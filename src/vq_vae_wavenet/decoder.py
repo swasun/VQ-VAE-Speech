@@ -1,10 +1,9 @@
-# coding: utf-8
-
  #####################################################################################
  # MIT License                                                                       #
  #                                                                                   #
- # Copyright (C) 2017: Ryuichi Yamamoto.                                             #
+ # Copyright (C) 2019 Charly Lamothe                                                 #
  #                                                                                   #
+ # This file is part of VQ-VAE-wavenet.                                              #
  #                                                                                   #
  #   Permission is hereby granted, free of charge, to any person obtaining a copy    #
  #   of this software and associated documentation files (the "Software"), to deal   #
@@ -25,6 +24,26 @@
  #   SOFTWARE.                                                                       #
  #####################################################################################
 
-from __future__ import with_statement, print_function, absolute_import
+from residual_stack import ResidualStack
 
-from .wavenet import receptive_field_size, WaveNet
+import torch.nn as nn
+import torch.nn.functional as F
+
+
+class Decoder(nn.Module):
+    
+    def __init__(self, in_channels, num_hiddens, num_residual_layers, num_residual_hiddens, use_kaiming_normal=False):
+        super(Decoder, self).__init__()
+        
+        # jitter 0.12
+        # conv 128
+        # upsample
+        # concat with speaker one-hot
+        # wavenet
+        # relu 256
+        # relu 256
+        # softmax
+        # sample
+
+    def forward(self, inputs):
+        return None

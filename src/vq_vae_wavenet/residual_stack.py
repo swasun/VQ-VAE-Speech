@@ -1,10 +1,10 @@
-# coding: utf-8
-
  #####################################################################################
  # MIT License                                                                       #
  #                                                                                   #
- # Copyright (C) 2017: Ryuichi Yamamoto.                                             #
+ # Copyright (C) 2019 Charly Lamothe                                                 #
+ # Copyright (C) 2018 Zalando Research                                               #
  #                                                                                   #
+ # This file is part of VQ-VAE-wavenet.                                              #
  #                                                                                   #
  #   Permission is hereby granted, free of charge, to any person obtaining a copy    #
  #   of this software and associated documentation files (the "Software"), to deal   #
@@ -25,6 +25,22 @@
  #   SOFTWARE.                                                                       #
  #####################################################################################
 
-from __future__ import with_statement, print_function, absolute_import
+from residual import Residual
 
-from .wavenet import receptive_field_size, WaveNet
+import torch.nn as nn
+import torch.nn.functional as F
+
+
+class ResidualStack(nn.Module):
+
+    def __init__(self, in_channels, num_hiddens, num_residual_layers, num_residual_hiddens, use_kaiming_normal=False):
+        super(ResidualStack, self).__init__()
+        
+        self._num_residual_layers = num_residual_layers
+        self._layers = nn.ModuleList(
+            [Residual(in_channels, num_hiddens, num_residual_hiddens, use_kaiming_normal)] * self._num_residual_layers)
+        
+    def forward(self, x):
+        for i in range(self._num_residual_layers):
+            x = self._layers[i](x)
+        return F.relu(x)
