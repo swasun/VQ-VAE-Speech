@@ -108,4 +108,3 @@ class AutoEncoder(nn.Module):
         model = AutoEncoder(decoder, device, configuration)
         model.load_state_dict(torch.load(path, map_location=device))
         return model
-

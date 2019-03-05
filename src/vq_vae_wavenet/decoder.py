@@ -27,6 +27,7 @@
 from residual_stack import ResidualStack
 from wavenet_factory import WaveNetFactory
 from conv1d_builder import Conv1DBuilder
+from jitter import Jitter
 
 import torch.nn as nn
 import torch.nn.functional as F
@@ -38,7 +39,8 @@ class Decoder(nn.Module):
     def __init__(self, in_channels, num_hiddens, num_residual_layers, num_residual_hiddens, wavenet_type, use_kaiming_normal=False):
         super(Decoder, self).__init__()
         
-        # define jitter layer here, using 0.12
+        # Apply the randomized time-jitter regularization
+        self._jitter = Jitter()
         
         """
         The jittered latent sequence is passed through a single
@@ -54,7 +56,7 @@ class Decoder(nn.Module):
 
         """
         The representation is then upsampled 320 times
-        (to match the 16kHz audio sampling rate)
+        (to match the 16kHz audio sampling rate).
         """
         self._upsample = nn.Upsample(scale_factor=320, mode='nearest')
 
@@ -63,7 +65,7 @@ class Decoder(nn.Module):
     def forward(self, inputs):
         x, speaker_one_hot = inputs
 
-        # use jitter here
+        x = self._jitter(x)
 
         x = self._conv_1(x)
 
@@ -71,17 +73,12 @@ class Decoder(nn.Module):
 
         # Concatenate upsampled with speaker one-hot
         concatenated = np.concatenate((
-            upsampled,
-            speaker_one_hot
+                upsampled,
+                speaker_one_hot
             ),
             axis=0
         )
 
         x = self._wavenet(concatenated)
 
-        """
-        A Softmax is applied to compute
-        the next sample probability.
-        """
-        return F.softmax(x, dim=1)
-
+        return x
