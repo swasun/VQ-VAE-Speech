@@ -37,13 +37,37 @@ class Decoder(nn.Module):
         
         # jitter 0.12
         # conv 128
-        # upsample
-        # concat with speaker one-hot
-        # wavenet
-        # relu 256
-        # relu 256
+
+        """
+        The representation was then upsampled 320 times
+        (to match the 16kHz audio sampling rate)
+        """
+        self._upsample = nn.Upsample(scale_factor=320, mode='nearest')
+
+        # self._wavenet = wavenet()
+
+        """
+        Finally, the signal was passed through 2
+        ReLU layers with 256 units.
+        """
+        self._residual_stack = ResidualStack(
+            in_channels=num_hiddens,
+            num_hiddens=num_hiddens,
+            num_residual_layers=num_residual_layers,
+            num_residual_hiddens=num_residual_hiddens,
+            use_kaiming_normal=use_kaiming_normal
+        )
+
         # softmax
         # sample
 
     def forward(self, inputs):
+        # upsampled = self._upsample(something)
+
+        # concatenate upsampled with speaker one-hot
+
+        # self._wavenet(concatenated)
+
+        return F.softmax()
+
         return None

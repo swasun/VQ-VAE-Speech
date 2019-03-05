@@ -45,9 +45,12 @@ class Configuration(object):
 
     default_batch_size = 32 # Just to test
     default_num_training_updates = 10000 # Just to test
-    default_num_hiddens = 768
-    default_num_residual_hiddens = 768
-    default_num_residual_layers = 4
+    default_encoder_num_hiddens = 768
+    default_encoder_num_residual_hiddens = 768
+    default_encoder_num_residual_layers = 4
+    default_decoder_num_hiddens = 256
+    default_decoder_num_residual_hiddens = 256
+    default_decoder_num_residual_layers = 2
 
     """
     This value is not that important, usually 64 works.
@@ -63,7 +66,7 @@ class Configuration(object):
     (log p(x|z)). So if the reconstruction cost is 100x higher, the
     commitment_cost should also be multiplied with the same amount.
     """
-    default_commitment_cost = 0.25 # 0.25 as specified in the paper
+    default_commitment_cost = 0.25 # Same as specified in the paper
 
     """
     Only uses for the EMA updates (instead of the Adam optimizer).
@@ -74,7 +77,7 @@ class Configuration(object):
     """
     default_decay = 0.99 # TODO
 
-    default_learning_rate = 3e-4 # TODO
+    default_learning_rate = 4e-4 # Same as specified in the paper
 
     """
     Weight initialization proposed by [He, K et al., 2015].
@@ -88,17 +91,22 @@ class Configuration(object):
     default_shuffle_dataset = True
 
     def __init__(self, batch_size=default_batch_size, num_training_updates=default_num_training_updates, \
-        num_hiddens=default_num_hiddens, num_residual_hiddens=default_num_residual_hiddens, \
-        num_residual_layers=default_num_residual_layers, embedding_dim=default_embedding_dim, \
+        encoder_num_hiddens=default_encoder_num_hiddens, encoder_num_residual_hiddens=default_encoder_num_residual_hiddens, \
+        encoder_num_residual_layers=default_encoder_num_residual_layers, decoder_num_hiddens=default_decoder_num_hiddens, \
+        decoder_num_residual_hiddens=default_decoder_num_residual_hiddens, \
+        decoder_num_residual_layers=default_decoder_num_residual_layers, embedding_dim=default_embedding_dim, \
         num_embeddings=default_num_embeddings, commitment_cost=default_commitment_cost, \
         decay=default_decay, learning_rate=default_learning_rate, use_kaiming_normal=default_use_kaiming_normal, \
         shuffle_dataset=default_shuffle_dataset):
 
         self._batch_size = batch_size
         self._num_training_updates = num_training_updates
-        self._num_hiddens = num_hiddens
-        self._num_residual_hiddens = num_residual_hiddens
-        self._num_residual_layers = num_residual_layers
+        self._encoder_num_hiddens = encoder_num_hiddens
+        self._encoder_num_residual_hiddens = encoder_num_residual_hiddens
+        self._encoder_num_residual_layers = encoder_num_residual_layers
+        self._decoder_num_hiddens = decoder_num_hiddens
+        self._decoder_num_residual_hiddens = decoder_num_residual_hiddens
+        self._decoder_num_residual_layers = decoder_num_residual_layers
         self._embedding_dim = embedding_dim
         self._num_embeddings = num_embeddings
         self._commitment_cost = commitment_cost
@@ -116,16 +124,28 @@ class Configuration(object):
         return self._num_training_updates
 
     @property
-    def num_hiddens(self):
-        return self._num_hiddens
+    def encoder_num_hiddens(self):
+        return self._encoder_num_hiddens
 
     @property
-    def num_residual_hiddens(self):
-        return self._num_residual_hiddens
+    def encoder_num_residual_hiddens(self):
+        return self._encoder_num_residual_hiddens
 
     @property
-    def num_residual_layers(self):
-        return self._num_residual_layers
+    def encoder_num_residual_layers(self):
+        return self._encoder_num_residual_layers
+
+    @property
+    def decoder_num_hiddens(self):
+        return self._decoder_num_hiddens
+
+    @property
+    def decoder_num_residual_hiddens(self):
+        return self._decoder_num_residual_hiddens
+
+    @property
+    def decoder_num_residual_layers(self):
+        return self._decoder_num_residual_layers
 
     @property
     def embedding_dim(self):
@@ -160,9 +180,12 @@ class Configuration(object):
         return Configuration(
             batch_size=args.batch_size,
             num_training_updates=args.num_training_updates,
-            num_hiddens=args.num_hiddens,
-            num_residual_hiddens=args.num_residual_hiddens,
-            num_residual_layers=args.num_residual_hiddens,
+            encoder_num_hiddens=args.encoder_num_hiddens,
+            encoder_num_residual_hiddens=args.encoder_num_residual_hiddens,
+            encoder_num_residual_layers=args.encoder_num_residual_hiddens,
+            decoder_num_hiddens=args.decoder_num_hiddens,
+            decoder_num_residual_hiddens=args.decoder_num_residual_hiddens,
+            decoder_num_residual_layers=args.decoder_num_residual_hiddens,
             embedding_dim=args.embedding_dim,
             num_embeddings=args.num_embeddings,
             commitment_cost=args.commitment_cost,
