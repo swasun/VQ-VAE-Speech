@@ -43,17 +43,17 @@ class Configuration(object):
         [ksw0306/ClariNet] https://github.com/ksw0306/ClariNet.
     """
 
-    default_batch_size = 32 # 32 instead of 128 specified in the paper
-    default_num_training_updates = 25000 # 25K instead of 250K specified in the paper
-    default_num_hiddens = 128
-    default_num_residual_hiddens = 32 # 32 instead of 256 specified in the paper
-    default_num_residual_layers = 2
+    default_batch_size = 32 # Just to test
+    default_num_training_updates = 10000 # Just to test
+    default_num_hiddens = 768
+    default_num_residual_hiddens = 768
+    default_num_residual_layers = 4
 
     """
     This value is not that important, usually 64 works.
     This will not change the capacity in the information-bottleneck.
     """
-    default_embedding_dim = 64
+    default_embedding_dim = 64 # Same as specified in the paper
 
     default_num_embeddings = 512 # The higher this value, the higher the capacity in the information bottleneck.
 
@@ -72,9 +72,9 @@ class Configuration(object):
     EMA updates were not used (but suggested in appendix) and compared in
     [Roy et al., 2018].
     """
-    default_decay = 0.99
+    default_decay = 0.99 # TODO
 
-    default_learning_rate = 3e-4 # 3e-4 instead of 2e-4 specified in the paper
+    default_learning_rate = 3e-4 # TODO
 
     """
     Weight initialization proposed by [He, K et al., 2015].

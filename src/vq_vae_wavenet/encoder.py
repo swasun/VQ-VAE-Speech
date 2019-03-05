@@ -28,6 +28,9 @@ from residual_stack import ResidualStack
 
 import torch.nn as nn
 import torch.nn.functional as F
+from python_speech_features.base import mfcc
+from python_speech_features import delta
+import numpy as np
 
 
 class Encoder(nn.Module):
@@ -35,7 +38,10 @@ class Encoder(nn.Module):
     def __init__(self, in_channels, num_hiddens, num_residual_layers, num_residual_hiddens, use_kaiming_normal=False):
         super(Encoder, self).__init__()
 
-        # MFCC + d + a
+        """
+        2 preprocessing convolution layers with filter length 3
+        and residual connections.
+        """
 
         self._conv_1 = self._create_conv(
             in_channels=in_channels,
@@ -51,7 +57,11 @@ class Encoder(nn.Module):
             use_kaiming_normal=use_kaiming_normal
         )
 
-        # StridedConv
+        """
+        1 strided convolution length reduction layer with filter
+        length 4 and stride 2 (downsampling the signal by a factor
+        of two).
+        """
         self._conv_3 = self._create_conv(
             in_channels=num_hiddens//2,
             out_channels=num_hiddens,
@@ -60,12 +70,28 @@ class Encoder(nn.Module):
             use_kaiming_normal=use_kaiming_normal
         )
 
+        """
+        2 convolutional layers with length 3 and
+        residual connections.
+        """
+
         self._conv_4 = self._create_conv(
             in_channels=num_hiddens//2,
             out_channels=num_hiddens,
             kernel_size=3,
             use_kaiming_normal=use_kaiming_normal
         )
+
+        self._conv_5 = self._create_conv(
+            in_channels=num_hiddens//2,
+            out_channels=num_hiddens,
+            kernel_size=3,
+            use_kaiming_normal=use_kaiming_normal
+        )
+
+        """
+        4 feedforward ReLu layers with residual connections.
+        """
 
         self._residual_stack = ResidualStack(
             in_channels=num_hiddens,
@@ -87,8 +113,24 @@ class Encoder(nn.Module):
             nn.init.kaiming_normal_(conv.weight)
         return conv
 
+    def _compute_features_from_inputs(self, inputs):
+        (rate, signal) = inputs
+        mfcc_features = mfcc(signal, rate)
+        d_mfcc_features = delta(mfcc_features, 2)
+        a_mfcc_features = delta(d_mfcc_features, 2)
+        concatenated_features = np.concatenate((
+                mfcc_features,
+                d_mfcc_features,
+                a_mfcc_features
+            ),
+            axis=0
+        )
+        return concatenated_features
+
     def forward(self, inputs):
-        x = self._conv_1(inputs)
+        features = self._compute_features_from_inputs(inputs)
+        
+        x = self._conv_1(features)
         x = F.relu(x)
         
         x = self._conv_2(x)
@@ -98,6 +140,9 @@ class Encoder(nn.Module):
         x = F.relu(x)
 
         x = self._conv_4(x)
+        x = F.relu(x)
+
+        x = self._conv_5(x)
         x = F.relu(x)
 
         return self._residual_stack(x)

@@ -1,0 +1,5 @@
+python-speech-features
+torch
+numpy
+matplotlib
+scipy
