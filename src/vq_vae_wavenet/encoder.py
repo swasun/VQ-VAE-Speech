@@ -25,6 +25,7 @@
  #####################################################################################
 
 from residual_stack import ResidualStack
+from conv1d_builder import Conv1DBuilder
 
 import torch.nn as nn
 import torch.nn.functional as F
@@ -43,14 +44,14 @@ class Encoder(nn.Module):
         and residual connections.
         """
 
-        self._conv_1 = self._create_conv(
+        self._conv_1 = Conv1DBuilder.build(
             in_channels=in_channels,
             out_channels=num_hiddens//2,
             kernel_size=3,
             use_kaiming_normal=use_kaiming_normal
         )
 
-        self._conv_2 = self._create_conv(
+        self._conv_2 = Conv1DBuilder.build(
             in_channels=num_hiddens//2,
             out_channels=num_hiddens,
             kernel_size=3,
@@ -62,7 +63,7 @@ class Encoder(nn.Module):
         length 4 and stride 2 (downsampling the signal by a factor
         of two).
         """
-        self._conv_3 = self._create_conv(
+        self._conv_3 = Conv1DBuilder.build(
             in_channels=num_hiddens//2,
             out_channels=num_hiddens,
             kernel_size=4,
@@ -75,14 +76,14 @@ class Encoder(nn.Module):
         residual connections.
         """
 
-        self._conv_4 = self._create_conv(
+        self._conv_4 = Conv1DBuilder.build(
             in_channels=num_hiddens//2,
             out_channels=num_hiddens,
             kernel_size=3,
             use_kaiming_normal=use_kaiming_normal
         )
 
-        self._conv_5 = self._create_conv(
+        self._conv_5 = Conv1DBuilder.build(
             in_channels=num_hiddens//2,
             out_channels=num_hiddens,
             kernel_size=3,
@@ -100,18 +101,6 @@ class Encoder(nn.Module):
             num_residual_hiddens=num_residual_hiddens,
             use_kaiming_normal=use_kaiming_normal
         )
-
-    def _create_conv(self, in_channels, out_channels, kernel_size, stride=1, use_kaiming_normal=False):
-        conv = nn.Conv2d(
-            in_channels=in_channels,
-            out_channels=out_channels,
-            kernel_size=kernel_size,
-            stride=stride
-        )
-        if use_kaiming_normal:
-            conv = nn.utils.weight_norm(conv)
-            nn.init.kaiming_normal_(conv.weight)
-        return conv
 
     def _compute_features_from_inputs(self, inputs):
         (rate, signal) = inputs

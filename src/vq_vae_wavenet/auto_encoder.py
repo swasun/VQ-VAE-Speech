@@ -51,7 +51,7 @@ class AutoEncoder(nn.Module):
             configuration.use_kaiming_normal
         )
 
-        self._pre_vq_conv = nn.Conv2d(
+        self._pre_vq_conv = nn.Conv1d(
             in_channels=configuration.num_hiddens, 
             out_channels=configuration.embedding_dim,
             kernel_size=1, 

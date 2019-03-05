@@ -26,6 +26,7 @@
 
 from residual_stack import ResidualStack
 from wavenet_factory import WaveNetFactory
+from conv1d_builder import Conv1DBuilder
 
 import torch.nn as nn
 import torch.nn.functional as F
@@ -37,8 +38,19 @@ class Decoder(nn.Module):
     def __init__(self, in_channels, num_hiddens, num_residual_layers, num_residual_hiddens, wavenet_type, use_kaiming_normal=False):
         super(Decoder, self).__init__()
         
-        # jitter 0.12
-        # conv 128
+        # define jitter layer here, using 0.12
+        
+        """
+        The jittered latent sequence is passed through a single
+        convolutional layer with filter length 3 and 128 hidden
+        units to mix information across neighboring timesteps.
+        """
+        self._conv_1 = Conv1DBuilder.build(
+            in_channels=128,
+            out_channels=128,
+            kernel_size=3,
+            use_kaiming_normal=use_kaiming_normal
+        )
 
         """
         The representation is then upsampled 320 times
@@ -50,6 +62,10 @@ class Decoder(nn.Module):
 
     def forward(self, inputs):
         x, speaker_one_hot = inputs
+
+        # use jitter here
+
+        x = self._conv_1(x)
 
         upsampled = self._upsample(x)
 

@@ -34,7 +34,7 @@ class Residual(nn.Module):
         super(Residual, self).__init__()
         
         relu_1 = nn.ReLU(True)
-        conv_1 = nn.Conv2d(
+        conv_1 = nn.Conv1d(
             in_channels=in_channels,
             out_channels=num_residual_hiddens,
             kernel_size=3,
@@ -47,7 +47,7 @@ class Residual(nn.Module):
             nn.init.kaiming_normal_(conv_1.weight)
 
         relu_2 = nn.ReLU(True)
-        conv_2 = nn.Conv2d(
+        conv_2 = nn.Conv1d(
             in_channels=num_residual_hiddens,
             out_channels=num_hiddens,
             kernel_size=1,
