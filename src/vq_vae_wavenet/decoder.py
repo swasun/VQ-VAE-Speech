@@ -65,7 +65,8 @@ class Decoder(nn.Module):
     def forward(self, inputs):
         x, speaker_one_hot = inputs
 
-        x = self._jitter(x)
+        #if self._is_training and self._use_jitter:
+        #    x = self._jitter(x)
 
         x = self._conv_1(x)
 

@@ -9,4 +9,12 @@ class Jitter(nn.Module):
         self._probability = probability
 
     def forward(self, inputs):
+        """
+        Current algorithm:
+        for i in range(len(quantized)):
+            before = random(0.12)
+            # TODO: check if lower/upper bound is respected
+            quantized[i] = quantized[i-1] if before else quantized[i+1]
+        """
+
         return inputs
