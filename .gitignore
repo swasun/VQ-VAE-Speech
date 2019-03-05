@@ -1,3 +1,6 @@
 data/
 __pycache__/
 log/
+loss/
+params/
+samples/
