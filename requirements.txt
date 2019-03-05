@@ -3,3 +3,7 @@ torch
 numpy
 matplotlib
 scipy
+lws
+docopt
+nnmnkwii
+tensorboardX

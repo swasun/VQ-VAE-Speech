@@ -25,49 +25,47 @@
  #####################################################################################
 
 from residual_stack import ResidualStack
+from wavenet_factory import WaveNetFactory
 
 import torch.nn as nn
 import torch.nn.functional as F
+import numpy as np
 
 
 class Decoder(nn.Module):
     
-    def __init__(self, in_channels, num_hiddens, num_residual_layers, num_residual_hiddens, use_kaiming_normal=False):
+    def __init__(self, in_channels, num_hiddens, num_residual_layers, num_residual_hiddens, wavenet_type, use_kaiming_normal=False):
         super(Decoder, self).__init__()
         
         # jitter 0.12
         # conv 128
 
         """
-        The representation was then upsampled 320 times
+        The representation is then upsampled 320 times
         (to match the 16kHz audio sampling rate)
         """
         self._upsample = nn.Upsample(scale_factor=320, mode='nearest')
 
-        # self._wavenet = wavenet()
-
-        """
-        Finally, the signal was passed through 2
-        ReLU layers with 256 units.
-        """
-        self._residual_stack = ResidualStack(
-            in_channels=num_hiddens,
-            num_hiddens=num_hiddens,
-            num_residual_layers=num_residual_layers,
-            num_residual_hiddens=num_residual_hiddens,
-            use_kaiming_normal=use_kaiming_normal
-        )
-
-        # softmax
-        # sample
+        self._wavenet = WaveNetFactory.build(wavenet_type)
 
     def forward(self, inputs):
-        # upsampled = self._upsample(something)
+        x, speaker_one_hot = inputs
 
-        # concatenate upsampled with speaker one-hot
+        upsampled = self._upsample(x)
 
-        # self._wavenet(concatenated)
+        # Concatenate upsampled with speaker one-hot
+        concatenated = np.concatenate((
+            upsampled,
+            speaker_one_hot
+            ),
+            axis=0
+        )
 
-        return F.softmax()
+        x = self._wavenet(concatenated)
 
-        return None
+        """
+        A Softmax is applied to compute
+        the next sample probability.
+        """
+        return F.softmax(x, dim=1)
+
