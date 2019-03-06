@@ -22,12 +22,13 @@
  #   SOFTWARE.                                                                       #
  #####################################################################################
 
+from flow_wavenet.data import LJspeechDataset, collate_fn, collate_fn_synthesize
+from flow_wavenet.model import Flowavenet
+
 import torch
 from torch import optim
 import torch.nn as nn
 from torch.utils.data import DataLoader
-from data import LJspeechDataset, collate_fn, collate_fn_synthesize
-from model import Flowavenet
 from torch.distributions.normal import Normal
 import numpy as np
 import librosa
@@ -43,7 +44,7 @@ torch.manual_seed(1111)
 
 parser = argparse.ArgumentParser(description='Train FloWaveNet of LJSpeech',
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-parser.add_argument('--data_path', type=str, default='./DATASETS/ljspeech/', help='Dataset Path')
+parser.add_argument('--data_path', type=str, default='../data/ljspeech/', help='Dataset Path')
 parser.add_argument('--sample_path', type=str, default='./samples', help='Sample Path')
 parser.add_argument('--save', '-s', type=str, default='./params', help='Folder to save checkpoints.')
 parser.add_argument('--load', '-l', type=str, default='./params', help='Checkpoint path')

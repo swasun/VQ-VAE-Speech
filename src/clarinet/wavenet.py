@@ -22,10 +22,11 @@
  #   SOFTWARE.                                                                       #
  #####################################################################################
 
+from clarinet.modules import Conv, ResBlock
+from clarinet.loss import sample_from_gaussian
+
 import torch
 from torch import nn
-from modules import Conv, ResBlock
-from loss import sample_from_gaussian
 
 
 class Wavenet(nn.Module):

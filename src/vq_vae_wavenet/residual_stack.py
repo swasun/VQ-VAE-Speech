@@ -25,7 +25,7 @@
  #   SOFTWARE.                                                                       #
  #####################################################################################
 
-from residual import Residual
+from vq_vae_wavenet.residual import Residual
 
 import torch.nn as nn
 import torch.nn.functional as F

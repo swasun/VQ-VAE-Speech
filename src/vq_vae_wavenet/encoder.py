@@ -24,8 +24,8 @@
  #   SOFTWARE.                                                                       #
  #####################################################################################
 
-from residual_stack import ResidualStack
-from conv1d_builder import Conv1DBuilder
+from vq_vae_wavenet.residual_stack import ResidualStack
+from vq_vae_wavenet.conv1d_builder import Conv1DBuilder
 
 import torch.nn as nn
 import torch.nn.functional as F

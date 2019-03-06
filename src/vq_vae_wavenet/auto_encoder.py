@@ -25,9 +25,10 @@
  #   SOFTWARE.                                                                       #
  #####################################################################################
 
-from encoder import Encoder
-from vector_quantizer import VectorQuantizer
-from vector_quantizer_ema import VectorQuantizerEMA
+from vq_vae_wavenet.encoder import Encoder
+from vq_vae_wavenet.decoder import Decoder
+from vq_vae_wavenet.vector_quantizer import VectorQuantizer
+from vq_vae_wavenet.vector_quantizer_ema import VectorQuantizerEMA
 
 import torch.nn as nn
 import torch
@@ -36,7 +37,7 @@ import os
 
 class AutoEncoder(nn.Module):
     
-    def __init__(self, decoder, device, configuration):
+    def __init__(self, wavenet_type, device, configuration):
         super(AutoEncoder, self).__init__()
         
         """
@@ -45,14 +46,14 @@ class AutoEncoder(nn.Module):
         """
         self._encoder = Encoder(
             3,
-            configuration.num_hiddens,
-            configuration.num_residual_layers, 
-            configuration.num_residual_hiddens,
+            configuration.encoder_num_hiddens,
+            configuration.encoder_num_residual_layers, 
+            configuration.encoder_num_residual_hiddens,
             configuration.use_kaiming_normal
         )
 
         self._pre_vq_conv = nn.Conv1d(
-            in_channels=configuration.num_hiddens, 
+            in_channels=configuration.encoder_num_hiddens, 
             out_channels=configuration.embedding_dim,
             kernel_size=1, 
             stride=1
@@ -74,7 +75,14 @@ class AutoEncoder(nn.Module):
                 configuration.commitment_cost
             )
 
-        self._decoder = decoder
+        self._decoder = Decoder(
+            3,
+            configuration.decoder_num_hiddens,
+            configuration.decoder_num_residual_layers, 
+            configuration.decoder_num_residual_hiddens,
+            wavenet_type,
+            configuration.use_kaiming_normal
+        )
 
     @property
     def vq_vae(self):

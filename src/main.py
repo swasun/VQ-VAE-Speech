@@ -24,10 +24,11 @@
  #   SOFTWARE.                                                                       #
  #####################################################################################
 
-from auto_encoder import AutoEncoder
-from trainer import Trainer
-from evaluator import Evaluator
-from configuration import Configuration
+from vq_vae_wavenet.auto_encoder import AutoEncoder
+from vq_vae_wavenet.trainer import Trainer
+from vq_vae_wavenet.evaluator import Evaluator
+from vq_vae_wavenet.configuration import Configuration
+from vq_vae_wavenet.wavenet_type import WaveNetType
 
 import torch
 import torch.optim as optim
@@ -70,13 +71,15 @@ if __name__ == "__main__":
     
     dataset_path = '..' + os.sep + args.data_path
 
-    auto_encoder = AutoEncoder(device, configuration).to(device) # Create an AutoEncoder model using our GPU device
+    auto_encoder = AutoEncoder(WaveNetType.WaveNet, device, configuration).to(device) # Create an AutoEncoder model using our GPU device
 
-    optimizer = optim.Adam(auto_encoder.parameters(), lr=configuration.learning_rate, amsgrad=True) # Create an Adam optimizer instance
+    print(auto_encoder)
+
+    """optimizer = optim.Adam(auto_encoder.parameters(), lr=configuration.learning_rate, amsgrad=True) # Create an Adam optimizer instance
     trainer = Trainer(device, auto_encoder, optimizer, dataset) # Create a trainer instance
     trainer.train(configuration.num_training_updates) # Train our model on the CIFAR10 dataset
     auto_encoder.save(results_path + os.sep + args.model_name) # Save our trained model
     trainer.save_loss_plot(results_path + os.sep + args.loss_plot_name) # Save the loss plot
 
-    evaluator = Evaluator(device, auto_encoder, dataset) # Create en Evaluator instance to evaluate our trained model
+    evaluator = Evaluator(device, auto_encoder, dataset) # Create en Evaluator instance to evaluate our trained model"""
     

@@ -22,15 +22,16 @@
  #   SOFTWARE.                                                                       #
  #####################################################################################
 
+from clarinet.data import LJspeechDataset, collate_fn, collate_fn_synthesize
+from clarinet.modules import ExponentialMovingAverage, KL_Loss, STFT
+from clarinet.wavenet import Wavenet
+from clarinet.wavenet_iaf import Wavenet_Student
+
 import torch
 from torch import optim
 import torch.nn as nn
 from torch.utils.data import DataLoader
 from torch.distributions.normal import Normal
-from data import LJspeechDataset, collate_fn, collate_fn_synthesize
-from modules import ExponentialMovingAverage, KL_Loss, STFT
-from wavenet import Wavenet
-from wavenet_iaf import Wavenet_Student
 import numpy as np
 import librosa
 import os

@@ -24,10 +24,10 @@
  #   SOFTWARE.                                                                       #
  #####################################################################################
 
-from residual_stack import ResidualStack
-from wavenet_factory import WaveNetFactory
-from conv1d_builder import Conv1DBuilder
-from jitter import Jitter
+from vq_vae_wavenet.residual_stack import ResidualStack
+from vq_vae_wavenet.wavenet_factory import WaveNetFactory
+from vq_vae_wavenet.conv1d_builder import Conv1DBuilder
+from vq_vae_wavenet.jitter import Jitter
 
 import torch.nn as nn
 import torch.nn.functional as F

@@ -22,11 +22,12 @@
  #   SOFTWARE.                                                                       #
  #####################################################################################
 
+from clarinet.data import LJspeechDataset, collate_fn, collate_fn_synthesize
+from clarinet.wavenet import Wavenet
+
 import time
 import torch
 from torch.utils.data import Dataset, DataLoader
-from data import LJspeechDataset, collate_fn, collate_fn_synthesize
-from wavenet import Wavenet
 import librosa
 import os
 import argparse

@@ -22,10 +22,11 @@
  #   SOFTWARE.                                                                       #
  #####################################################################################
 
+from flow_wavenet.modules import Wavenet
+
 import torch
 from torch import nn
 from math import log, pi
-from modules import Wavenet
 import math
 
 logabs = lambda x: torch.log(torch.abs(x))

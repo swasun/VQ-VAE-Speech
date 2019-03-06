@@ -1,4 +1,4 @@
-from wavenet_type import WaveNetType
+from vq_vae_wavenet.wavenet_type import WaveNetType
 from wavenet_vocoder.builder import wavenet as build_wavenet_model
 from flow_wavenet.train import build_model as build_flowavenet_model
 from clarinet.train import build_model as build_clarinet_model

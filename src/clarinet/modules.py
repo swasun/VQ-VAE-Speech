@@ -22,10 +22,11 @@
  #   SOFTWARE.                                                                       #
  #####################################################################################
 
+from clarinet.loss import gaussian_loss, KL_gaussians
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from loss import gaussian_loss, KL_gaussians
 import numpy as np
 import math
 

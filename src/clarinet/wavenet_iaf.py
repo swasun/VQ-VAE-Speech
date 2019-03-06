@@ -22,10 +22,11 @@
  #   SOFTWARE.                                                                       #
  #####################################################################################
 
+from clarinet.modules import Conv, ResBlock
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from modules import Conv, ResBlock
 
 
 class Wavenet_Student(nn.Module):
