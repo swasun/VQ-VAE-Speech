@@ -29,12 +29,65 @@ from vq_vae_wavenet.trainer import Trainer
 from vq_vae_wavenet.evaluator import Evaluator
 from vq_vae_wavenet.configuration import Configuration
 from vq_vae_wavenet.wavenet_type import WaveNetType
+from vq_vae_wavenet.utils import mu_law_encode, mu_law_decode, get_config
+from dataset.vctk_dataset import VCTKDataset
+from dataset.vctk import VCTK
 
-import torch
-import torch.optim as optim
 import os
 import argparse
+from tqdm import tqdm
+import torch
+import torch.optim as optim
+from torch.utils.data import DataLoader
+from torch import nn
+import librosa
 
+
+def train(model, use_cuda, train_loader, val_loader):
+    parameters = list(model.parameters())
+    opt = torch.optim.Adam([p for p in parameters if p.requires_grad], lr=params['lr'])
+
+    for epoch in range(params['start_epoch'], params['num_epochs']):
+        train_bar = tqdm(train_loader)
+        model.train()
+        for data in train_bar:
+            x_enc, x_dec, speaker_id, quantized = data
+            if use_cuda:
+                x_enc, x_dec, speaker_id, quantized = x_enc.cuda(), x_dec.cuda(), speaker_id.cuda(), quantized.cuda()
+
+            opt.zero_grad()
+            loss, _ = model(x_enc, x_dec, speaker_id, quantized)
+            loss.mean().backward()
+            opt.step()
+
+            train_bar.set_description('Epoch {}: loss {:.4f}'.format(epoch + 1, loss.mean().item()))
+
+        model.eval()
+        data_val = next(iter(val_loader))
+        with torch.no_grad():
+            x_enc_val, x_dec_val, speaker_id_val, quantized_val = data_val
+            if use_cuda:
+                x_enc_val, x_dec_val, speaker_id_val, quantized_val = x_enc_val.cuda(), x_dec_val.cuda(), speaker_id_val.cuda(), quantized_val.cuda()
+            _, out = model(x_enc_val, x_dec_val, speaker_id_val, quantized_val)
+
+            output = out.argmax(dim=1).detach().cpu().numpy().squeeze()
+            input_mu = x_dec_val.argmax(dim=1).detach().cpu().numpy().squeeze()
+            input = x_enc_val.detach().cpu().numpy().squeeze()
+
+            output = mu_law_decode(output)
+            input_mu = mu_law_decode(input_mu)
+
+            #librosa.output.write_wav(os.path.join(save_path, '{}_output.wav'.format(epoch)), output, params['sr'])
+            #librosa.output.write_wav(os.path.join(save_path, '{}_input_mu.wav'.format(epoch)), input_mu, params['sr'])
+            #librosa.output.write_wav(os.path.join(save_path, '{}_input.wav'.format(epoch)), input, params['sr'])
+
+
+
+        """torch.save({'epoch': epoch,
+                    'encoder': encoder.state_dict(),
+                    'decoder': decoder.state_dict(),
+                    'vq': vq.state_dict()
+                    }, os.path.join(save_path, '{}_checkpoint.pth'.format(epoch)))"""
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -62,7 +115,11 @@ if __name__ == "__main__":
     # Dataset and model hyperparameters
     configuration = Configuration.build_from_args(args)
 
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu') # Use GPU if cuda is available
+    params = get_config('speech_vctk.yaml')
+
+    use_cuda = torch.cuda.is_available()
+    device = torch.device('cuda' if use_cuda else 'cpu') # Use GPU if cuda is available
+    gpu_ids = [i for i in range(torch.cuda.device_count())]
 
     # Set the result path and create the directory if it doesn't exist
     results_path = '..' + os.sep + args.results_path
@@ -71,15 +128,22 @@ if __name__ == "__main__":
     
     dataset_path = '..' + os.sep + args.data_path
 
-    auto_encoder = AutoEncoder(WaveNetType.WaveNet, device, configuration).to(device) # Create an AutoEncoder model using our GPU device
+    vctk = VCTK(params['data_root'], ratio=params['train_val_split'])
+    train_dataset = VCTKDataset(vctk.audios_train, vctk.speaker_dic, params)
+    val_dataset = VCTKDataset(vctk.audios_val, vctk.speaker_dic, params)
+    train_loader = DataLoader(train_dataset, batch_size=params['batch_size'] * len(gpu_ids), shuffle=True,
+                              num_workers=params['num_workers'], pin_memory=use_cuda)
+    val_loader = DataLoader(val_dataset, batch_size=1, num_workers=params['num_workers'], pin_memory=use_cuda)
 
-    print(auto_encoder)
+    auto_encoder = AutoEncoder(WaveNetType.WaveNet, device, configuration, params, train_dataset.speaker_dic).to(device) # Create an AutoEncoder model using our GPU device
+    auto_encoder = nn.DataParallel(auto_encoder.cuda(), device_ids=gpu_ids) if use_cuda else auto_encoder
 
-    """optimizer = optim.Adam(auto_encoder.parameters(), lr=configuration.learning_rate, amsgrad=True) # Create an Adam optimizer instance
-    trainer = Trainer(device, auto_encoder, optimizer, dataset) # Create a trainer instance
-    trainer.train(configuration.num_training_updates) # Train our model on the CIFAR10 dataset
+    optimizer = optim.Adam(auto_encoder.parameters(), lr=configuration.learning_rate, amsgrad=True) # Create an Adam optimizer instance
+    #trainer = Trainer(device, auto_encoder, optimizer, dataset) # Create a trainer instance
+    #trainer.train(configuration.num_training_updates) # Train our model
+    train(auto_encoder, use_cuda, train_loader, val_dataset)
     auto_encoder.save(results_path + os.sep + args.model_name) # Save our trained model
-    trainer.save_loss_plot(results_path + os.sep + args.loss_plot_name) # Save the loss plot
+    #trainer.save_loss_plot(results_path + os.sep + args.loss_plot_name) # Save the loss plot
 
-    evaluator = Evaluator(device, auto_encoder, dataset) # Create en Evaluator instance to evaluate our trained model"""
+    #evaluator = Evaluator(device, auto_encoder, dataset) # Create en Evaluator instance to evaluate our trained model
     

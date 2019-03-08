@@ -62,13 +62,11 @@ class Decoder(nn.Module):
 
         self._wavenet = WaveNetFactory.build(wavenet_type)
 
-    def forward(self, inputs):
-        x, speaker_one_hot = inputs
-
+    def forward(self, ):
         #if self._is_training and self._use_jitter:
         #    x = self._jitter(x)
 
-        x = self._conv_1(x)
+        """x = self._conv_1(x)
 
         upsampled = self._upsample(x)
 
@@ -78,8 +76,8 @@ class Decoder(nn.Module):
                 speaker_one_hot
             ),
             axis=0
-        )
+        )"""
 
-        x = self._wavenet(concatenated)
+        x = self._wavenet()
 
         return x

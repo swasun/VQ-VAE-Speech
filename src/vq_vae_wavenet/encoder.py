@@ -117,9 +117,9 @@ class Encoder(nn.Module):
         return concatenated_features
 
     def forward(self, inputs):
-        features = self._compute_features_from_inputs(inputs)
+        #features = self._compute_features_from_inputs(inputs)
         
-        x = self._conv_1(features)
+        x = self._conv_1(inputs)
         x = F.relu(x)
         
         x = self._conv_2(x)
