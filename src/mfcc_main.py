@@ -24,11 +24,11 @@
  #   SOFTWARE.                                                                       #
  #####################################################################################
 
-from vq_vae_mfcc.auto_encoder import AutoEncoder
+from vq_vae_mfcc.mfcc_auto_encoder import MFCCAutoEncoder
 from vq_vae_mfcc.trainer import Trainer
 from vq_vae_mfcc.evaluator import Evaluator
 from vq_vae_mfcc.configuration import Configuration
-from vq_vae_mfcc.speech_dataset import SpeechDataset
+from dataset.speech_dataset import SpeechDataset
 
 import torch
 import torch.optim as optim
@@ -82,7 +82,7 @@ if __name__ == "__main__":
     
     dataset = SpeechDataset(params, gpu_ids, use_cuda)
 
-    auto_encoder = AutoEncoder(device, configuration, params).to(device) # Create an AutoEncoder model using our GPU device
+    auto_encoder = MFCCAutoEncoder(device, configuration, params).to(device) # Create an AutoEncoder model using our GPU device
     auto_encoder = auto_encoder.double()
 
     optimizer = optim.Adam(auto_encoder.parameters(), lr=configuration.learning_rate, amsgrad=True) # Create an Adam optimizer instance

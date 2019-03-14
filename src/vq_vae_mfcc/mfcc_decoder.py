@@ -25,17 +25,17 @@
  #   SOFTWARE.                                                                       #
  #####################################################################################
 
-from vq_vae_mfcc.residual_stack import ResidualStack
-from vq_vae_wavenet.jitter import Jitter
+from vq_vae_speech.residual_stack import ResidualStack
+from vq_vae_speech.jitter import Jitter
 
 import torch.nn as nn
 import torch.nn.functional as F
 
 
-class Decoder(nn.Module):
+class MFCCDecoder(nn.Module):
     
     def __init__(self, in_channels, num_hiddens, num_residual_layers, num_residual_hiddens, use_kaiming_normal=False):
-        super(Decoder, self).__init__()
+        super(MFCCDecoder, self).__init__()
 
         self._jitter = Jitter(0.12)
         

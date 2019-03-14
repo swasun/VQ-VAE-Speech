@@ -41,9 +41,4 @@ def compute_features_from_inputs(signal, rate=16000):
         ),
         axis=1
     )
-    """print('signal.shape: {}'.format(signal.shape))
-    print('mfcc_features.shape: {}'.format(mfcc_features.shape))
-    print('d_mfcc_features.shape: {}'.format(d_mfcc_features.shape))
-    print('a_mfcc_features.shape: {}'.format(a_mfcc_features.shape))
-    print('concatenated_features.shape: {}'.format(concatenated_features.shape))"""
     return concatenated_features

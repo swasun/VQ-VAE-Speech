@@ -25,25 +25,23 @@
  #   SOFTWARE.                                                                       #
  #####################################################################################
 
-from vq_vae_mfcc.encoder import Encoder
-from vq_vae_mfcc.decoder import Decoder
+from vq_vae_wavenet.wavenet_encoder import WaveNetEncoder
+from vq_vae_wavenet.wavenet_decoder import WaveNetDecoder
+from vq_vae_wavenet.wavenet_factory import WaveNetFactory
 from vq.vector_quantizer import VectorQuantizer
 from vq.vector_quantizer_ema import VectorQuantizerEMA
-from vq_vae_wavenet.utils import compute_features_from_inputs
+from wavenet_vocoder import WaveNet
 
-import torch.nn as nn
 import torch
-import torch.nn.functional as F
-import os
-import numpy as np
+import torch.nn as nn
 
 
-class AutoEncoder(nn.Module):
+class WaveNetAutoEncoder(nn.Module):
     
-    def __init__(self, device, configuration, params):
-        super(AutoEncoder, self).__init__()
+    def __init__(self, wavenet_type, device, configuration, params, speaker_dic):
+        super(WaveNetAutoEncoder, self).__init__()
         
-        self._encoder = Encoder(
+        self._encoder = WaveNetEncoder(
             in_channels=95,
             num_hiddens=params['d'],
             num_residual_layers=2,
@@ -81,15 +79,29 @@ class AutoEncoder(nn.Module):
                 configuration.commitment_cost
             )
 
-        self._decoder = Decoder(
+        self._decoder = WaveNetDecoder(
             params['k'],
-            params['d'],
-            2,
-            params['d'],
+            configuration.decoder_num_hiddens,
+            configuration.decoder_num_residual_layers, 
+            configuration.decoder_num_residual_hiddens,
+            wavenet_type,
             configuration.use_kaiming_normal
         )
+        #self._decoder = WaveNetFactory.build(wavenet_type)
+        """self._decoder = WaveNet(params['quantize'],
+                      params['n_layers'],
+                      params['n_loop'],
+                      params['residual_channels'],
+                      params['gate_channels'],
+                      params['skip_out_channels'],
+                      params['filter_size'],
+                      cin_channels=params['local_condition_dim'],
+                      gin_channels=params['global_condition_dim'],
+                      n_speakers=len(speaker_dic),
+                      upsample_conditional_features=True,
+                      upsample_scales=[2, 2, 2, 2, 2, 2]) # 64 downsamples"""
 
-        self.criterion = nn.MSELoss()
+        self.criterion = nn.CrossEntropyLoss()
         self._device = device
 
     @property
@@ -108,27 +120,30 @@ class AutoEncoder(nn.Module):
     def decoder(self):
         return self._decoder
 
-    def forward(self, x_enc, target):
+    def forward(self, x_enc, x_dec, global_condition, quantized_val):
+        print('x_enc.size(): {}'.format(x_enc.size()))
+
         z = self._encoder(x_enc)
-        #print('z.size(): {}'.format(z.size()))
+        print('z.size(): {}'.format(z.size()))
 
         z = self._pre_vq_conv(z)
-        #print('pre_vq_conv output size: {}'.format(z.size()))
+        print('pre_vq_conv output size: {}'.format(z.size()))
 
         vq_loss, quantized, perplexity, _ = self._vq_vae(z)
 
-        reconstructed_x = self._decoder(quantized)
-        reconstructed_x = reconstructed_x.view(95, 39)
-        #print('reconstructed_x.size() reshaped: {}'.format(reconstructed_x.size()))
+        local_condition = quantized
+        local_condition = local_condition.squeeze(-1)
+        print('local_condition.size(): {}'.format(local_condition.size()))
 
-        target_features = compute_features_from_inputs(target)
-        tensor_target_features = torch.tensor(target_features).to(self._device)
-        """print()
-        print('reconstructed_x.size(): {}'.format(reconstructed_x.size()))
-        print('target.size(): {}'.format(target.size()))
-        print('target_features.shape: {}'.format(target_features.shape))
-        print('tensor_target_features.size(): {}'.format(tensor_target_features.size()))"""
-        reconstruction_loss = self.criterion(reconstructed_x, tensor_target_features)
+        print('x_dec.size(): {}'.format(x_dec.size()))
+        x_dec = x_dec.squeeze(-1)
+        print('x_dec.size(): {}'.format(x_dec.size()))
+        
+        reconstructed_x = self._decoder(x_dec, local_condition, global_condition)
+        reconstructed_x = reconstructed_x.unsqueeze(-1)
+
+        reconstruction_loss = self.criterion(reconstructed_x, x_dec)
+
         loss = vq_loss + reconstruction_loss
 
         return loss, reconstructed_x, perplexity
@@ -137,7 +152,7 @@ class AutoEncoder(nn.Module):
         torch.save(self.state_dict(), path)
 
     @staticmethod
-    def load(self, path, configuration, device):
-        model = AutoEncoder(device, configuration)
+    def load(self, path, decoder, device, configuration, params, speaker_dic):
+        model = WaveNetAutoEncoder(decoder, device, configuration, params, speaker_dic)
         model.load_state_dict(torch.load(path, map_location=device))
         return model

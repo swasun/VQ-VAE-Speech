@@ -24,15 +24,13 @@
  #   SOFTWARE.                                                                       #
  #####################################################################################
 
-from vq_vae_wavenet.auto_encoder import AutoEncoder
+from vq_vae_wavenet.wavenet_auto_encoder import WaveNetAutoEncoder
 from vq_vae_wavenet.trainer import Trainer
 from vq_vae_wavenet.evaluator import Evaluator
 from vq_vae_wavenet.configuration import Configuration
 from vq_vae_wavenet.wavenet_type import WaveNetType
-from vq_vae_wavenet.utils import mu_law_encode, mu_law_decode, get_config
-from dataset.vctk_dataset import VCTKDataset
-from dataset.vctk import VCTK
-from vq_vae_mfcc.speech_dataset import SpeechDataset
+from vq_vae_speech.utils import mu_law_encode, mu_law_decode, get_config
+from dataset.speech_dataset import SpeechDataset
 
 import os
 import argparse
@@ -135,7 +133,7 @@ if __name__ == "__main__":
 
     dataset = SpeechDataset(params, gpu_ids, use_cuda)
 
-    auto_encoder = AutoEncoder(WaveNetType.WaveNet, device, configuration, params, dataset.speaker_dic).to(device) # Create an AutoEncoder model using our GPU device
+    auto_encoder = WaveNetAutoEncoder(WaveNetType.WaveNet, device, configuration, params, dataset.speaker_dic).to(device) # Create an AutoEncoder model using our GPU device
     #auto_encoder = auto_encoder.double()
     #auto_encoder = nn.DataParallel(auto_encoder.to(device), device_ids=gpu_ids) if use_cuda else auto_encoder
 

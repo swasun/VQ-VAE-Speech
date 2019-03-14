@@ -34,10 +34,10 @@ import torch.nn.functional as F
 import numpy as np
 
 
-class Encoder(nn.Module):
+class SpeechEncoder(nn.Module):
     
     def __init__(self, in_channels, num_hiddens, num_residual_layers, num_residual_hiddens, device, use_kaiming_normal=False):
-        super(Encoder, self).__init__()
+        super(SpeechEncoder, self).__init__()
 
         self._device = device
 

@@ -2,7 +2,6 @@
  # MIT License                                                                       #
  #                                                                                   #
  # Copyright (C) 2019 Charly Lamothe                                                 #
- # Copyright (C) 2018 Zalando Research                                               #
  #                                                                                   #
  # This file is part of VQ-VAE-WaveNet.                                              #
  #                                                                                   #
@@ -25,46 +24,52 @@
  #   SOFTWARE.                                                                       #
  #####################################################################################
 
+from vq_vae_wavenet.wavenet_factory import WaveNetFactory
+from vq_vae_speech.residual_stack import ResidualStack
+from vq_vae_speech.conv1d_builder import Conv1DBuilder
+from vq_vae_speech.jitter import Jitter
+
 import torch.nn as nn
+import torch.nn.functional as F
+import numpy as np
 
 
-class Residual(nn.Module):
-
-    def __init__(self, in_channels, num_hiddens, num_residual_hiddens, use_kaiming_normal=False):
-        super(Residual, self).__init__()
-        
-        relu_1 = nn.ReLU(True)
-        conv_1 = nn.Conv1d(
-            in_channels=in_channels,
-            out_channels=num_residual_hiddens,
-            kernel_size=3,
-            stride=1,
-            padding=1,
-            bias=False
-        )
-        if use_kaiming_normal:
-            conv_1 = nn.utils.weight_norm(conv_1)
-            nn.init.kaiming_normal_(conv_1.weight)
-
-        relu_2 = nn.ReLU(True)
-        conv_2 = nn.Conv1d(
-            in_channels=num_residual_hiddens,
-            out_channels=num_hiddens,
-            kernel_size=1,
-            stride=1,
-            bias=False
-        )
-        if use_kaiming_normal:
-            conv_2 = nn.utils.weight_norm(conv_2)
-            nn.init.kaiming_normal_(conv_2.weight)
-
-        # All parameters same as specified in the paper
-        self._block = nn.Sequential(
-            relu_1,
-            conv_1,
-            relu_2,
-            conv_2
-        )
+class WaveNetDecoder(nn.Module):
     
-    def forward(self, x):
-        return x + self._block(x)
+    def __init__(self, in_channels, num_hiddens, num_residual_layers, num_residual_hiddens, wavenet_type, use_kaiming_normal=False):
+        super(WaveNetDecoder, self).__init__()
+        
+        # Apply the randomized time-jitter regularization
+        self._jitter = Jitter()
+        
+        """
+        The jittered latent sequence is passed through a single
+        convolutional layer with filter length 3 and 128 hidden
+        units to mix information across neighboring timesteps.
+        """
+        self._conv_1 = Conv1DBuilder.build(
+            in_channels=256,
+            out_channels=128,
+            kernel_size=3,
+            use_kaiming_normal=use_kaiming_normal
+        )
+
+        """
+        The representation is then upsampled 320 times
+        (to match the 16kHz audio sampling rate).
+        """
+        self._upsample = nn.Upsample(scale_factor=320, mode='nearest')
+
+        self._wavenet = WaveNetFactory.build(wavenet_type)
+
+    def forward(self, x_dec, local_condition, global_condition):
+        #if self._is_training and self._use_jitter:
+        #    x = self._jitter(x)
+
+        x = self._conv_1(x_dec)
+
+        upsampled = self._upsample(x)
+
+        x = self._wavenet(upsampled, local_condition, global_condition)
+
+        return x
