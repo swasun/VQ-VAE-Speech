@@ -2,7 +2,6 @@
  # MIT License                                                                       #
  #                                                                                   #
  # Copyright (C) 2019 Charly Lamothe                                                 #
- # Copyright (C) 2018 Zalando Research                                               #
  #                                                                                   #
  # This file is part of VQ-VAE-Speech.                                               #
  #                                                                                   #

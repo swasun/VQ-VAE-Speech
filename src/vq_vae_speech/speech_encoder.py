@@ -26,7 +26,7 @@
 
 from vq_vae_speech.residual_stack import ResidualStack
 from vq_vae_speech.conv1d_builder import Conv1DBuilder
-from vq_vae_speech.utils import compute_features_from_inputs
+from vq_vae_speech.utils import compute_mfcc_features
 
 import torch
 import torch.nn as nn
@@ -105,7 +105,7 @@ class SpeechEncoder(nn.Module):
         )
 
     def forward(self, inputs):
-        features = compute_features_from_inputs(inputs)
+        features = compute_mfcc_features(inputs)
         features_tensor = torch.tensor(features).view(-1, 95, 39).to(self._device)
         print('inputs.size(): {}'.format(inputs.size()))
         print('features.shape: {}'.format(features.shape))

@@ -29,17 +29,13 @@ from vq_vae_mfcc.trainer import Trainer
 from vq_vae_mfcc.evaluator import Evaluator
 from vq_vae_mfcc.configuration import Configuration
 from dataset.speech_dataset import SpeechDataset
+from vq_vae_speech.utils import get_config
 
 import torch
 import torch.optim as optim
 import os
 import argparse
 import yaml
-
-
-def get_config(config):
-    with open(config, 'r') as stream:
-        return yaml.load(stream)
 
 
 if __name__ == "__main__":
@@ -66,7 +62,7 @@ if __name__ == "__main__":
 
     # Dataset and model hyperparameters
     configuration = Configuration.build_from_args(args)
-    params = get_config('speech_vctk.yaml')
+    params = get_config('../configurations/speech_vctk.yaml')
 
     #use_cuda = torch.cuda.is_available()
     #device = torch.device('cuda' if use_cuda else 'cpu') # Use GPU if cuda is available

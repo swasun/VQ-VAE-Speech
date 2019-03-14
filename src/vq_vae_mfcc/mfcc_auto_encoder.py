@@ -2,7 +2,6 @@
  # MIT License                                                                       #
  #                                                                                   #
  # Copyright (C) 2019 Charly Lamothe                                                 #
- # Copyright (C) 2018 Zalando Research                                               #
  #                                                                                   #
  # This file is part of VQ-VAE-Speech.                                               #
  #                                                                                   #
@@ -26,7 +25,7 @@
  #####################################################################################
 
 from vq_vae_speech.speech_encoder import SpeechEncoder
-from vq_vae_speech.utils import compute_features_from_inputs
+from vq_vae_speech.utils import compute_mfcc_features
 from vq_vae_mfcc.mfcc_decoder import MFCCDecoder
 from vq.vector_quantizer import VectorQuantizer
 from vq.vector_quantizer_ema import VectorQuantizerEMA
@@ -121,7 +120,7 @@ class MFCCAutoEncoder(nn.Module):
         reconstructed_x = reconstructed_x.view(95, 39)
         #print('reconstructed_x.size() reshaped: {}'.format(reconstructed_x.size()))
 
-        target_features = compute_features_from_inputs(target)
+        target_features = compute_mfcc_features(target)
         tensor_target_features = torch.tensor(target_features).to(self._device)
         """print()
         print('reconstructed_x.size(): {}'.format(reconstructed_x.size()))
