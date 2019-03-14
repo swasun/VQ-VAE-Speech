@@ -3,7 +3,7 @@
  #                                                                                   #
  # Copyright (C) 2019 Charly Lamothe                                                 #
  #                                                                                   #
- # This file is part of VQ-VAE-WaveNet.                                              #
+ # This file is part of VQ-VAE-Speech.                                              #
  #                                                                                   #
  #   Permission is hereby granted, free of charge, to any person obtaining a copy    #
  #   of this software and associated documentation files (the "Software"), to deal   #
@@ -24,9 +24,9 @@
  #   SOFTWARE.                                                                       #
  #####################################################################################
 
-from vq_vae_wavenet.residual_stack import ResidualStack
-from vq_vae_wavenet.conv1d_builder import Conv1DBuilder
-from vq_vae_wavenet.utils import compute_features_from_inputs
+from vq_vae_speech.residual_stack import ResidualStack
+from vq_vae_speech.conv1d_builder import Conv1DBuilder
+from vq_vae_speech.utils import compute_features_from_inputs
 
 import torch
 import torch.nn as nn
