@@ -226,7 +226,7 @@ class WaveNet(nn.Module):
         if g is not None:
             if self.embed_speakers is not None:
                 # (B x 1) -> (B x 1 x gin_channels)
-                g = self.embed_speakers(g.view(B, -1))
+                g = self.embed_speakers(g.view(B, -1).long())
                 # (B x gin_channels x 1)
                 g = g.transpose(1, 2)
                 assert g.dim() == 3
@@ -245,7 +245,8 @@ class WaveNet(nn.Module):
             assert c.size(-1) == x.size(-1)
 
         # Feed data to network
-        x = self.first_conv(x)
+        #print('x.dtype: {}'.format(x.double().dtype))
+        x = self.first_conv(torch.tensor(x, dtype=torch.double))
         skips = None
         for f in self.conv_layers:
             x, h = f(x, c, g_bct)

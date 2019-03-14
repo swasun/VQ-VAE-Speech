@@ -26,10 +26,8 @@
 
 from vq_vae_speech.speech_encoder import SpeechEncoder
 from vq_vae_wavenet.wavenet_decoder import WaveNetDecoder
-from vq_vae_wavenet.wavenet_factory import WaveNetFactory
 from vq.vector_quantizer import VectorQuantizer
 from vq.vector_quantizer_ema import VectorQuantizerEMA
-from wavenet_vocoder import WaveNet
 
 import torch
 import torch.nn as nn
@@ -47,7 +45,7 @@ class WaveNetAutoEncoder(nn.Module):
             num_residual_hiddens=params['d'],
             device=device,
             use_kaiming_normal=configuration.use_kaiming_normal
-        )
+        ).double()
 
         self._pre_vq_conv = nn.Conv1d(
             #in_channels=configuration.encoder_num_hiddens, 
@@ -56,7 +54,7 @@ class WaveNetAutoEncoder(nn.Module):
             64,
             kernel_size=1,
             stride=1
-        )
+        ).double()
 
         if configuration.decay > 0.0:
             self._vq_vae = VectorQuantizerEMA(
@@ -67,7 +65,7 @@ class WaveNetAutoEncoder(nn.Module):
                 params['d'],
                 configuration.commitment_cost,
                 configuration.decay
-            )
+            ).double()
         else:
             self._vq_vae = VectorQuantizer(
                 device,
@@ -76,7 +74,7 @@ class WaveNetAutoEncoder(nn.Module):
                 params['k'],
                 params['d'],
                 configuration.commitment_cost
-            )
+            ).double()
 
         self._decoder = WaveNetDecoder(
             params['k'],
@@ -84,21 +82,10 @@ class WaveNetAutoEncoder(nn.Module):
             configuration.decoder_num_residual_layers, 
             configuration.decoder_num_residual_hiddens,
             wavenet_type,
+            params,
+            speaker_dic,
             configuration.use_kaiming_normal
         )
-        #self._decoder = WaveNetFactory.build(wavenet_type)
-        """self._decoder = WaveNet(params['quantize'],
-                      params['n_layers'],
-                      params['n_loop'],
-                      params['residual_channels'],
-                      params['gate_channels'],
-                      params['skip_out_channels'],
-                      params['filter_size'],
-                      cin_channels=params['local_condition_dim'],
-                      gin_channels=params['global_condition_dim'],
-                      n_speakers=len(speaker_dic),
-                      upsample_conditional_features=True,
-                      upsample_scales=[2, 2, 2, 2, 2, 2]) # 64 downsamples"""
 
         self.criterion = nn.CrossEntropyLoss()
         self._device = device

@@ -22,7 +22,7 @@ class VCTKDataset(Dataset):
         #self.length = params['length']+1
         self.quantize = params['quantize']
 
-    def preprocessing(self,raw, quantized):
+    def preprocessing(self, raw, quantized):
 
         if self.length is not None:
             if len(raw) <=self.length :

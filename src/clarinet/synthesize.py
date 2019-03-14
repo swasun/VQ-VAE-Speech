@@ -35,12 +35,12 @@ import argparse
 
 parser = argparse.ArgumentParser(description='Train WaveNet of LJSpeech',
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-parser.add_argument('--data_path', type=str, default='../../DATASETS/ljspeech/', help='Dataset Path')
-parser.add_argument('--sample_path', type=str, default='../../samples', help='Sample Path')
-parser.add_argument('--save', '-s', type=str, default='../../params', help='Folder to save checkpoints.')
-parser.add_argument('--load', '-l', type=str, default='../../params', help='Checkpoint path to resume / test.')
-parser.add_argument('--loss', type=str, default='../../loss', help='Folder to save loss')
-parser.add_argument('--log', type=str, default='../../log', help='Log folder.')
+parser.add_argument('--data_path', type=str, default='../DATASETS/ljspeech/', help='Dataset Path')
+parser.add_argument('--sample_path', type=str, default='../samples', help='Sample Path')
+parser.add_argument('--save', '-s', type=str, default='../params', help='Folder to save checkpoints.')
+parser.add_argument('--load', '-l', type=str, default='../params', help='Checkpoint path to resume / test.')
+parser.add_argument('--loss', type=str, default='../loss', help='Folder to save loss')
+parser.add_argument('--log', type=str, default='../log', help='Log folder.')
 parser.add_argument('--model_name', type=str, default='wavenet_gaussian_01', help='Model Name')
 parser.add_argument('--load_step', type=int, default=0, help='Load Step')
 

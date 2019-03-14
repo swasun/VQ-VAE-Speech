@@ -28,6 +28,7 @@ from vq_vae_wavenet.wavenet_factory import WaveNetFactory
 from vq_vae_speech.residual_stack import ResidualStack
 from vq_vae_speech.conv1d_builder import Conv1DBuilder
 from vq_vae_speech.jitter import Jitter
+from wavenet_vocoder.wavenet import WaveNet
 
 import torch.nn as nn
 import torch.nn.functional as F
@@ -36,7 +37,7 @@ import numpy as np
 
 class WaveNetDecoder(nn.Module):
     
-    def __init__(self, in_channels, num_hiddens, num_residual_layers, num_residual_hiddens, wavenet_type, use_kaiming_normal=False):
+    def __init__(self, in_channels, num_hiddens, num_residual_layers, num_residual_hiddens, wavenet_type, params, speaker_dic, use_kaiming_normal=False):
         super(WaveNetDecoder, self).__init__()
         
         # Apply the randomized time-jitter regularization
@@ -60,16 +61,35 @@ class WaveNetDecoder(nn.Module):
         """
         self._upsample = nn.Upsample(scale_factor=320, mode='nearest')
 
-        self._wavenet = WaveNetFactory.build(wavenet_type)
+        #self._wavenet = WaveNetFactory.build(wavenet_type)
+        self._wavenet = WaveNet(params['quantize'],
+                      params['n_layers'],
+                      params['n_loop'],
+                      params['residual_channels'],
+                      params['gate_channels'],
+                      params['skip_out_channels'],
+                      params['filter_size'],
+                      cin_channels=params['local_condition_dim'],
+                      gin_channels=params['global_condition_dim'],
+                      n_speakers=len(speaker_dic),
+                      #upsample_conditional_features=True,
+                      upsample_scales=[2, 2, 2, 2, 2, 2]).double() # 64 downsamples
 
     def forward(self, x_dec, local_condition, global_condition):
         #if self._is_training and self._use_jitter:
         #    x = self._jitter(x)
 
-        x = self._conv_1(x_dec)
+        #x = self._conv_1(x_dec)
+        x = x_dec
 
-        upsampled = self._upsample(x)
+        #upsampled = self._upsample(x)
 
-        x = self._wavenet(upsampled, local_condition, global_condition)
+        print('x_dec.size(): {}'.format(x.size()))
+        print('x.size(): {}'.format(x.size()))
+        #print('upsampled.size(): {}'.format(upsampled.size()))
+        print('local_condition.size(): {}'.format(local_condition.size()))
+        print('global_condition.size(): {}'.format(global_condition.size()))
+
+        x = self._wavenet(x_dec, local_condition.double(), global_condition)
 
         return x

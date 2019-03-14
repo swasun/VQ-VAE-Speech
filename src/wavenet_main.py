@@ -134,7 +134,7 @@ if __name__ == "__main__":
     dataset = SpeechDataset(params, gpu_ids, use_cuda)
 
     auto_encoder = WaveNetAutoEncoder(WaveNetType.WaveNet, device, configuration, params, dataset.speaker_dic).to(device) # Create an AutoEncoder model using our GPU device
-    #auto_encoder = auto_encoder.double()
+    auto_encoder = auto_encoder.double()
     #auto_encoder = nn.DataParallel(auto_encoder.to(device), device_ids=gpu_ids) if use_cuda else auto_encoder
 
     optimizer = optim.Adam(auto_encoder.parameters(), lr=configuration.learning_rate, amsgrad=True) # Create an Adam optimizer instance
