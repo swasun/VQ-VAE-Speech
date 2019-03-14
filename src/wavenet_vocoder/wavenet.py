@@ -246,7 +246,7 @@ class WaveNet(nn.Module):
 
         # Feed data to network
         #print('x.dtype: {}'.format(x.double().dtype))
-        x = self.first_conv(torch.tensor(x, dtype=torch.double))
+        x = self.first_conv(torch.tensor(x, dtype=torch.double)) # TODO: change this ugly fix
         skips = None
         for f in self.conv_layers:
             x, h = f(x, c, g_bct)
