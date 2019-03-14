@@ -58,7 +58,7 @@ def mu_law_decode(y, mu = 256):
     return x.astype(np.float32)
 
 def compute_mfcc_features(signal, rate=16000):
-    mfcc_features = mfcc(signal, rate)
+    mfcc_features = mfcc(signal.cpu(), rate)
     d_mfcc_features = delta(mfcc_features, 2)
     a_mfcc_features = delta(d_mfcc_features, 2)
     concatenated_features = np.concatenate((

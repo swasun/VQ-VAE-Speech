@@ -107,33 +107,33 @@ class SpeechEncoder(nn.Module):
     def forward(self, inputs):
         features = compute_mfcc_features(inputs)
         features_tensor = torch.tensor(features).view(-1, 95, 39).to(self._device)
-        print('inputs.size(): {}'.format(inputs.size()))
-        print('features.shape: {}'.format(features.shape))
-        print('features_tensor.size(): {}'.format(features_tensor.size()))
+        #print('inputs.size(): {}'.format(inputs.size()))
+        #print('features.shape: {}'.format(features.shape))
+        #print('features_tensor.size(): {}'.format(features_tensor.size()))
 
         #features_tensor = inputs
 
         x = self._conv_1(features_tensor)
-        print('conv_1 output size: {}'.format(x.size()))
+        #print('conv_1 output size: {}'.format(x.size()))
         x = F.relu(x)
         
         x = self._conv_2(x)
-        print('conv_2 output size: {}'.format(x.size()))
+        #print('conv_2 output size: {}'.format(x.size()))
         x = F.relu(x)
         
         x = self._conv_3(x)
-        print('conv_3 output size: {}'.format(x.size()))
+        #print('conv_3 output size: {}'.format(x.size()))
         x = F.relu(x)
 
         x = self._conv_4(x)
-        print('conv_4 output size: {}'.format(x.size()))
+        #print('conv_4 output size: {}'.format(x.size()))
         x = F.relu(x)
 
         x = self._conv_5(x)
-        print('conv_5 output size: {}'.format(x.size()))
+        #print('conv_5 output size: {}'.format(x.size()))
         x = F.relu(x)
 
         x = self._residual_stack(x)
-        print('residual_stack output size: {}'.format(x.size()))
+        #print('residual_stack output size: {}'.format(x.size()))
 
         return x

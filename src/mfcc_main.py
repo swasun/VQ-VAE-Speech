@@ -68,7 +68,7 @@ if __name__ == "__main__":
     #device = torch.device('cuda' if use_cuda else 'cpu') # Use GPU if cuda is available
     #gpu_ids = [i for i in range(torch.cuda.device_count())]
     use_cuda = True
-    device = 'cuda:1'
+    device = 'cuda:0'
     gpu_ids = [1]
 
     # Set the result path and create the directory if it doesn't exist
