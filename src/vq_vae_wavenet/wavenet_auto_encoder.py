@@ -24,7 +24,7 @@
  #   SOFTWARE.                                                                       #
  #####################################################################################
 
-from vq_vae_wavenet.wavenet_encoder import WaveNetEncoder
+from vq_vae_speech.speech_encoder import SpeechEncoder
 from vq_vae_wavenet.wavenet_decoder import WaveNetDecoder
 from vq_vae_wavenet.wavenet_factory import WaveNetFactory
 from vq.vector_quantizer import VectorQuantizer
@@ -40,7 +40,7 @@ class WaveNetAutoEncoder(nn.Module):
     def __init__(self, wavenet_type, device, configuration, params, speaker_dic):
         super(WaveNetAutoEncoder, self).__init__()
         
-        self._encoder = WaveNetEncoder(
+        self._encoder = SpeechEncoder(
             in_channels=95,
             num_hiddens=params['d'],
             num_residual_layers=2,
