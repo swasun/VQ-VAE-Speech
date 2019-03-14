@@ -1,5 +1,5 @@
 from dataset.vctk import VCTK
-from vq_vae_wavenet.utils import load_wav, mu_law_encode
+from vq_vae_speech.utils import load_wav, mu_law_encode
 
 from torch.utils.data import Dataset
 import numpy as np

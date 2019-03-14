@@ -27,7 +27,7 @@
 
 from vq_vae_speech.speech_encoder import SpeechEncoder
 from vq_vae_speech.utils import compute_features_from_inputs
-from vq_vae_mfcc.mcc_decoder import mcc_Decoder
+from vq_vae_mfcc.mfcc_decoder import MFCCDecoder
 from vq.vector_quantizer import VectorQuantizer
 from vq.vector_quantizer_ema import VectorQuantizerEMA
 
