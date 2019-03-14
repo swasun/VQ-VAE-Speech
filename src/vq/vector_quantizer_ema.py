@@ -100,7 +100,8 @@ class VectorQuantizerEMA(nn.Module):
         """
 
         # Convert inputs from BCHW -> BHWC
-        inputs = inputs.permute(0, 2, 3, 1).contiguous()
+        #inputs = inputs.permute(0, 2, 3, 1).contiguous()
+        inputs = inputs.permute(1, 2, 0).contiguous()
         input_shape = inputs.shape
         
         # Flatten input
@@ -110,10 +111,10 @@ class VectorQuantizerEMA(nn.Module):
         distances = (torch.sum(flat_input**2, dim=1, keepdim=True) 
                     + torch.sum(self._embedding.weight**2, dim=1)
                     - 2 * torch.matmul(flat_input, self._embedding.weight.t()))
-            
+
         # Encoding
         encoding_indices = torch.argmin(distances, dim=1).unsqueeze(1)
-        encodings = torch.zeros(encoding_indices.shape[0], self._num_embeddings).to(self._device)
+        encodings = torch.zeros(encoding_indices.shape[0], self._num_embeddings, dtype=torch.double).to(self._device)
         encodings.scatter_(1, encoding_indices, 1)
         
         # Use EMA to update the embedding vectors
@@ -144,7 +145,8 @@ class VectorQuantizerEMA(nn.Module):
         perplexity = torch.exp(-torch.sum(avg_probs * torch.log(avg_probs + 1e-10)))
         
         # Convert quantized from BHWC -> BCHW
-        return loss, quantized.permute(0, 3, 1, 2).contiguous(), perplexity, encodings
+        #return loss, quantized.permute(0, 3, 1, 2).contiguous(), perplexity, encodings
+        return loss, quantized.permute(2, 0, 1).contiguous(), perplexity, encodings
 
     @property
     def embedding(self):

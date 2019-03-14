@@ -1,4 +1,5 @@
 import torch.nn as nn
+import numpy as np
 
 
 class Jitter(nn.Module):
@@ -8,13 +9,26 @@ class Jitter(nn.Module):
 
         self._probability = probability
 
-    def forward(self, inputs):
-        """
-        Current algorithm:
-        for i in range(len(quantized)):
-            before = random(0.12)
-            # TODO: check if lower/upper bound is respected
-            quantized[i] = quantized[i-1] if before else quantized[i+1]
-        """
+    def forward(self, quantized):
+        length = quantized.size(2)
+        for i in range(length):
+            """
+            Each latent vector is replace with either of its neighbors with a certain probability
+            (0.12 from the paper).
+            """
+            replace = [True, False][np.random.choice([1, 0], p=[self._probability, 1 - self._probability])]
+            if replace:
+                if i == 0:
+                    neighbor_index = i + 1
+                elif i == length - 1:
+                    neighbor_index = i - 1
+                else:
+                    """
+                    "We independently sample whether it is to
+                    be replaced with the token right after
+                    or before it."
+                    """
+                    neighbor_index = i + np.random.choice([-1, 1], p=[0.5, 0.5])
+                quantized[:, i, :] = quantized[:, neighbor_index, :]
 
-        return inputs
+        return quantized

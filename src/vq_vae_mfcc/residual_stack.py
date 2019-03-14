@@ -2,6 +2,7 @@
  # MIT License                                                                       #
  #                                                                                   #
  # Copyright (C) 2019 Charly Lamothe                                                 #
+ # Copyright (C) 2018 Zalando Research                                               #
  #                                                                                   #
  # This file is part of VQ-VAE-WaveNet.                                              #
  #                                                                                   #
@@ -24,52 +25,22 @@
  #   SOFTWARE.                                                                       #
  #####################################################################################
 
-from vq_vae_wavenet.residual_stack import ResidualStack
-from vq_vae_wavenet.wavenet_factory import WaveNetFactory
-from vq_vae_wavenet.conv1d_builder import Conv1DBuilder
-from vq_vae_wavenet.jitter import Jitter
+from vq_vae_mfcc.residual import Residual
 
 import torch.nn as nn
 import torch.nn.functional as F
-import numpy as np
 
 
-class Decoder(nn.Module):
-    
-    def __init__(self, in_channels, num_hiddens, num_residual_layers, num_residual_hiddens, wavenet_type, use_kaiming_normal=False):
-        super(Decoder, self).__init__()
+class ResidualStack(nn.Module):
+
+    def __init__(self, in_channels, num_hiddens, num_residual_layers, num_residual_hiddens, use_kaiming_normal=False):
+        super(ResidualStack, self).__init__()
         
-        # Apply the randomized time-jitter regularization
-        self._jitter = Jitter()
+        self._num_residual_layers = num_residual_layers
+        self._layers = nn.ModuleList(
+            [Residual(in_channels, num_hiddens, num_residual_hiddens, use_kaiming_normal)] * self._num_residual_layers)
         
-        """
-        The jittered latent sequence is passed through a single
-        convolutional layer with filter length 3 and 128 hidden
-        units to mix information across neighboring timesteps.
-        """
-        self._conv_1 = Conv1DBuilder.build(
-            in_channels=256,
-            out_channels=128,
-            kernel_size=3,
-            use_kaiming_normal=use_kaiming_normal
-        )
-
-        """
-        The representation is then upsampled 320 times
-        (to match the 16kHz audio sampling rate).
-        """
-        self._upsample = nn.Upsample(scale_factor=320, mode='nearest')
-
-        self._wavenet = WaveNetFactory.build(wavenet_type)
-
-    def forward(self, x_dec, local_condition, global_condition):
-        #if self._is_training and self._use_jitter:
-        #    x = self._jitter(x)
-
-        x = self._conv_1(x_dec)
-
-        upsampled = self._upsample(x)
-
-        x = self._wavenet(upsampled, local_condition, global_condition)
-
-        return x
+    def forward(self, x):
+        for i in range(self._num_residual_layers):
+            x = self._layers[i](x)
+        return F.relu(x)

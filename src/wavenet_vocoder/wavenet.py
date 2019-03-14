@@ -240,6 +240,8 @@ class WaveNet(nn.Module):
                 c = f(c)
             # B x C x T
             c = c.squeeze(1)
+            print('c.size(): {}'.format(c.size(-1)))
+            print('x.size(): {}'.format(x.size(-1)))
             assert c.size(-1) == x.size(-1)
 
         # Feed data to network

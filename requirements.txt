@@ -7,3 +7,5 @@ lws
 docopt
 nnmnkwii
 tensorboardX
+pyyaml
+tqdm

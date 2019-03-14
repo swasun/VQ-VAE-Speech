@@ -1,6 +1,8 @@
 import librosa
 import numpy as np
 import yaml
+from python_speech_features.base import mfcc
+from python_speech_features import delta
 
 
 def get_config(config):
@@ -27,3 +29,21 @@ def mu_law_decode(y, mu = 256):
     y = 2 * y / mu - 1
     x = np.sign(y) / mu * ((mu) ** np.abs(y) - 1)
     return x.astype(np.float32)
+
+def compute_features_from_inputs(signal, rate=16000):
+    mfcc_features = mfcc(signal, rate)
+    d_mfcc_features = delta(mfcc_features, 2)
+    a_mfcc_features = delta(d_mfcc_features, 2)
+    concatenated_features = np.concatenate((
+            mfcc_features,
+            d_mfcc_features,
+            a_mfcc_features
+        ),
+        axis=1
+    )
+    """print('signal.shape: {}'.format(signal.shape))
+    print('mfcc_features.shape: {}'.format(mfcc_features.shape))
+    print('d_mfcc_features.shape: {}'.format(d_mfcc_features.shape))
+    print('a_mfcc_features.shape: {}'.format(a_mfcc_features.shape))
+    print('concatenated_features.shape: {}'.format(concatenated_features.shape))"""
+    return concatenated_features

@@ -2,6 +2,7 @@
  # MIT License                                                                       #
  #                                                                                   #
  # Copyright (C) 2019 Charly Lamothe                                                 #
+ # Copyright (C) 2018 Zalando Research                                               #
  #                                                                                   #
  # This file is part of VQ-VAE-WaveNet.                                              #
  #                                                                                   #
@@ -24,52 +25,57 @@
  #   SOFTWARE.                                                                       #
  #####################################################################################
 
-from vq_vae_wavenet.residual_stack import ResidualStack
-from vq_vae_wavenet.wavenet_factory import WaveNetFactory
-from vq_vae_wavenet.conv1d_builder import Conv1DBuilder
-from vq_vae_wavenet.jitter import Jitter
-
-import torch.nn as nn
-import torch.nn.functional as F
+import matplotlib.pyplot as plt
+from torchvision.utils import make_grid
 import numpy as np
 
 
-class Decoder(nn.Module):
-    
-    def __init__(self, in_channels, num_hiddens, num_residual_layers, num_residual_hiddens, wavenet_type, use_kaiming_normal=False):
-        super(Decoder, self).__init__()
-        
-        # Apply the randomized time-jitter regularization
-        self._jitter = Jitter()
-        
-        """
-        The jittered latent sequence is passed through a single
-        convolutional layer with filter length 3 and 128 hidden
-        units to mix information across neighboring timesteps.
-        """
-        self._conv_1 = Conv1DBuilder.build(
-            in_channels=256,
-            out_channels=128,
-            kernel_size=3,
-            use_kaiming_normal=use_kaiming_normal
+class Evaluator(object):
+
+    def __init__(self, device, model, dataset):
+        self._device = device
+        self._model = model
+        self._dataset = dataset
+
+    def reconstruct(self):
+        self._model.eval()
+
+        (self._valid_originals, _) = next(iter(self._dataset.validation_loader))
+        self._valid_originals = self._valid_originals.to(self._device)
+
+        vq_output_eval = self._model.pre_vq_conv(self._model.encoder(self._valid_originals))
+        _, valid_quantize, _, _ = self._model.vq_vae(vq_output_eval)
+        self._valid_reconstructions = self._model.decoder(valid_quantize)
+
+        (train_originals, _) = next(iter(self._dataset.training_loader))
+        train_originals = train_originals.to(self._device)
+        _, self._train_reconstructions, _, _ = self._model.vq_vae(train_originals)
+
+    def save_original_images_plot(self, path):
+        self._save_image(make_grid(self._valid_originals.cpu()+0.5), path)
+
+    def save_validation_reconstructions_plot(self, path):
+        self._save_image(make_grid(self._valid_reconstructions.cpu().data)+0.5, path)
+
+    def save_embedding_plot(self, path):
+        try:
+            import umap
+        except ImportError:
+            raise ValueError('umap-learn not installed')
+
+        map = umap.UMAP(
+            n_neighbors=3,
+            min_dist=0.1,
+            metric='euclidean'
         )
 
-        """
-        The representation is then upsampled 320 times
-        (to match the 16kHz audio sampling rate).
-        """
-        self._upsample = nn.Upsample(scale_factor=320, mode='nearest')
+        projection = map.fit_transform(self._model.vq_vae.embedding.weight.data.cpu())
 
-        self._wavenet = WaveNetFactory.build(wavenet_type)
+        fig = plt.figure()
+        plt.scatter(projection[:,0], projection[:,1], alpha=0.3)
+        fig.savefig(path)
+        plt.close(fig)
 
-    def forward(self, x_dec, local_condition, global_condition):
-        #if self._is_training and self._use_jitter:
-        #    x = self._jitter(x)
-
-        x = self._conv_1(x_dec)
-
-        upsampled = self._upsample(x)
-
-        x = self._wavenet(upsampled, local_condition, global_condition)
-
-        return x
+    def _save_image(self, img, path):
+        npimg = img.numpy()
+        plt.imsave(path, np.transpose(npimg, (1, 2, 0)))
