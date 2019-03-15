@@ -53,8 +53,8 @@ class WaveNetDecoder(nn.Module):
         units to mix information across neighboring timesteps.
         """
         self._conv_1 = Conv1DBuilder.build(
-            in_channels=256,
-            out_channels=128,
+            in_channels=64,
+            out_channels=768,
             kernel_size=3,
             use_kaiming_normal=configuration['use_kaiming_normal']
         )
@@ -78,8 +78,7 @@ class WaveNetDecoder(nn.Module):
             gin_channels=configuration['global_condition_dim'],
             n_speakers=len(speaker_dic),
             upsample_conditional_features=True,
-            upsample_scales=[2, 2, 2, 2, 2, 2] # 64 downsamples
-            #upsample_scales=[20, 20, 20]
+            upsample_scales=[2, 2, 2, 2, 2, 2, 12] # 64 downsamples
         )
 
     def forward(self, y, local_condition, global_condition):
@@ -89,12 +88,6 @@ class WaveNetDecoder(nn.Module):
         local_condition = self._conv_1(torch.tensor(local_condition, dtype=torch.double)) # FIXME: improve this ugly fix
 
         #local_condition = self._upsample(local_condition)
-
-        print('x_dec.size(): {}'.format(x.size()))
-        print('x.size(): {}'.format(x.size()))
-        #print('upsampled.size(): {}'.format(upsampled.size()))
-        print('local_condition.size(): {}'.format(local_condition.size()))
-        print('global_condition.size(): {}'.format(global_condition.size()))
 
         x = self._wavenet(y, local_condition.double(), global_condition)
 

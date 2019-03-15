@@ -47,11 +47,11 @@ def get_config(config):
         return yaml.load(stream)
 
 
-def train(model, use_cuda, train_loader, val_loader, device):
+def train(configuration, model, use_cuda, train_loader, val_loader, device):
     parameters = list(model.parameters())
-    opt = torch.optim.Adam([p for p in parameters if p.requires_grad], lr=params['learning_rate'])
+    opt = torch.optim.Adam([p for p in parameters if p.requires_grad], lr=configuration['learning_rate'])
 
-    for epoch in range(params['start_epoch'], params['num_epochs']):
+    for epoch in range(configuration['start_epoch'], configuration['num_epochs']):
         train_bar = tqdm(train_loader)
         model.train()
         for data in train_bar:
@@ -81,9 +81,9 @@ def train(model, use_cuda, train_loader, val_loader, device):
             output = MuLaw.decode(output)
             input_mu = MuLaw.decode(input_mu)
 
-            #librosa.output.write_wav(os.path.join(save_path, '{}_output.wav'.format(epoch)), output, params['sampling_rate'])
-            #librosa.output.write_wav(os.path.join(save_path, '{}_input_mu.wav'.format(epoch)), input_mu, params['sampling_rate'])
-            #librosa.output.write_wav(os.path.join(save_path, '{}_input.wav'.format(epoch)), input, params['sampling_rate'])
+            #librosa.output.write_wav(os.path.join(save_path, '{}_output.wav'.format(epoch)), output, configuration['sampling_rate'])
+            #librosa.output.write_wav(os.path.join(save_path, '{}_input_mu.wav'.format(epoch)), input_mu, configuration['sampling_rate'])
+            #librosa.output.write_wav(os.path.join(save_path, '{}_input.wav'.format(epoch)), input, configuration['sampling_rate'])
 
 
 
@@ -102,9 +102,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Dataset and model hyperparameters
-    configuration = Configuration.build_from_args(args)
-
-    params = get_config('../configurations/vctk.yaml')
+    configuration = get_config('../configurations/vctk.yaml')
 
     #use_cuda = torch.cuda.is_available()
     use_cuda = False
@@ -130,8 +128,8 @@ if __name__ == "__main__":
     optimizer = optim.Adam(auto_encoder.parameters(), lr=configuration['learning_rate'], amsgrad=True) # Create an Adam optimizer instance
     #trainer = Trainer(device, auto_encoder, optimizer, dataset) # Create a trainer instance
     #trainer.train(configuration.num_training_updates) # Train our model
-    train(auto_encoder, use_cuda, dataset.training_loader, dataset.validation_loader, device)
-    auto_encoder.save(results_path + os.sep + args.model_name) # Save our trained model
+    train(configuration, auto_encoder, use_cuda, dataset.training_loader, dataset.validation_loader, device)
+    #auto_encoder.save(results_path + os.sep + args.model_name) # Save our trained model
     #trainer.save_loss_plot(results_path + os.sep + args.loss_plot_name) # Save the loss plot
 
     #evaluator = Evaluator(device, auto_encoder, dataset) # Create en Evaluator instance to evaluate our trained model
