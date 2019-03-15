@@ -105,12 +105,12 @@ if __name__ == "__main__":
     configuration = get_config('../configurations/vctk.yaml')
 
     #use_cuda = torch.cuda.is_available()
-    use_cuda = False
+    use_cuda = True
     #device = torch.device('cuda' if use_cuda else 'cpu') # Use GPU if cuda is available
     #gpu_ids = [i for i in range(torch.cuda.device_count())]
     #device = 'cuda:1'
-    device = 'cpu'
-    gpu_ids = [1]
+    device = 'cuda:0'
+    gpu_ids = [0]
 
     # Set the result path and create the directory if it doesn't exist
     results_path = '..' + os.sep + args.results_path
@@ -122,7 +122,6 @@ if __name__ == "__main__":
     dataset = SpeechDataset(configuration, gpu_ids, use_cuda)
 
     auto_encoder = WaveNetAutoEncoder(configuration, dataset.speaker_dic, device).to(device) # Create an AutoEncoder model using our GPU device
-    auto_encoder = auto_encoder.double()
     #auto_encoder = nn.DataParallel(auto_encoder.to(device), device_ids=gpu_ids) if use_cuda else auto_encoder
 
     optimizer = optim.Adam(auto_encoder.parameters(), lr=configuration['learning_rate'], amsgrad=True) # Create an Adam optimizer instance

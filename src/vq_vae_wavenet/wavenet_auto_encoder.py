@@ -47,14 +47,14 @@ class WaveNetAutoEncoder(nn.Module):
             input_features_type=configuration['input_features_type'],
             features_filters=configuration['features_filters'],
             device=device
-        ).double()
+        )
 
         self._pre_vq_conv = nn.Conv1d(
             in_channels=configuration['num_embeddings'],
             out_channels=configuration['embedding_dim'],
             kernel_size=1,
             stride=1
-        ).double()
+        )
 
         if configuration['decay'] > 0.0:
             self._vq = VectorQuantizerEMA(
@@ -74,7 +74,8 @@ class WaveNetAutoEncoder(nn.Module):
 
         self._decoder = WaveNetDecoder(
             configuration,
-            speaker_dic
+            speaker_dic,
+            device
         )
 
         self._criterion = nn.MSELoss()
@@ -97,26 +98,19 @@ class WaveNetAutoEncoder(nn.Module):
         return self._decoder
 
     def forward(self, x_enc, x_dec, global_condition, quantized_val):
-        print('x_enc.size(): {}'.format(x_enc.size()))
-
         z = self._encoder(x_enc)
-        print('z.size(): {}'.format(z.size()))
 
         z = self._pre_vq_conv(z)
-        print('pre_vq_conv output size: {}'.format(z.size()))
 
         vq_loss, quantized, perplexity, _ = self._vq(z)
 
         local_condition = quantized
         local_condition = local_condition.squeeze(-1)
-        print('local_condition.size(): {}'.format(local_condition.size()))
-
-        print('x_dec.size(): {}'.format(x_dec.size()))
         x_dec = x_dec.squeeze(-1)
-        print('x_dec.size(): {}'.format(x_dec.size()))
         
         reconstructed_x = self._decoder(x_dec, local_condition, global_condition)
         reconstructed_x = reconstructed_x.unsqueeze(-1)
+        x_dec = x_dec.unsqueeze(-1)
 
         reconstruction_loss = self._criterion(reconstructed_x, x_dec)
         loss = vq_loss + reconstruction_loss

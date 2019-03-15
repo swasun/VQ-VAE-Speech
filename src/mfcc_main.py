@@ -59,7 +59,7 @@ if __name__ == "__main__":
     #gpu_ids = [i for i in range(torch.cuda.device_count())]
     use_cuda = True
     device = 'cuda:0'
-    gpu_ids = [1]
+    gpu_ids = [0]
 
     # Set the result path and create the directory if it doesn't exist
     results_path = '..' + os.sep + args.results_path
@@ -69,7 +69,6 @@ if __name__ == "__main__":
     dataset = SpeechDataset(configuration, gpu_ids, use_cuda)
 
     auto_encoder = FeaturesAutoEncoder(configuration, device).to(device) # Create an AutoEncoder model using our GPU device
-    auto_encoder = auto_encoder.double()
 
     optimizer = optim.Adam(auto_encoder.parameters(), lr=configuration['learning_rate'], amsgrad=True) # Create an Adam optimizer instance
     trainer = Trainer(device, auto_encoder, optimizer, dataset) # Create a trainer instance

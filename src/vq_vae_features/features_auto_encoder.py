@@ -117,7 +117,7 @@ class FeaturesAutoEncoder(nn.Module):
 
         reconstructed_x = reconstructed_x.view(self._features_dim, self._features_filters * 3)
         y_features = SpeechFeatures.features_by_name(self._output_features_type, y)
-        tensor_y_features = torch.tensor(y_features).to(self._device)
+        tensor_y_features = torch.tensor(y_features, dtype=torch.float).to(self._device)
 
         reconstruction_loss = self._criterion(reconstructed_x, tensor_y_features)
         loss = vq_loss + reconstruction_loss

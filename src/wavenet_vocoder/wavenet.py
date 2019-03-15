@@ -240,13 +240,10 @@ class WaveNet(nn.Module):
                 c = f(c)
             # B x C x T
             c = c.squeeze(1)
-            print('c.size(): {}'.format(c.size(-1)))
-            print('x.size(): {}'.format(x.size(-1)))
             assert c.size(-1) == x.size(-1)
 
         # Feed data to network
-        #print('x.dtype: {}'.format(x.double().dtype))
-        x = self.first_conv(torch.tensor(x, dtype=torch.double)) # FIXME: change this ugly fix
+        x = self.first_conv(x)
         skips = None
         for f in self.conv_layers:
             x, h = f(x, c, g_bct)

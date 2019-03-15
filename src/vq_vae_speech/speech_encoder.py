@@ -110,7 +110,7 @@ class SpeechEncoder(nn.Module):
 
     def forward(self, inputs):
         features = SpeechFeatures.features_by_name(self._input_features_type, inputs)
-        features_tensor = torch.tensor(features).view(-1, features.shape[0], self._features_filters * 3).to(self._device)
+        features_tensor = torch.tensor(features, dtype=torch.float).view(-1, features.shape[0], self._features_filters * 3).to(self._device)
 
         x = F.relu(self._conv_1(features_tensor))
         

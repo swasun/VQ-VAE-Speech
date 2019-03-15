@@ -38,7 +38,7 @@ import numpy as np
 
 class WaveNetDecoder(nn.Module):
     
-    def __init__(self, configuration, speaker_dic):
+    def __init__(self, configuration, speaker_dic, device):
         super(WaveNetDecoder, self).__init__()
 
         self._use_jitter = configuration['use_jitter']
@@ -59,12 +59,6 @@ class WaveNetDecoder(nn.Module):
             use_kaiming_normal=configuration['use_kaiming_normal']
         )
 
-        """
-        The representation is then upsampled 320 times
-        (to match the 16kHz audio sampling rate).
-        """
-        self._upsample = nn.Upsample(scale_factor=320, mode='nearest')
-
         #self._wavenet = WaveNetFactory.build(wavenet_type)
         self._wavenet = WaveNet(
             configuration['quantize'],
@@ -78,17 +72,17 @@ class WaveNetDecoder(nn.Module):
             gin_channels=configuration['global_condition_dim'],
             n_speakers=len(speaker_dic),
             upsample_conditional_features=True,
-            upsample_scales=[2, 2, 2, 2, 2, 2, 12] # 64 downsamples
+            upsample_scales=[2, 2, 2, 2, 2, 2, 12] # 768
         )
+
+        self._device = device
 
     def forward(self, y, local_condition, global_condition):
         if self._use_jitter and self.training:
             local_condition = self._jitter(local_condition)
 
-        local_condition = self._conv_1(torch.tensor(local_condition, dtype=torch.double)) # FIXME: improve this ugly fix
+        local_condition = self._conv_1(local_condition)
 
-        #local_condition = self._upsample(local_condition)
-
-        x = self._wavenet(y, local_condition.double(), global_condition)
+        x = self._wavenet(y, local_condition, global_condition)
 
         return x

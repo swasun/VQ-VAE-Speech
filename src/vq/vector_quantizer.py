@@ -98,7 +98,7 @@ class VectorQuantizer(nn.Module):
             
         # Encoding
         encoding_indices = torch.argmin(distances, dim=1).unsqueeze(1)
-        encodings = torch.zeros(encoding_indices.shape[0], self._num_embeddings).to(self._device)
+        encodings = torch.zeros(encoding_indices.shape[0], self._num_embeddings, dtype=torch.float).to(self._device)
         encodings.scatter_(1, encoding_indices, 1)
         
         # Quantize and unflatten
