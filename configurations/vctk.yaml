@@ -56,6 +56,7 @@ gate_channels: 768
 skip_out_channels: 256
 global_condition_dim: 128
 local_condition_dim: 768
+wavenet_type: 'WaveNet'
 
 # Features
 input_features_type: 'mfcc'

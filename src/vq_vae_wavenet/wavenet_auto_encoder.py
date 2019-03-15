@@ -35,59 +35,47 @@ import torch.nn as nn
 
 class WaveNetAutoEncoder(nn.Module):
     
-    def __init__(self, wavenet_type, device, configuration, params, speaker_dic):
+    def __init__(self, configuration, speaker_dic, device):
         super(WaveNetAutoEncoder, self).__init__()
         
         self._encoder = SpeechEncoder(
-            in_channels=95,
-            num_hiddens=params['d'],
-            num_residual_layers=2,
-            num_residual_hiddens=params['d'],
-            use_kaiming_normal=configuration.use_kaiming_normal,
+            in_channels=configuration['features_dim'],
+            num_hiddens=configuration['num_hiddens'],
+            num_residual_layers=configuration['num_residual_layers'],
+            num_residual_hiddens=configuration['residual_channels'],
+            use_kaiming_normal=configuration['use_kaiming_normal'],
             device=device
         ).double()
 
         self._pre_vq_conv = nn.Conv1d(
-            #in_channels=configuration.encoder_num_hiddens, 
-            #out_channels=configuration.embedding_dim,
-            768,
-            64,
+            in_channels=configuration['num_embeddings'],
+            out_channels=configuration['embedding_dim'],
             kernel_size=1,
             stride=1
         ).double()
 
-        if configuration.decay > 0.0:
+        if configuration['decay'] > 0.0:
             self._vq = VectorQuantizerEMA(
-                device,
-                #configuration.num_embeddings,
-                #configuration.embedding_dim, 
-                params['k'],
-                params['d'],
-                configuration.commitment_cost,
-                configuration.decay
-            ).double()
+                num_embeddings=configuration['embedding_dim'],
+                embedding_dim=configuration['num_embeddings'],
+                commitment_cost=configuration['commitment_cost'],
+                decay=configuration['decay'],
+                device=device
+            )
         else:
             self._vq = VectorQuantizer(
-                device,
-                #configuration.num_embeddings,
-                #configuration.embedding_dim, 
-                params['k'],
-                params['d'],
-                configuration.commitment_cost
-            ).double()
+                num_embeddings=configuration['embedding_dim'],
+                embedding_dim=configuration['num_embeddings'],
+                commitment_cost=configuration['commitment_cost'],
+                device=device
+            )
 
         self._decoder = WaveNetDecoder(
-            params['k'],
-            configuration.decoder_num_hiddens,
-            configuration.decoder_num_residual_layers, 
-            configuration.decoder_num_residual_hiddens,
-            wavenet_type,
-            params,
-            speaker_dic,
-            configuration.use_kaiming_normal
+            configuration,
+            speaker_dic
         )
 
-        self.criterion = nn.CrossEntropyLoss()
+        self._criterion = nn.MSELoss()
         self._device = device
 
     @property
@@ -128,8 +116,7 @@ class WaveNetAutoEncoder(nn.Module):
         reconstructed_x = self._decoder(x_dec, local_condition, global_condition)
         reconstructed_x = reconstructed_x.unsqueeze(-1)
 
-        reconstruction_loss = self.criterion(reconstructed_x, x_dec)
-
+        reconstruction_loss = self._criterion(reconstructed_x, x_dec)
         loss = vq_loss + reconstruction_loss
 
         return loss, reconstructed_x, perplexity
@@ -138,7 +125,7 @@ class WaveNetAutoEncoder(nn.Module):
         torch.save(self.state_dict(), path)
 
     @staticmethod
-    def load(self, path, decoder, device, configuration, params, speaker_dic):
-        model = WaveNetAutoEncoder(decoder, device, configuration, params, speaker_dic)
+    def load(self, path, configuration, speaker_dic, device):
+        model = WaveNetAutoEncoder(configuration, speaker_dic, device)
         model.load_state_dict(torch.load(path, map_location=device))
         return model

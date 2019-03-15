@@ -38,11 +38,11 @@ import numpy as np
 
 class WaveNetDecoder(nn.Module):
     
-    def __init__(self, in_channels, num_hiddens, num_residual_layers, num_residual_hiddens, wavenet_type, params, speaker_dic, use_kaiming_normal):
+    def __init__(self, configuration, speaker_dic):
         super(WaveNetDecoder, self).__init__()
         
         # Apply the randomized time-jitter regularization
-        self._jitter = Jitter()
+        self._jitter = Jitter(configuration['jitter_probability'])
         
         """
         The jittered latent sequence is passed through a single
@@ -53,7 +53,7 @@ class WaveNetDecoder(nn.Module):
             in_channels=256,
             out_channels=128,
             kernel_size=3,
-            use_kaiming_normal=use_kaiming_normal
+            use_kaiming_normal=configuration['use_kaiming_normal']
         )
 
         """
@@ -64,15 +64,15 @@ class WaveNetDecoder(nn.Module):
 
         #self._wavenet = WaveNetFactory.build(wavenet_type)
         self._wavenet = WaveNet(
-            params['quantize'],
-            params['n_layers'],
-            params['n_loop'],
-            params['residual_channels'],
-            params['gate_channels'],
-            params['skip_out_channels'],
-            params['filter_size'],
-            cin_channels=params['local_condition_dim'],
-            gin_channels=params['global_condition_dim'],
+            configuration['quantize'],
+            configuration['n_layers'],
+            configuration['n_loop'],
+            configuration['residual_channels'],
+            configuration['gate_channels'],
+            configuration['skip_out_channels'],
+            configuration['filter_size'],
+            cin_channels=configuration['local_condition_dim'],
+            gin_channels=configuration['global_condition_dim'],
             n_speakers=len(speaker_dic),
             upsample_conditional_features=True,
             #upsample_scales=[2, 2, 2, 2, 2, 2] # 64 downsamples
