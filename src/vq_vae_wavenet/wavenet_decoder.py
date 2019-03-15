@@ -40,9 +40,12 @@ class WaveNetDecoder(nn.Module):
     
     def __init__(self, configuration, speaker_dic):
         super(WaveNetDecoder, self).__init__()
+
+        self._use_jitter = configuration['use_jitter']
         
         # Apply the randomized time-jitter regularization
-        self._jitter = Jitter(configuration['jitter_probability'])
+        if self._use_jitter:
+            self._jitter = Jitter(configuration['jitter_probability'])
         
         """
         The jittered latent sequence is passed through a single
@@ -75,16 +78,15 @@ class WaveNetDecoder(nn.Module):
             gin_channels=configuration['global_condition_dim'],
             n_speakers=len(speaker_dic),
             upsample_conditional_features=True,
-            #upsample_scales=[2, 2, 2, 2, 2, 2] # 64 downsamples
-            upsample_scales=[20, 20, 20]
+            upsample_scales=[2, 2, 2, 2, 2, 2] # 64 downsamples
+            #upsample_scales=[20, 20, 20]
         )
 
-    def forward(self, x_dec, local_condition, global_condition):
-        #if self._is_training and self._use_jitter:
-        #    x = self._jitter(x)
+    def forward(self, y, local_condition, global_condition):
+        if self._use_jitter and self.training:
+            local_condition = self._jitter(local_condition)
 
-        x = self._conv_1(torch.tensor(x_dec, dtype=torch.double)) # FIXME: improve this ugly fix
-        #x = x_dec
+        local_condition = self._conv_1(torch.tensor(local_condition, dtype=torch.double)) # FIXME: improve this ugly fix
 
         #local_condition = self._upsample(local_condition)
 
@@ -94,6 +96,6 @@ class WaveNetDecoder(nn.Module):
         print('local_condition.size(): {}'.format(local_condition.size()))
         print('global_condition.size(): {}'.format(global_condition.size()))
 
-        x = self._wavenet(x_dec, local_condition.double(), global_condition)
+        x = self._wavenet(y, local_condition.double(), global_condition)
 
         return x

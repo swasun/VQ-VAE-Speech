@@ -90,7 +90,7 @@ class FeaturesDecoder(nn.Module):
     def forward(self, inputs):
         x = inputs
 
-        if self._use_jitter:
+        if self._use_jitter and self.training:
             x = self._jitter(x)
 
         x = self._conv_1(x)

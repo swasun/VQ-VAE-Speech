@@ -29,6 +29,15 @@ import numpy as np
 
 
 class Jitter(nn.Module):
+    """
+    Jitter implementation from [Chorowski et al., 2019].
+    During training, each latent vector can replace either one or both of
+    its neighbors. As in dropout, this prevents the model from
+    relying on consistency across groups of tokens. Additionally,
+    this regularization also promotes latent representation stability
+    over time: a latent vector extracted at time step t must strive
+    to also be useful at time steps t − 1 or t + 1.
+    """
 
     def __init__(self, probability=0.12):
         super(Jitter, self).__init__()
