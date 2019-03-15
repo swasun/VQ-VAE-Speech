@@ -120,7 +120,7 @@ if __name__ == "__main__":
     # Dataset and model hyperparameters
     configuration = Configuration.build_from_args(args)
 
-    params = get_config('../configurations/speech_vctk.yaml')
+    params = get_config('../configurations/vctk.yaml')
 
     #use_cuda = torch.cuda.is_available()
     use_cuda = False

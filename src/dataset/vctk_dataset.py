@@ -83,12 +83,13 @@ class VCTKDataset(Dataset):
 if __name__ =='__main__':
 
     from torch.utils.data import DataLoader
+
     vctk = VCTK('./')
     params={'length':7680, 'quantize':256, 'sr':16000, 'res_type':'kaiser_fast','top_db':20}
-    train_dataset = VCTKDataset(vctk.audios_train,vctk.speaker_dic,params)
-    val_dataset = VCTKDataset(vctk.audios_val,vctk.speaker_dic, params)
+    train_dataset = VCTKDataset(vctk.audios_train, vctk.speaker_dic, params)
+    val_dataset = VCTKDataset(vctk.audios_val, vctk.speaker_dic, params)
 
-    train_loader = DataLoader(train_dataset, batch_size=4,num_workers=4)
+    train_loader = DataLoader(train_dataset, batch_size=4, num_workers=4)
     val_loader = DataLoader(val_dataset, batch_size=1, num_workers=4)
     raw, one_hot, speaker_id, quantized = next(iter(train_loader))
     raw_val, one_hot_val, speaker_id_val, quantized_val = next(iter(val_loader))

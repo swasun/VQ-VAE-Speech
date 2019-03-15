@@ -48,13 +48,9 @@ class Evaluator(object):
             metric='euclidean'
         )
 
-        projection = map.fit_transform(self._model.vq_vae.embedding.weight.data.cpu())
+        projection = map.fit_transform(self._model.vq.embedding.weight.data.cpu())
 
         fig = plt.figure()
         plt.scatter(projection[:,0], projection[:,1], alpha=0.3)
         fig.savefig(path)
         plt.close(fig)
-
-    def _save_image(self, img, path):
-        npimg = img.numpy()
-        plt.imsave(path, np.transpose(npimg, (1, 2, 0)))

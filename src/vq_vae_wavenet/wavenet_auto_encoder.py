@@ -57,7 +57,7 @@ class WaveNetAutoEncoder(nn.Module):
         ).double()
 
         if configuration.decay > 0.0:
-            self._vq_vae = VectorQuantizerEMA(
+            self._vq = VectorQuantizerEMA(
                 device,
                 #configuration.num_embeddings,
                 #configuration.embedding_dim, 
@@ -67,7 +67,7 @@ class WaveNetAutoEncoder(nn.Module):
                 configuration.decay
             ).double()
         else:
-            self._vq_vae = VectorQuantizer(
+            self._vq = VectorQuantizer(
                 device,
                 #configuration.num_embeddings,
                 #configuration.embedding_dim, 
@@ -91,8 +91,8 @@ class WaveNetAutoEncoder(nn.Module):
         self._device = device
 
     @property
-    def vq_vae(self):
-        return self._vq_vae
+    def vq(self):
+        return self._vq
 
     @property
     def pre_vq_conv(self):
@@ -115,7 +115,7 @@ class WaveNetAutoEncoder(nn.Module):
         z = self._pre_vq_conv(z)
         print('pre_vq_conv output size: {}'.format(z.size()))
 
-        vq_loss, quantized, perplexity, _ = self._vq_vae(z)
+        vq_loss, quantized, perplexity, _ = self._vq(z)
 
         local_condition = quantized
         local_condition = local_condition.squeeze(-1)

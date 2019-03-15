@@ -61,7 +61,7 @@ class MFCCAutoEncoder(nn.Module):
         )
 
         if configuration.decay > 0.0:
-            self._vq_vae = VectorQuantizerEMA(
+            self._vq = VectorQuantizerEMA(
                 device,
                 #configuration.num_embeddings,
                 #configuration.embedding_dim, 
@@ -71,7 +71,7 @@ class MFCCAutoEncoder(nn.Module):
                 configuration.decay
             )
         else:
-            self._vq_vae = VectorQuantizer(
+            self._vq = VectorQuantizer(
                 device,
                 #configuration.num_embeddings,
                 #configuration.embedding_dim, 
@@ -92,8 +92,8 @@ class MFCCAutoEncoder(nn.Module):
         self._device = device
 
     @property
-    def vq_vae(self):
-        return self._vq_vae
+    def vq(self):
+        return self._vq
 
     @property
     def pre_vq_conv(self):
@@ -114,7 +114,7 @@ class MFCCAutoEncoder(nn.Module):
         z = self._pre_vq_conv(z)
         #print('pre_vq_conv output size: {}'.format(z.size()))
 
-        vq_loss, quantized, perplexity, _ = self._vq_vae(z)
+        vq_loss, quantized, perplexity, _ = self._vq(z)
 
         reconstructed_x = self._decoder(quantized)
         reconstructed_x = reconstructed_x.view(95, 39)
@@ -137,7 +137,7 @@ class MFCCAutoEncoder(nn.Module):
         torch.save(self.state_dict(), path)
 
     @staticmethod
-    def load(self, path, configuration, device):
-        model = AutoEncoder(device, configuration)
+    def load(self, path, configuration, device, params):
+        model = MFCCAutoEncoder(device, configuration, params)
         model.load_state_dict(torch.load(path, map_location=device))
         return model

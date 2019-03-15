@@ -106,7 +106,7 @@ class SpeechEncoder(nn.Module):
 
     def forward(self, inputs):
         features = SpeechFeatures.mfcc(inputs)
-        features_tensor = torch.tensor(features).view(-1, 95, 39).to(self._device)
+        features_tensor = torch.tensor(features).view(-1, features.shape[0], 39).to(self._device)
         #print('inputs.size(): {}'.format(inputs.size()))
         #print('features.shape: {}'.format(features.shape))
         #print('features_tensor.size(): {}'.format(features_tensor.size()))

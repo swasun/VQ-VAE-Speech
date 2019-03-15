@@ -66,7 +66,7 @@ if __name__ == "__main__":
 
     # Dataset and model hyperparameters
     configuration = Configuration.build_from_args(args)
-    params = get_config('../configurations/speech_vctk.yaml')
+    params = get_config('../configurations/vctk.yaml')
 
     #use_cuda = torch.cuda.is_available()
     #device = torch.device('cuda' if use_cuda else 'cpu') # Use GPU if cuda is available
@@ -91,7 +91,7 @@ if __name__ == "__main__":
     auto_encoder.save(results_path + os.sep + args.model_name) # Save our trained model
     trainer.save_loss_plot(results_path + os.sep + args.loss_plot_name) # Save the loss plot
 
-    #evaluator = Evaluator(device, auto_encoder, dataset) # Create en Evaluator instance to evaluate our trained model
-    #evaluator.reconstruct() # Reconstruct our images from the embedded space
-    #evaluator.save_original_images_plot(results_path + os.sep + args.original_images_name) # Save the original images for comparaison purpose
-    #evaluator.save_validation_reconstructions_plot(results_path + os.sep + args.validation_images_name) # Reconstruct the decoded images and save them
+    evaluator = Evaluator(device, auto_encoder, dataset) # Create en Evaluator instance to evaluate our trained model
+    evaluator.reconstruct() # Reconstruct our images from the embedded space
+    evaluator.save_original_images_plot(results_path + os.sep + args.original_images_name) # Save the original images for comparaison purpose
+    evaluator.save_validation_reconstructions_plot(results_path + os.sep + args.validation_images_name) # Reconstruct the decoded images and save them
