@@ -26,7 +26,7 @@
 
 from vq_vae_speech.speech_encoder import SpeechEncoder
 from vq_vae_speech.speech_features import SpeechFeatures
-from vq_vae_mfcc.mfcc_decoder import MFCCDecoder
+from vq_vae_features.features_decoder import FeaturesDecoder
 from vq.vector_quantizer import VectorQuantizer
 from vq.vector_quantizer_ema import VectorQuantizerEMA
 
@@ -37,10 +37,10 @@ import os
 import numpy as np
 
 
-class MFCCAutoEncoder(nn.Module):
+class FeaturesAutoEncoder(nn.Module):
     
     def __init__(self, device, configuration, params):
-        super(MFCCAutoEncoder, self).__init__()
+        super(FeaturesAutoEncoder, self).__init__()
         
         self._encoder = SpeechEncoder(
             in_channels=95,
@@ -80,7 +80,7 @@ class MFCCAutoEncoder(nn.Module):
                 configuration.commitment_cost
             )
 
-        self._decoder = MFCCDecoder(
+        self._decoder = FeaturesDecoder(
             params['k'],
             params['d'],
             2,
@@ -138,6 +138,6 @@ class MFCCAutoEncoder(nn.Module):
 
     @staticmethod
     def load(self, path, configuration, device, params):
-        model = MFCCAutoEncoder(device, configuration, params)
+        model = FeaturesAutoEncoder(device, configuration, params)
         model.load_state_dict(torch.load(path, map_location=device))
         return model

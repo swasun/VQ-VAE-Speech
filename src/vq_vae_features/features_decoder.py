@@ -31,10 +31,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-class MFCCDecoder(nn.Module):
+class FeaturesDecoder(nn.Module):
     
     def __init__(self, in_channels, num_hiddens, num_residual_layers, num_residual_hiddens, use_kaiming_normal=False):
-        super(MFCCDecoder, self).__init__()
+        super(FeaturesDecoder, self).__init__()
 
         self._jitter = Jitter(0.12)
         

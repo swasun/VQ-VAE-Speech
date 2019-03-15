@@ -24,10 +24,10 @@
  #   SOFTWARE.                                                                       #
  #####################################################################################
 
-from vq_vae_mfcc.mfcc_auto_encoder import MFCCAutoEncoder
-from vq_vae_mfcc.trainer import Trainer
-from vq_vae_mfcc.evaluator import Evaluator
-from vq_vae_mfcc.configuration import Configuration
+from vq_vae_features.features_auto_encoder import FeaturesAutoEncoder
+from vq_vae_features.trainer import Trainer
+from vq_vae_features.evaluator import Evaluator
+from vq_vae_features.configuration import Configuration
 from dataset.speech_dataset import SpeechDataset
 
 import torch
@@ -76,13 +76,13 @@ if __name__ == "__main__":
     gpu_ids = [1]
 
     # Set the result path and create the directory if it doesn't exist
-    results_path = '..' + os.sep + '..' + os.sep + args.results_path
+    results_path = '..' + os.sep + args.results_path
     if not os.path.isdir(results_path):
         os.mkdir(results_path)
     
     dataset = SpeechDataset(params, gpu_ids, use_cuda)
 
-    auto_encoder = MFCCAutoEncoder(device, configuration, params).to(device) # Create an AutoEncoder model using our GPU device
+    auto_encoder = FeaturesAutoEncoder(device, configuration, params).to(device) # Create an AutoEncoder model using our GPU device
     auto_encoder = auto_encoder.double()
 
     optimizer = optim.Adam(auto_encoder.parameters(), lr=configuration.learning_rate, amsgrad=True) # Create an Adam optimizer instance
@@ -91,7 +91,6 @@ if __name__ == "__main__":
     auto_encoder.save(results_path + os.sep + args.model_name) # Save our trained model
     trainer.save_loss_plot(results_path + os.sep + args.loss_plot_name) # Save the loss plot
 
-    evaluator = Evaluator(device, auto_encoder, dataset) # Create en Evaluator instance to evaluate our trained model
-    evaluator.reconstruct() # Reconstruct our images from the embedded space
-    evaluator.save_original_images_plot(results_path + os.sep + args.original_images_name) # Save the original images for comparaison purpose
-    evaluator.save_validation_reconstructions_plot(results_path + os.sep + args.validation_images_name) # Reconstruct the decoded images and save them
+    #evaluator = Evaluator(device, auto_encoder, dataset) # Create en Evaluator instance to evaluate our trained model
+    #evaluator.reconstruct() # Reconstruct our images from the embedded space
+    #evaluator.save_original_images_plot(results_path + os.sep + args.original_images_name) # Save the original images for comparaison purpose
