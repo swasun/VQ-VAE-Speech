@@ -36,7 +36,8 @@ class Jitter(nn.Module):
         self._probability = probability
 
     def forward(self, quantized):
-        length = quantized.size(2)
+        original_quantized = quantized.detach().clone()
+        length = original_quantized.size(2)
         for i in range(length):
             """
             Each latent vector is replace with either of its neighbors with a certain probability
@@ -55,6 +56,6 @@ class Jitter(nn.Module):
                     or before it."
                     """
                     neighbor_index = i + np.random.choice([-1, 1], p=[0.5, 0.5])
-                quantized[:, i, :] = quantized[:, neighbor_index, :]
+                quantized[:, :, i] = original_quantized[:, :, neighbor_index]
 
         return quantized

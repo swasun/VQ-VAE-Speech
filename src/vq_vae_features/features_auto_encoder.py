@@ -45,6 +45,8 @@ class FeaturesAutoEncoder(nn.Module):
             num_residual_layers=configuration['num_residual_layers'],
             num_residual_hiddens=configuration['num_hiddens'],
             use_kaiming_normal=configuration['use_kaiming_normal'],
+            input_features_type=configuration['input_features_type'],
+            features_filters=configuration['features_filters'],
             device=device
         )
 
@@ -78,6 +80,7 @@ class FeaturesAutoEncoder(nn.Module):
             num_residual_layers=configuration['num_residual_layers'],
             num_residual_hiddens=configuration['residual_channels'],
             use_kaiming_normal=configuration['use_kaiming_normal'],
+            use_jitter=configuration['use_jitter'],
             jitter_probability=configuration['jitter_probability']
         )
 

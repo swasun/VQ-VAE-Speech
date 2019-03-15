@@ -35,10 +35,13 @@ import torch.nn.functional as F
 
 class FeaturesDecoder(nn.Module):
     
-    def __init__(self, in_channels, out_channels, num_hiddens, num_residual_layers, num_residual_hiddens, use_kaiming_normal, jitter_probability=0.12):
+    def __init__(self, in_channels, out_channels, num_hiddens, num_residual_layers, num_residual_hiddens, use_kaiming_normal, use_jitter, jitter_probability):
         super(FeaturesDecoder, self).__init__()
 
-        self._jitter = Jitter(jitter_probability)
+        self._use_jitter = use_jitter
+
+        if self._use_jitter:
+            self._jitter = Jitter(jitter_probability)
 
         self._conv_1 = Conv1DBuilder.build(
             in_channels=in_channels,
@@ -84,13 +87,13 @@ class FeaturesDecoder(nn.Module):
             use_kaiming_normal=use_kaiming_normal
         )
 
-    def forward(self, inputs, use_jitter=False):
+    def forward(self, inputs):
         x = inputs
 
-        if use_jitter:
+        if self._use_jitter:
             x = self._jitter(x)
 
-        x = self._conv_1(inputs)
+        x = self._conv_1(x)
         
         x = self._residual_stack(x)
         

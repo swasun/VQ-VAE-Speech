@@ -8,7 +8,6 @@ save_path: './speech_output'
 num_workers: 1
 train_val_split: 0.8
 learning_rate: 0.0002
-use_jitter: False
 
 # Audio
 sampling_rate: 16000 # Sampling rate
@@ -74,5 +73,5 @@ features_filters: 13
 use_kaiming_normal: False
 
 # jitter layer
-jitter_probability: 0.12
+jitter_probability: 0.40
 use_jitter: False

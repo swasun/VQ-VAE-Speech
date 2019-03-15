@@ -44,6 +44,8 @@ class WaveNetAutoEncoder(nn.Module):
             num_residual_layers=configuration['num_residual_layers'],
             num_residual_hiddens=configuration['residual_channels'],
             use_kaiming_normal=configuration['use_kaiming_normal'],
+            input_features_type=configuration['input_features_type'],
+            features_filters=configuration['features_filters'],
             device=device
         ).double()
 

@@ -31,12 +31,13 @@ from vq_vae_speech.speech_features import SpeechFeatures
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import numpy as np
 
 
 class SpeechEncoder(nn.Module):
     
-    def __init__(self, in_channels, num_hiddens, num_residual_layers, num_residual_hiddens, use_kaiming_normal, device):
+    def __init__(self, in_channels, num_hiddens, num_residual_layers, num_residual_hiddens,
+        use_kaiming_normal, input_features_type, features_filters, device):
+
         super(SpeechEncoder, self).__init__()
 
         self._device = device
@@ -103,37 +104,24 @@ class SpeechEncoder(nn.Module):
             num_residual_hiddens=num_residual_hiddens,
             use_kaiming_normal=use_kaiming_normal
         )
+        
+        self._input_features_type = input_features_type
+        self._features_filters = features_filters
 
     def forward(self, inputs):
-        features = SpeechFeatures.mfcc(inputs)
-        features_tensor = torch.tensor(features).view(-1, features.shape[0], 39).to(self._device)
-        #print('inputs.size(): {}'.format(inputs.size()))
-        #print('features.shape: {}'.format(features.shape))
-        #print('features_tensor.size(): {}'.format(features_tensor.size()))
+        features = SpeechFeatures.features_by_name(self._input_features_type, inputs)
+        features_tensor = torch.tensor(features).view(-1, features.shape[0], self._features_filters * 3).to(self._device)
 
-        #features_tensor = inputs
-
-        x = self._conv_1(features_tensor)
-        #print('conv_1 output size: {}'.format(x.size()))
-        x = F.relu(x)
+        x = F.relu(self._conv_1(features_tensor))
         
-        x = self._conv_2(x)
-        #print('conv_2 output size: {}'.format(x.size()))
-        x = F.relu(x)
+        x = F.relu(self._conv_2(x))
         
-        x = self._conv_3(x)
-        #print('conv_3 output size: {}'.format(x.size()))
-        x = F.relu(x)
+        x = F.relu(self._conv_3(x))
 
-        x = self._conv_4(x)
-        #print('conv_4 output size: {}'.format(x.size()))
-        x = F.relu(x)
+        x = F.relu(self._conv_4(x))
 
-        x = self._conv_5(x)
-        #print('conv_5 output size: {}'.format(x.size()))
-        x = F.relu(x)
+        x = F.relu(self._conv_5(x))
 
         x = self._residual_stack(x)
-        #print('residual_stack output size: {}'.format(x.size()))
 
         return x
