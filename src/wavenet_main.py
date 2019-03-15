@@ -50,7 +50,7 @@ def get_config(config):
 
 def train(model, use_cuda, train_loader, val_loader, device):
     parameters = list(model.parameters())
-    opt = torch.optim.Adam([p for p in parameters if p.requires_grad], lr=params['lr'])
+    opt = torch.optim.Adam([p for p in parameters if p.requires_grad], lr=params['learning_rate'])
 
     for epoch in range(params['start_epoch'], params['num_epochs']):
         train_bar = tqdm(train_loader)
@@ -82,9 +82,9 @@ def train(model, use_cuda, train_loader, val_loader, device):
             output = MuLaw.decode(output)
             input_mu = MuLaw.decode(input_mu)
 
-            #librosa.output.write_wav(os.path.join(save_path, '{}_output.wav'.format(epoch)), output, params['sr'])
-            #librosa.output.write_wav(os.path.join(save_path, '{}_input_mu.wav'.format(epoch)), input_mu, params['sr'])
-            #librosa.output.write_wav(os.path.join(save_path, '{}_input.wav'.format(epoch)), input, params['sr'])
+            #librosa.output.write_wav(os.path.join(save_path, '{}_output.wav'.format(epoch)), output, params['sampling_rate'])
+            #librosa.output.write_wav(os.path.join(save_path, '{}_input_mu.wav'.format(epoch)), input_mu, params['sampling_rate'])
+            #librosa.output.write_wav(os.path.join(save_path, '{}_input.wav'.format(epoch)), input, params['sampling_rate'])
 
 
 

@@ -43,8 +43,8 @@ class WaveNetAutoEncoder(nn.Module):
             num_hiddens=params['d'],
             num_residual_layers=2,
             num_residual_hiddens=params['d'],
-            device=device,
-            use_kaiming_normal=configuration.use_kaiming_normal
+            use_kaiming_normal=configuration.use_kaiming_normal,
+            device=device
         ).double()
 
         self._pre_vq_conv = nn.Conv1d(

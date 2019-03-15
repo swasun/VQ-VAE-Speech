@@ -61,10 +61,8 @@ class VectorQuantizerEMA(nn.Module):
         epsilon: small float constant to avoid numerical instability.
     """
     
-    def __init__(self, device, num_embeddings, embedding_dim, commitment_cost, decay, epsilon=1e-5):
+    def __init__(self, num_embeddings, embedding_dim, commitment_cost, decay, device, epsilon=1e-5):
         super(VectorQuantizerEMA, self).__init__()
-        
-        self._device = device
 
         self._embedding_dim = embedding_dim
         self._num_embeddings = num_embeddings
@@ -78,6 +76,7 @@ class VectorQuantizerEMA(nn.Module):
         self._ema_w.data.normal_()
         
         self._decay = decay
+        self._device = device
         self._epsilon = epsilon
 
     def forward(self, inputs):
@@ -100,7 +99,6 @@ class VectorQuantizerEMA(nn.Module):
         """
 
         # Convert inputs from BCHW -> BHWC
-        #inputs = inputs.permute(0, 2, 3, 1).contiguous()
         inputs = inputs.permute(1, 2, 0).contiguous()
         input_shape = inputs.shape
         
@@ -145,7 +143,6 @@ class VectorQuantizerEMA(nn.Module):
         perplexity = torch.exp(-torch.sum(avg_probs * torch.log(avg_probs + 1e-10)))
         
         # Convert quantized from BHWC -> BCHW
-        #return loss, quantized.permute(0, 3, 1, 2).contiguous(), perplexity, encodings
         return loss, quantized.permute(2, 0, 1).contiguous(), perplexity, encodings
 
     @property

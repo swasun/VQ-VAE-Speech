@@ -4,3 +4,4 @@ log/
 loss/
 params/
 samples/
+*.pth

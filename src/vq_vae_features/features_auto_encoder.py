@@ -32,64 +32,60 @@ from vq.vector_quantizer_ema import VectorQuantizerEMA
 
 import torch.nn as nn
 import torch
-import torch.nn.functional as F
-import os
-import numpy as np
 
 
 class FeaturesAutoEncoder(nn.Module):
     
-    def __init__(self, device, configuration, params):
+    def __init__(self, configuration, device):
         super(FeaturesAutoEncoder, self).__init__()
-        
+
         self._encoder = SpeechEncoder(
-            in_channels=95,
-            num_hiddens=params['d'],
-            num_residual_layers=2,
-            num_residual_hiddens=params['d'],
-            device=device,
-            use_kaiming_normal=configuration.use_kaiming_normal
+            in_channels=configuration['features_dim'],
+            num_hiddens=configuration['num_hiddens'],
+            num_residual_layers=configuration['num_residual_layers'],
+            num_residual_hiddens=configuration['num_hiddens'],
+            use_kaiming_normal=configuration['use_kaiming_normal'],
+            device=device
         )
 
         self._pre_vq_conv = nn.Conv1d(
-            #in_channels=configuration.encoder_num_hiddens, 
-            #out_channels=configuration.embedding_dim,
-            768,
-            64,
+            in_channels=configuration['num_embeddings'],
+            out_channels=configuration['embedding_dim'],
             kernel_size=1,
             stride=1
         )
 
-        if configuration.decay > 0.0:
+        if configuration['decay'] > 0.0:
             self._vq = VectorQuantizerEMA(
-                device,
-                #configuration.num_embeddings,
-                #configuration.embedding_dim, 
-                params['k'],
-                params['d'],
-                configuration.commitment_cost,
-                configuration.decay
+                num_embeddings=configuration['embedding_dim'],
+                embedding_dim=configuration['num_embeddings'],
+                commitment_cost=configuration['commitment_cost'],
+                decay=configuration['decay'],
+                device=device
             )
         else:
             self._vq = VectorQuantizer(
-                device,
-                #configuration.num_embeddings,
-                #configuration.embedding_dim, 
-                params['k'],
-                params['d'],
-                configuration.commitment_cost
+                num_embeddings=configuration['embedding_dim'],
+                embedding_dim=configuration['num_embeddings'],
+                commitment_cost=configuration['commitment_cost'],
+                device=device
             )
 
         self._decoder = FeaturesDecoder(
-            params['k'],
-            params['d'],
-            2,
-            params['d'],
-            configuration.use_kaiming_normal
+            in_channels=configuration['embedding_dim'],
+            out_channels=configuration['features_dim'],
+            num_hiddens=configuration['num_embeddings'],
+            num_residual_layers=configuration['num_residual_layers'],
+            num_residual_hiddens=configuration['residual_channels'],
+            use_kaiming_normal=configuration['use_kaiming_normal'],
+            jitter_probability=configuration['jitter_probability']
         )
 
-        self.criterion = nn.MSELoss()
+        self._criterion = nn.MSELoss()
         self._device = device
+        self._features_filters = configuration['features_filters']
+        self._output_features_type = configuration['output_features_type']
+        self._features_dim = configuration['features_dim']
 
     @property
     def vq(self):
@@ -107,28 +103,20 @@ class FeaturesAutoEncoder(nn.Module):
     def decoder(self):
         return self._decoder
 
-    def forward(self, x_enc, target):
-        z = self._encoder(x_enc)
-        #print('z.size(): {}'.format(z.size()))
+    def forward(self, x, y):
+        z = self._encoder(x)
 
         z = self._pre_vq_conv(z)
-        #print('pre_vq_conv output size: {}'.format(z.size()))
 
         vq_loss, quantized, perplexity, _ = self._vq(z)
 
         reconstructed_x = self._decoder(quantized)
-        reconstructed_x = reconstructed_x.view(95, 39)
-        #print('reconstructed_x.size() reshaped: {}'.format(reconstructed_x.size()))
 
-        #target_features = SpeechFeatures.mfcc(target)
-        target_features = SpeechFeatures.logfbank(target)
-        tensor_target_features = torch.tensor(target_features).to(self._device)
-        """print()
-        print('reconstructed_x.size(): {}'.format(reconstructed_x.size()))
-        print('target.size(): {}'.format(target.size()))
-        print('target_features.shape: {}'.format(target_features.shape))
-        print('tensor_target_features.size(): {}'.format(tensor_target_features.size()))"""
-        reconstruction_loss = self.criterion(reconstructed_x, tensor_target_features)
+        reconstructed_x = reconstructed_x.view(self._features_dim, self._features_filters * 3)
+        y_features = SpeechFeatures.features_by_name(self._output_features_type, y)
+        tensor_y_features = torch.tensor(y_features).to(self._device)
+
+        reconstruction_loss = self._criterion(reconstructed_x, tensor_y_features)
         loss = vq_loss + reconstruction_loss
 
         return loss, reconstructed_x, perplexity
@@ -137,7 +125,7 @@ class FeaturesAutoEncoder(nn.Module):
         torch.save(self.state_dict(), path)
 
     @staticmethod
-    def load(self, path, configuration, device, params):
-        model = FeaturesAutoEncoder(device, configuration, params)
+    def load(self, path, configuration, device):
+        model = FeaturesAutoEncoder(configuration, device)
         model.load_state_dict(torch.load(path, map_location=device))
         return model

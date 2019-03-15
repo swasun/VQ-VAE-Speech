@@ -25,16 +25,16 @@
  #   SOFTWARE.                                                                       #
  #####################################################################################
 
-import torch
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.signal import savgol_filter
-import os
+
 
 def cycle(iterable):
     while True:
         for x in iterable:
             yield x
+
 
 class Trainer(object):
 

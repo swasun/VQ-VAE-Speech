@@ -148,16 +148,16 @@ def train(epoch, model_t, model_s, optimizer, ema):
         global_step += 1
         if global_step == 200000:
             for param_group in optimizer.param_groups:
-                param_group['lr'] *= 0.5
-                state['learning_rate'] = param_group['lr']
+                param_group['learning_rate'] *= 0.5
+                state['learning_rate'] = param_group['learning_rate']
         if global_step == 400000:
             for param_group in optimizer.param_groups:
-                param_group['lr'] *= 0.5
-                state['learning_rate'] = param_group['lr']
+                param_group['learning_rate'] *= 0.5
+                state['learning_rate'] = param_group['learning_rate']
         if global_step == 600000:
             for param_group in optimizer.param_groups:
-                param_group['lr'] *= 0.5
-                state['learning_rate'] = param_group['lr']
+                param_group['learning_rate'] *= 0.5
+                state['learning_rate'] = param_group['learning_rate']
 
         x, y, c = x.to(device), y.to(device), c.to(device)
 

@@ -27,7 +27,6 @@
 from vq_vae_features.features_auto_encoder import FeaturesAutoEncoder
 from vq_vae_features.trainer import Trainer
 from vq_vae_features.evaluator import Evaluator
-from vq_vae_features.configuration import Configuration
 from dataset.speech_dataset import SpeechDataset
 
 import torch
@@ -44,7 +43,7 @@ def get_config(config):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--batch_size', nargs='?', default=Configuration.default_batch_size, type=int, help='The size of the batch during training')
+    """parser.add_argument('--batch_size', nargs='?', default=Configuration.default_batch_size, type=int, help='The size of the batch during training')
     parser.add_argument('--num_training_updates', nargs='?', default=Configuration.default_num_training_updates, type=int, help='The number of updates during training')
     parser.add_argument('--num_hiddens', nargs='?', default=Configuration.default_num_hiddens, type=int, help='The number of hidden neurons in each layer')
     parser.add_argument('--num_residual_hiddens', nargs='?', default=Configuration.default_num_residual_hiddens, type=int, help='The number of hidden neurons in each layer within a residual block')
@@ -55,7 +54,7 @@ if __name__ == "__main__":
     parser.add_argument('--decay', nargs='?', default=Configuration.default_decay, type=float, help='Decay for the moving averages (set to 0.0 to not use EMA)')
     parser.add_argument('--learning_rate', nargs='?', default=Configuration.default_learning_rate, type=float, help='The learning rate of the optimizer during training updates')
     parser.add_argument('--use_kaiming_normal', nargs='?', default=Configuration.default_use_kaiming_normal, type=bool, help='Use the weight normalization proposed in [He, K et al., 2015]')
-    parser.add_argument('--unshuffle_dataset', default=not Configuration.default_shuffle_dataset, action='store_true', help='Do not shuffle the dataset before training')
+    parser.add_argument('--unshuffle_dataset', default=not Configuration.default_shuffle_dataset, action='store_true', help='Do not shuffle the dataset before training')"""
     parser.add_argument('--data_path', nargs='?', default='data', type=str, help='The path of the data directory')
     parser.add_argument('--results_path', nargs='?', default='results', type=str, help='The path of the results directory')
     parser.add_argument('--loss_plot_name', nargs='?', default='loss.png', type=str, help='The file name of the training loss plot')
@@ -65,8 +64,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Dataset and model hyperparameters
-    configuration = Configuration.build_from_args(args)
-    params = get_config('../configurations/vctk.yaml')
+    configuration = get_config('../configurations/vctk.yaml')
 
     #use_cuda = torch.cuda.is_available()
     #device = torch.device('cuda' if use_cuda else 'cpu') # Use GPU if cuda is available
@@ -80,14 +78,14 @@ if __name__ == "__main__":
     if not os.path.isdir(results_path):
         os.mkdir(results_path)
     
-    dataset = SpeechDataset(params, gpu_ids, use_cuda)
+    dataset = SpeechDataset(configuration, gpu_ids, use_cuda)
 
-    auto_encoder = FeaturesAutoEncoder(device, configuration, params).to(device) # Create an AutoEncoder model using our GPU device
+    auto_encoder = FeaturesAutoEncoder(configuration, device).to(device) # Create an AutoEncoder model using our GPU device
     auto_encoder = auto_encoder.double()
 
-    optimizer = optim.Adam(auto_encoder.parameters(), lr=configuration.learning_rate, amsgrad=True) # Create an Adam optimizer instance
+    optimizer = optim.Adam(auto_encoder.parameters(), lr=configuration['learning_rate'], amsgrad=True) # Create an Adam optimizer instance
     trainer = Trainer(device, auto_encoder, optimizer, dataset) # Create a trainer instance
-    trainer.train(configuration.num_training_updates)
+    trainer.train(configuration['num_epochs'])
     auto_encoder.save(results_path + os.sep + args.model_name) # Save our trained model
     trainer.save_loss_plot(results_path + os.sep + args.loss_plot_name) # Save the loss plot
 

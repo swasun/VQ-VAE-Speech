@@ -30,12 +30,13 @@ import torch.nn as nn
 class Conv1DBuilder(object):
 
     @staticmethod
-    def build(in_channels, out_channels, kernel_size, stride=1, use_kaiming_normal=False):
+    def build(in_channels, out_channels, kernel_size, stride=1, padding=0, use_kaiming_normal=False):
         conv = nn.Conv1d(
             in_channels=in_channels,
             out_channels=out_channels,
             kernel_size=kernel_size,
-            stride=stride
+            stride=stride,
+            padding=padding
         )
         if use_kaiming_normal:
             conv = nn.utils.weight_norm(conv)

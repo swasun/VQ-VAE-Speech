@@ -30,7 +30,7 @@ import torch.nn as nn
 
 class Residual(nn.Module):
 
-    def __init__(self, in_channels, num_hiddens, num_residual_hiddens, use_kaiming_normal=False):
+    def __init__(self, in_channels, num_hiddens, num_residual_hiddens, use_kaiming_normal):
         super(Residual, self).__init__()
         
         relu_1 = nn.ReLU(True)

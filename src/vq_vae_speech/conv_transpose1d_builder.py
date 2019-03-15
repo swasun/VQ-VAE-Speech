@@ -2,7 +2,6 @@
  # MIT License                                                                       #
  #                                                                                   #
  # Copyright (C) 2019 Charly Lamothe                                                 #
- # Copyright (C) 2018 Zalando Research                                               #
  #                                                                                   #
  # This file is part of VQ-VAE-Speech.                                               #
  #                                                                                   #
@@ -25,22 +24,21 @@
  #   SOFTWARE.                                                                       #
  #####################################################################################
 
-from vq_vae_speech.residual import Residual
-
 import torch.nn as nn
-import torch.nn.functional as F
 
 
-class ResidualStack(nn.Module):
+class ConvTranspose1DBuilder(object):
 
-    def __init__(self, in_channels, num_hiddens, num_residual_layers, num_residual_hiddens, use_kaiming_normal):
-        super(ResidualStack, self).__init__()
-        
-        self._num_residual_layers = num_residual_layers
-        self._layers = nn.ModuleList(
-            [Residual(in_channels, num_hiddens, num_residual_hiddens, use_kaiming_normal)] * self._num_residual_layers)
-        
-    def forward(self, x):
-        for i in range(self._num_residual_layers):
-            x = self._layers[i](x)
-        return F.relu(x)
+    @staticmethod
+    def build(in_channels, out_channels, kernel_size, stride=1, padding=0, use_kaiming_normal=False):
+        conv = nn.ConvTranspose1d(
+            in_channels=in_channels,
+            out_channels=out_channels,
+            kernel_size=kernel_size,
+            stride=stride,
+            padding=padding
+        )
+        if use_kaiming_normal:
+            conv = nn.utils.weight_norm(conv)
+            nn.init.kaiming_normal_(conv.weight)
+        return conv

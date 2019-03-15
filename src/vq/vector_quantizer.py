@@ -54,10 +54,8 @@ class VectorQuantizer(nn.Module):
             (see equation 4 in the paper - this variable is Beta).
     """
     
-    def __init__(self, device, num_embeddings, embedding_dim, commitment_cost):
+    def __init__(self, num_embeddings, embedding_dim, commitment_cost, device):
         super(VectorQuantizer, self).__init__()
-
-        self._device = device
         
         self._embedding_dim = embedding_dim
         self._num_embeddings = num_embeddings
@@ -65,6 +63,7 @@ class VectorQuantizer(nn.Module):
         self._embedding = nn.Embedding(self._num_embeddings, self._embedding_dim)
         self._embedding.weight.data.uniform_(-1/self._num_embeddings, 1/self._num_embeddings)
         self._commitment_cost = commitment_cost
+        self._device = device
 
     def forward(self, inputs):
         """
@@ -86,7 +85,7 @@ class VectorQuantizer(nn.Module):
         """
 
         # Convert inputs from BCHW -> BHWC
-        inputs = inputs.permute(0, 2, 3, 1).contiguous()
+        inputs = inputs.permute(1, 2, 0).contiguous()
         input_shape = inputs.shape
         
         # Flatten input
@@ -115,7 +114,7 @@ class VectorQuantizer(nn.Module):
         perplexity = torch.exp(-torch.sum(avg_probs * torch.log(avg_probs + 1e-10)))
         
         # Convert quantized from BHWC -> BCHW
-        return loss, quantized.permute(0, 3, 1, 2).contiguous(), perplexity, encodings
+        return loss, quantized.permute(2, 0, 1).contiguous(), perplexity, encodings
 
     @property
     def embedding(self):

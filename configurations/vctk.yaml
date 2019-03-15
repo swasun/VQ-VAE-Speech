@@ -1,40 +1,77 @@
 # Training
-batch_size: 2 #batch_size per a GPU
-data_root: './' #./ == vctk/raw/VCTK-Corpus
+batch_size: 2 # batch_size per a GPU
+data_root: './' # ./ == vctk/raw/VCTK-Corpus
 start_epoch: 0
 num_epochs: 1000
 checkpoint: 
 save_path: './speech_output'
 num_workers: 1
 train_val_split: 0.8
-lr: 0.0002
+learning_rate: 0.0002
+use_jitter: False
 
 # Audio
-sr: 16000 #Sampling rate
-res_type: 'kaiser_fast' #Resampling algorithm
-top_db: 20 #The threshold (in decibels) below reference to consider as silence
+sampling_rate: 16000 # Sampling rate
+res_type: 'kaiser_fast' # Resampling algorithm
+top_db: 20 # The threshold (in decibels) below reference to consider as silence
 length: 7680
 
 # Mu-law
 quantize: 256
 
 # Encoder
+num_hiddens: 768
 input_dim: 256
 
 # VQ
-d: 768
-k: 64
-beta: 0.25
-decay: # 0.99
+num_embeddings: 768 # The higher this value, the higher the capacity in the information bottleneck.
+
+# This value is not that important, usually 64 works.
+# This will not change the capacity in the information-bottleneck.
+embedding_dim: 64
+
+# Commitment cost should be set appropriately. It's often useful to try a couple
+# of values. It mostly depends on the scale of the reconstruction cost
+# (log p(x|z)). So if the reconstruction cost is 100x higher, the
+# commitment_cost should also be multiplied with the same amount.
+# 0.25 as specified in the paper.
+commitment_cost: 0.25
+
+# Only uses for the EMA updates (instead of the Adam optimizer).
+# This typically converges faster, and makes the model less dependent on choice
+# of the optimizer. In the original VQ-VAE paper [van den Oord et al., 2017],
+# EMA updates were not used (but suggested in appendix) and compared in
+# [Roy et al., 2018].
+decay: 0.99
+
+# Residual
+residual_channels: 768
+num_residual_layers: 2
 
 # WaveNet Decoder
 n_loop: 2
 n_layers: 20 # n_layers % n_loop == 0
 filter_size: 3
-residual_channels: 768
 gate_channels: 768
 skip_out_channels: 256
 global_condition_dim: 128
 local_condition_dim: 768
 
-# Features Decoder
+# Features
+input_features_type: 'mfcc'
+output_features_type: 'logfbank'
+features_dim: 95
+features_filters: 13
+
+# Conv
+
+# Weight initialization proposed by [He, K et al., 2015].
+# PyTorch doc: https://pytorch.org/docs/stable/nn.html#torch.nn.init.kaiming_normal_.
+# The model seems to converge faster using it.
+# In addition to that, I used nn.utils.weight_norm() before each use of kaiming_normal(),
+# as they do in [ksw0306/ClariNet], because it works better.
+use_kaiming_normal: False
+
+# jitter layer
+jitter_probability: 0.12
+use_jitter: False

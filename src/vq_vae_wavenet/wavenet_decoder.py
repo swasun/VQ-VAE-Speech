@@ -38,7 +38,7 @@ import numpy as np
 
 class WaveNetDecoder(nn.Module):
     
-    def __init__(self, in_channels, num_hiddens, num_residual_layers, num_residual_hiddens, wavenet_type, params, speaker_dic, use_kaiming_normal=False):
+    def __init__(self, in_channels, num_hiddens, num_residual_layers, num_residual_hiddens, wavenet_type, params, speaker_dic, use_kaiming_normal):
         super(WaveNetDecoder, self).__init__()
         
         # Apply the randomized time-jitter regularization

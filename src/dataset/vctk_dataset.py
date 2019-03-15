@@ -9,75 +9,79 @@ import librosa
 
 
 class VCTKDataset(Dataset):
-    def __init__(self,audios,speaker_dic, params):
 
-        self.audios = audios
-        self.speaker_dic = speaker_dic
+    def __init__(self, audios, speaker_dic, configuration):
+        self._audios = audios
+        self._speaker_dic = speaker_dic
+        self._sampling_rate = configuration['sampling_rate']
+        self._res_type = configuration['res_type']
+        self._top_db = configuration['top_db']
+        self._length = None if configuration['length'] is None else configuration['length'] + 1
+        self._quantize = configuration['quantize']
 
-        self.params = params
-        if params['length'] is None:
-            self.length = None
-        else:
-            self.length = params['length'] + 1
-
-        #self.length = params['length']+1
-        self.quantize = params['quantize']
-
-    def preprocessing(self, raw, quantized):
-
-        if self.length is not None:
-            if len(raw) <=self.length :
+    def _preprocessing(self, raw, quantized):
+        if self._length is not None:
+            if len(raw) <=self._length :
                 # padding
-                pad = self.length  - len(raw)
+                pad = self._length - len(raw)
                 raw = np.concatenate(
                     (raw, np.zeros(pad, dtype=np.float32)))
                 quantized = np.concatenate(
-                    (quantized, self.quantize // 2 * np.ones(pad)))
+                    (quantized, self._quantize // 2 * np.ones(pad)))
                 quantized = quantized.astype(np.long)
             else:
                 # triming
-                start = random.randint(0, len(raw) -self.length  - 1)
-                raw = raw[start:start + self.length ]
-                quantized = quantized[start:start + self.length ]
+                start = random.randint(0, len(raw) -self._length  - 1)
+                raw = raw[start:start + self._length ]
+                quantized = quantized[start:start + self._length ]
 
-        #ont_hot for input of wavenet
+        # ont_hot for input of wavenet
         one_hot = np.identity(
-            self.quantize, dtype=np.float32)[quantized]
+            self._quantize,
+            dtype=np.float32
+        )[quantized]
         one_hot = np.expand_dims(one_hot.T, 2)
 
-        raw = np.expand_dims(raw, 0)  # expand channel
-        raw = np.expand_dims(raw, -1)  # expand height
+        raw = np.expand_dims(raw, 0) # expand channel
+        raw = np.expand_dims(raw, -1) # expand height
 
-        #target for wavenet
+        # target for wavenet
         quantized = np.expand_dims(quantized, 1)
 
         return raw, one_hot[:, :-1],quantized[1:]
 
     def __getitem__(self, index):
-        wav_filename = self.audios[index]
-        raw = self._load_wav(wav_filename, self.params)
+        wav_filename = self._audios[index]
+        raw = self._load_wav(wav_filename, self._sampling_rate, self._res_type, self._top_db)
 
         quantized = MuLaw.encode(raw)
 
         speaker = pathlib.Path(wav_filename).parent.name
 
-        speaker_id = np.array(
-            self.speaker_dic[speaker], dtype=np.long)
+        speaker_id = np.array(self._speaker_dic[speaker], dtype=np.long)
 
-        raw, one_hot, quantized = self.preprocessing(raw,quantized)
+        raw, one_hot, quantized = self._preprocessing(raw, quantized)
 
         return raw, one_hot, speaker_id,quantized
 
     def __len__(self):
-        return len(self.audios)
+        return len(self._audios)
 
-    def _load_wav(self, filename, params):
-        raw, _ = librosa.load(filename, params['sr'], res_type=params['res_type'])
-        raw, _ = librosa.effects.trim(raw, params['top_db'])
+    def _load_wav(self, filename, sampling_rate, res_type, top_db):
+        raw, _ = librosa.load(filename, sampling_rate, res_type=res_type)
+        raw, _ = librosa.effects.trim(raw, top_db=top_db)
         raw /= np.abs(raw).max()
         raw = raw.astype(np.float32)
 
         return raw
+
+    @property
+    def speaker_dic(self):
+        return self._speaker_dic
+
+    @property
+    def quantize(self):
+        return self._quantize
 
 
 if __name__ =='__main__':
@@ -85,9 +89,9 @@ if __name__ =='__main__':
     from torch.utils.data import DataLoader
 
     vctk = VCTK('./')
-    params={'length':7680, 'quantize':256, 'sr':16000, 'res_type':'kaiser_fast','top_db':20}
-    train_dataset = VCTKDataset(vctk.audios_train, vctk.speaker_dic, params)
-    val_dataset = VCTKDataset(vctk.audios_val, vctk.speaker_dic, params)
+    configuration = { 'length':7680, 'quantize':256, 'sampling_rate':16000, 'res_type':'kaiser_fast', 'top_db':20 }
+    train_dataset = VCTKDataset(vctk.audios_train, vctk.speaker_dic, configuration)
+    val_dataset = VCTKDataset(vctk.audios_val, vctk.speaker_dic, configuration)
 
     train_loader = DataLoader(train_dataset, batch_size=4, num_workers=4)
     val_loader = DataLoader(val_dataset, batch_size=1, num_workers=4)
