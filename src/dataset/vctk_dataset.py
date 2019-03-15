@@ -1,10 +1,11 @@
 from dataset.vctk import VCTK
-from vq_vae_speech.utils import load_wav, mu_law_encode
+from vq_vae_speech.mu_law import MuLaw
 
 from torch.utils.data import Dataset
 import numpy as np
 import random
 import pathlib
+import librosa
 
 
 class VCTKDataset(Dataset):
@@ -54,9 +55,9 @@ class VCTKDataset(Dataset):
 
     def __getitem__(self, index):
         wav_filename = self.audios[index]
-        raw = load_wav(wav_filename,self.params)
+        raw = self._load_wav(wav_filename, self.params)
 
-        quantized = mu_law_encode(raw)
+        quantized = MuLaw.encode(raw)
 
         speaker = pathlib.Path(wav_filename).parent.name
 
@@ -69,6 +70,14 @@ class VCTKDataset(Dataset):
 
     def __len__(self):
         return len(self.audios)
+
+    def _load_wav(self, filename, params):
+        raw, _ = librosa.load(filename, params['sr'], res_type=params['res_type'])
+        raw, _ = librosa.effects.trim(raw, params['top_db'])
+        raw /= np.abs(raw).max()
+        raw = raw.astype(np.float32)
+
+        return raw
 
 
 if __name__ =='__main__':

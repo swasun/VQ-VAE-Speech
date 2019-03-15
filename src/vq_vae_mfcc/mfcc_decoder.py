@@ -94,7 +94,7 @@ class MFCCDecoder(nn.Module):
             nn.init.kaiming_normal_(self._conv_trans_3.weight)
 
     def forward(self, inputs):
-        self._jitter(inputs)
+        #self._jitter(inputs)
 
         #print('decoder input size: {}'.format(inputs.size()))
         x = self._conv_1(inputs)

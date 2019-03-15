@@ -75,7 +75,8 @@ class WaveNetDecoder(nn.Module):
             gin_channels=params['global_condition_dim'],
             n_speakers=len(speaker_dic),
             upsample_conditional_features=True,
-            upsample_scales=[2, 2, 2, 2, 2, 2] # 64 downsamples
+            #upsample_scales=[2, 2, 2, 2, 2, 2] # 64 downsamples
+            upsample_scales=[20, 20, 20]
         )
 
     def forward(self, x_dec, local_condition, global_condition):
@@ -85,7 +86,7 @@ class WaveNetDecoder(nn.Module):
         x = self._conv_1(torch.tensor(x_dec, dtype=torch.double)) # FIXME: improve this ugly fix
         #x = x_dec
 
-        #upsampled = self._upsample(x)
+        #local_condition = self._upsample(local_condition)
 
         print('x_dec.size(): {}'.format(x.size()))
         print('x.size(): {}'.format(x.size()))

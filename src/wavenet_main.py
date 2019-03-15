@@ -29,7 +29,7 @@ from vq_vae_wavenet.trainer import Trainer
 from vq_vae_wavenet.evaluator import Evaluator
 from vq_vae_wavenet.configuration import Configuration
 from vq_vae_wavenet.wavenet_type import WaveNetType
-from vq_vae_speech.utils import mu_law_encode, mu_law_decode, get_config
+from vq_vae_speech.mu_law import MuLaw
 from dataset.speech_dataset import SpeechDataset
 
 import os
@@ -40,6 +40,12 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 from torch import nn
 import librosa
+import yaml
+
+
+def get_config(config):
+    with open(config, 'r') as stream:
+        return yaml.load(stream)
 
 
 def train(model, use_cuda, train_loader, val_loader, device):
@@ -73,8 +79,8 @@ def train(model, use_cuda, train_loader, val_loader, device):
             input_mu = x_dec_val.argmax(dim=1).detach().cpu().numpy().squeeze()
             input = x_enc_val.detach().cpu().numpy().squeeze()
 
-            output = mu_law_decode(output)
-            input_mu = mu_law_decode(input_mu)
+            output = MuLaw.decode(output)
+            input_mu = MuLaw.decode(input_mu)
 
             #librosa.output.write_wav(os.path.join(save_path, '{}_output.wav'.format(epoch)), output, params['sr'])
             #librosa.output.write_wav(os.path.join(save_path, '{}_input_mu.wav'.format(epoch)), input_mu, params['sr'])

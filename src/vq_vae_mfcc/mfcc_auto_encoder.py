@@ -25,7 +25,7 @@
  #####################################################################################
 
 from vq_vae_speech.speech_encoder import SpeechEncoder
-from vq_vae_speech.utils import compute_mfcc_features
+from vq_vae_speech.speech_features import SpeechFeatures
 from vq_vae_mfcc.mfcc_decoder import MFCCDecoder
 from vq.vector_quantizer import VectorQuantizer
 from vq.vector_quantizer_ema import VectorQuantizerEMA
@@ -120,7 +120,8 @@ class MFCCAutoEncoder(nn.Module):
         reconstructed_x = reconstructed_x.view(95, 39)
         #print('reconstructed_x.size() reshaped: {}'.format(reconstructed_x.size()))
 
-        target_features = compute_mfcc_features(target)
+        #target_features = SpeechFeatures.mfcc(target)
+        target_features = SpeechFeatures.logfbank(target)
         tensor_target_features = torch.tensor(target_features).to(self._device)
         """print()
         print('reconstructed_x.size(): {}'.format(reconstructed_x.size()))
