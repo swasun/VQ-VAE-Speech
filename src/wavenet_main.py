@@ -102,7 +102,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Dataset and model hyperparameters
-    configuration = get_config('../configurations/vctk.yaml')
+    configuration = get_config('../configurations/vctk_wavenet.yaml')
 
     #use_cuda = torch.cuda.is_available()
     use_cuda = True

@@ -99,12 +99,12 @@ class Trainer(object):
         ax = fig.add_subplot(1, 2, 1)
         ax.plot(train_res_recon_error_smooth)
         ax.set_yscale('log')
-        ax.set_title('Smoothed NMSE.')
+        ax.set_title('Smoothed MSE')
         ax.set_xlabel('Iterations')
 
         ax = fig.add_subplot(1, 2, 2)
         ax.plot(train_res_perplexity_smooth)
-        ax.set_title('Smoothed Average codebook usage (perplexity).')
+        ax.set_title('Smoothed Average codebook usage (perplexity)')
         ax.set_xlabel('Iterations')
 
         fig.savefig(path)

@@ -59,7 +59,6 @@ wavenet_type: 'WaveNet'
 
 # Features
 input_features_type: 'mfcc'
-output_features_type: 'logfbank'
 features_dim: 95
 features_filters: 13
 
@@ -73,5 +72,5 @@ features_filters: 13
 use_kaiming_normal: False
 
 # jitter layer
-jitter_probability: 0.40
+jitter_probability: 0.12
 use_jitter: False

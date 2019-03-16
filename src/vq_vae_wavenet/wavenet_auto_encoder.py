@@ -46,6 +46,7 @@ class WaveNetAutoEncoder(nn.Module):
             use_kaiming_normal=configuration['use_kaiming_normal'],
             input_features_type=configuration['input_features_type'],
             features_filters=configuration['features_filters'],
+            sampling_rate=configuration['sampling_rate'],
             device=device
         )
 

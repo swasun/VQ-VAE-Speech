@@ -64,8 +64,8 @@ class VectorQuantizerEMA(nn.Module):
     def __init__(self, num_embeddings, embedding_dim, commitment_cost, decay, device, epsilon=1e-5):
         super(VectorQuantizerEMA, self).__init__()
 
-        self._embedding_dim = embedding_dim
         self._num_embeddings = num_embeddings
+        self._embedding_dim = embedding_dim
         
         self._embedding = nn.Embedding(self._num_embeddings, self._embedding_dim)
         self._embedding.weight.data.normal_()

@@ -52,7 +52,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Dataset and model hyperparameters
-    configuration = get_config('../configurations/vctk.yaml')
+    configuration = get_config('../configurations/vctk_features.yaml')
 
     #use_cuda = torch.cuda.is_available()
     #device = torch.device('cuda' if use_cuda else 'cpu') # Use GPU if cuda is available
@@ -69,6 +69,11 @@ if __name__ == "__main__":
     dataset = SpeechDataset(configuration, gpu_ids, use_cuda)
 
     auto_encoder = FeaturesAutoEncoder(configuration, device).to(device) # Create an AutoEncoder model using our GPU device
+
+    #from torchsummary import summary
+    #summary(auto_encoder, (95, 13))
+    #import sys
+    #sys.exit(0)
 
     optimizer = optim.Adam(auto_encoder.parameters(), lr=configuration['learning_rate'], amsgrad=True) # Create an Adam optimizer instance
     trainer = Trainer(device, auto_encoder, optimizer, dataset) # Create a trainer instance

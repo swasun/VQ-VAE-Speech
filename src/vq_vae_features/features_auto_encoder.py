@@ -47,6 +47,7 @@ class FeaturesAutoEncoder(nn.Module):
             use_kaiming_normal=configuration['use_kaiming_normal'],
             input_features_type=configuration['input_features_type'],
             features_filters=configuration['features_filters'],
+            sampling_rate=configuration['sampling_rate'],
             device=device
         )
 
@@ -59,16 +60,16 @@ class FeaturesAutoEncoder(nn.Module):
 
         if configuration['decay'] > 0.0:
             self._vq = VectorQuantizerEMA(
-                num_embeddings=configuration['embedding_dim'],
-                embedding_dim=configuration['num_embeddings'],
+                num_embeddings=configuration['num_embeddings'],
+                embedding_dim=configuration['embedding_dim'],
                 commitment_cost=configuration['commitment_cost'],
                 decay=configuration['decay'],
                 device=device
             )
         else:
             self._vq = VectorQuantizer(
-                num_embeddings=configuration['embedding_dim'],
-                embedding_dim=configuration['num_embeddings'],
+                num_embeddings=configuration['num_embeddings'],
+                embedding_dim=configuration['embedding_dim'],
                 commitment_cost=configuration['commitment_cost'],
                 device=device
             )
@@ -84,11 +85,13 @@ class FeaturesAutoEncoder(nn.Module):
             jitter_probability=configuration['jitter_probability']
         )
 
-        self._criterion = nn.MSELoss()
-        self._device = device
         self._features_filters = configuration['features_filters']
         self._output_features_type = configuration['output_features_type']
         self._features_dim = configuration['features_dim']
+        self._sampling_rate = configuration['sampling_rate']
+        self._device = device
+
+        self._criterion = nn.MSELoss()
 
     @property
     def vq(self):
@@ -116,7 +119,12 @@ class FeaturesAutoEncoder(nn.Module):
         reconstructed_x = self._decoder(quantized)
 
         reconstructed_x = reconstructed_x.view(self._features_dim, self._features_filters * 3)
-        y_features = SpeechFeatures.features_by_name(self._output_features_type, y)
+        y_features = SpeechFeatures.features_from_name(
+            name=self._output_features_type,
+            signal=y,
+            rate=self._sampling_rate,
+            filters_number=self._features_filters
+        )
         tensor_y_features = torch.tensor(y_features, dtype=torch.float).to(self._device)
 
         reconstruction_loss = self._criterion(reconstructed_x, tensor_y_features)

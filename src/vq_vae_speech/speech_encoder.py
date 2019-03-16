@@ -36,11 +36,10 @@ import torch.nn.functional as F
 class SpeechEncoder(nn.Module):
     
     def __init__(self, in_channels, num_hiddens, num_residual_layers, num_residual_hiddens,
-        use_kaiming_normal, input_features_type, features_filters, device):
+        use_kaiming_normal, input_features_type, features_filters, sampling_rate,
+        device):
 
         super(SpeechEncoder, self).__init__()
-
-        self._device = device
 
         """
         2 preprocessing convolution layers with filter length 3
@@ -107,9 +106,16 @@ class SpeechEncoder(nn.Module):
         
         self._input_features_type = input_features_type
         self._features_filters = features_filters
+        self._sampling_rate = sampling_rate
+        self._device = device
 
     def forward(self, inputs):
-        features = SpeechFeatures.features_by_name(self._input_features_type, inputs)
+        features = SpeechFeatures.features_from_name(
+            name=self._input_features_type,
+            signal=inputs,
+            rate=self._sampling_rate,
+            filters_number=self._features_filters
+        )
         features_tensor = torch.tensor(features, dtype=torch.float).view(-1, features.shape[0], self._features_filters * 3).to(self._device)
 
         x = F.relu(self._conv_1(features_tensor))

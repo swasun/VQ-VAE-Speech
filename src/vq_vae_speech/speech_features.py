@@ -37,5 +37,5 @@ class SpeechFeatures(object):
         return concatenated_features
 
     @staticmethod
-    def features_by_name(name, signal, rate=default_rate, filters_number=default_filters_number):
+    def features_from_name(name, signal, rate=default_rate, filters_number=default_filters_number):
         return getattr(SpeechFeatures, name)(signal, rate, filters_number)

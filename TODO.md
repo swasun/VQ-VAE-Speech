@@ -1,3 +1,8 @@
+* Use tqdm in vq_vae_features training
+* log MSE instead of MSE for vq_vae_features ?
+* language entropy using a character LM like DeepSpeech
+* plot spectrogram of input/output features
+* plot/compare vq output with/wo jitter
 * Fix jitter layer
 * Fix perplexity metric
 * Update README
