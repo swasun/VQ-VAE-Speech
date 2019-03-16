@@ -59,8 +59,8 @@ features_filters: 13
 # The model seems to converge faster using it.
 # In addition to that, I used nn.utils.weight_norm() before each use of kaiming_normal(),
 # as they do in [ksw0306/ClariNet], because it works better.
-use_kaiming_normal: False
+use_kaiming_normal: True
 
 # jitter layer
-jitter_probability: 0.30
+jitter_probability: 0.12
 use_jitter: True
