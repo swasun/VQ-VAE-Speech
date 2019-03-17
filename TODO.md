@@ -3,8 +3,6 @@
 * language entropy using a character LM like DeepSpeech
 * plot spectrogram of input/output features
 * plot/compare vq output with/wo jitter
-* Fix jitter layer
-* Fix perplexity metric
 * Update README
 * Compute all MFCC of datasets before the training
 * LibriSpeech dataloader with the right dataset

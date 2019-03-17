@@ -2,7 +2,7 @@
 batch_size: 2 # batch_size per a GPU
 data_root: './' # ./ == vctk/raw/VCTK-Corpus
 start_epoch: 0
-num_epochs: 500
+num_epochs: 1500
 checkpoint: 
 num_workers: 1
 train_val_split: 0.8
@@ -40,7 +40,7 @@ commitment_cost: 0.25
 # of the optimizer. In the original VQ-VAE paper [van den Oord et al., 2017],
 # EMA updates were not used (but suggested in appendix) and compared in
 # [Roy et al., 2018].
-decay: 0.99
+decay: 0.80
 
 # Residual
 residual_channels: 768
