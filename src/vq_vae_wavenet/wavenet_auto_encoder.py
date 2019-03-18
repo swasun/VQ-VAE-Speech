@@ -122,7 +122,7 @@ class WaveNetAutoEncoder(nn.Module):
         torch.save(self.state_dict(), path)
 
     @staticmethod
-    def load(self, path, configuration, speaker_dic, device):
+    def load(path, configuration, speaker_dic, device):
         model = WaveNetAutoEncoder(configuration, speaker_dic, device)
         model.load_state_dict(torch.load(path, map_location=device))
         return model

@@ -136,7 +136,7 @@ class FeaturesAutoEncoder(nn.Module):
         torch.save(self.state_dict(), path)
 
     @staticmethod
-    def load(self, path, configuration, device):
+    def load(path, configuration, device):
         model = FeaturesAutoEncoder(configuration, device)
         model.load_state_dict(torch.load(path, map_location=device))
         return model
