@@ -110,15 +110,20 @@ class FeaturesAutoEncoder(nn.Module):
         return self._decoder
 
     def forward(self, x, y):
+        print('x.size(): {}'.format(x.size()))
+
         z = self._encoder(x)
+        print('z.size(): {}'.format(z.size()))
 
         z = self._pre_vq_conv(z)
+        print('z.size(): {}'.format(z.size()))
 
         vq_loss, quantized, perplexity, _ = self._vq(z)
+        print('quantized.size(): {}'.format(quantized.size()))
 
         reconstructed_x = self._decoder(quantized)
 
-        reconstructed_x = reconstructed_x.view(self._features_dim, self._features_filters * 3)
+        reconstructed_x = reconstructed_x.view(-1, self._features_filters * 3)
         y_features = SpeechFeatures.features_from_name(
             name=self._output_features_type,
             signal=y,

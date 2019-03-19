@@ -50,14 +50,16 @@ class SpeechEncoder(nn.Module):
             in_channels=in_channels,
             out_channels=num_hiddens,
             kernel_size=3,
-            use_kaiming_normal=use_kaiming_normal
+            use_kaiming_normal=use_kaiming_normal,
+            padding=1
         )
 
         self._conv_2 = Conv1DBuilder.build(
             in_channels=num_hiddens,
             out_channels=num_hiddens,
             kernel_size=3,
-            use_kaiming_normal=use_kaiming_normal
+            use_kaiming_normal=use_kaiming_normal,
+            padding=1
         )
 
         """
@@ -70,7 +72,8 @@ class SpeechEncoder(nn.Module):
             out_channels=num_hiddens,
             kernel_size=4,
             stride=2,
-            use_kaiming_normal=use_kaiming_normal
+            use_kaiming_normal=use_kaiming_normal,
+            padding=1
         )
 
         """
@@ -82,14 +85,16 @@ class SpeechEncoder(nn.Module):
             in_channels=num_hiddens,
             out_channels=num_hiddens,
             kernel_size=3,
-            use_kaiming_normal=use_kaiming_normal
+            use_kaiming_normal=use_kaiming_normal,
+            padding=1
         )
 
         self._conv_5 = Conv1DBuilder.build(
             in_channels=num_hiddens,
             out_channels=num_hiddens,
             kernel_size=3,
-            use_kaiming_normal=use_kaiming_normal
+            use_kaiming_normal=use_kaiming_normal,
+            padding=1
         )
 
         """
@@ -118,16 +123,22 @@ class SpeechEncoder(nn.Module):
         )
         features_tensor = torch.tensor(features, dtype=torch.float).view(-1, features.shape[0], self._features_filters * 3).to(self._device)
 
-        x = F.relu(self._conv_1(features_tensor))
+        x_conv_1 = F.relu(self._conv_1(features_tensor))
+
+        #print('x_conv_1.size(): {}'.format(x_conv_1.size()))
+        x = F.relu(self._conv_2(x_conv_1)) + x_conv_1
+        #print('x_conv_2.size(): {}'.format(x.size()))
         
-        x = F.relu(self._conv_2(x))
-        
-        x = F.relu(self._conv_3(x))
+        x_conv_3 = F.relu(self._conv_3(x))
+        #print('x_conv_3.size(): {}'.format(x_conv_3.size()))
 
-        x = F.relu(self._conv_4(x))
+        x_conv_4 = F.relu(self._conv_4(x_conv_3)) + x_conv_3
+        #print('x_conv_4.size(): {}'.format(x_conv_4.size()))
 
-        x = F.relu(self._conv_5(x))
+        x_conv_5 = F.relu(self._conv_5(x_conv_4)) + x_conv_4
+        #print('x_conv_5.size(): {}'.format(x_conv_5.size()))
 
-        x = self._residual_stack(x)
+        x = self._residual_stack(x_conv_5) + x_conv_5
+        #print('x.size(): {}'.format(x.size()))
 
         return x
