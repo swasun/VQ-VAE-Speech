@@ -82,31 +82,31 @@ class FeaturesDecoder(nn.Module):
             in_channels=num_hiddens,
             out_channels=out_channels,
             kernel_size=3, 
-            #stride=2,
-            padding=1,
+            stride=2,
+            padding=0,
             use_kaiming_normal=use_kaiming_normal
         )
 
     def forward(self, inputs):
         x = inputs
-        print('x.size(): {}'.format(x.size()))
+        #print('x.size(): {}'.format(x.size()))
 
         if self._use_jitter and self.training:
             x = self._jitter(x)
 
         x = self._conv_1(x)
-        print('x.size(): {}'.format(x.size()))
+        #print('x.size(): {}'.format(x.size()))
         
         x = self._residual_stack(x)
-        print('x.size(): {}'.format(x.size()))
+        #print('x.size(): {}'.format(x.size()))
         
         x = F.relu(self._conv_trans_1(x))
-        print('x.size(): {}'.format(x.size()))
+        #print('x.size(): {}'.format(x.size()))
 
         x = F.relu(self._conv_trans_2(x))
-        print('x.size(): {}'.format(x.size()))
+        #print('x.size(): {}'.format(x.size()))
 
         x = self._conv_trans_3(x)
-        print('x.size(): {}'.format(x.size()))
+        #print('x.size(): {}'.format(x.size()))
         
         return x
