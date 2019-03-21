@@ -1,11 +1,10 @@
-decoder_type: 'features'
+decoder_type: 'deconvolutional'
 
 # Training
 batch_size: 2 # batch_size per a GPU
 data_root: './' # ./ == vctk/raw/VCTK-Corpus
 start_epoch: 0
-num_epochs: 500
-checkpoint: 
+num_epochs: 5
 num_workers: 1
 train_val_split: 0.8
 learning_rate: 0.0002

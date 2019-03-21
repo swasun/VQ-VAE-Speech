@@ -24,11 +24,11 @@
  #   SOFTWARE.                                                                       #
  #####################################################################################
 
+from error_handling.console_logger import ConsoleLogger
 from dataset.speech_dataset import SpeechDataset
 from experiments.model_factory import ModelFactory
 from experiments.device_configuration import DeviceConfiguration
 from experiments.experiments import Experiments
-from error_handling.console_logger import ConsoleLogger
 
 import os
 import argparse
@@ -37,17 +37,14 @@ import sys
 
 
 if __name__ == "__main__":
-    default_experiments_path = '..' + os.sep + 'configurations' + os.sep + 'experiments.json'
+    default_experiments_configuration_path = '..' + os.sep + 'configurations' + os.sep + 'experiments_test.json'
+    default_experiments_path = '..' + os.sep + 'experiments'
 
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--summary', nargs='?', default=None, type=str, help='The summary of the model regarding a specified configuration file')
-    parser.add_argument('--experiments_path', nargs='?', default=default_experiments_path, type=str, help='The path of the results directory')
+    parser.add_argument('--experiments_configuration_path', nargs='?', default=default_experiments_configuration_path, type=str, help='The path of the experiments configuration file')
+    parser.add_argument('--experiments_path', nargs='?', default=default_experiments_path, type=str, help='The path of the experiments ouput directory')
     args = parser.parse_args()
-
-    import sys
-    from experiments.experiments import Experiments
-    print(Experiments.load('../configurations/experiments.json'))
-    sys.exit(0)
 
     # If specified, print the summary of the model using the CPU device
     if args.summary:
@@ -59,6 +56,10 @@ if __name__ == "__main__":
         ConsoleLogger.status('Printing the summary of the model...')
         device_configuration = DeviceConfiguration.load_from_configuration(configuration)
         dataset = SpeechDataset(configuration, device_configuration.gpu_ids, device_configuration.use_cuda)
-        model = ModelFactory.build(configuration, device_configuration, dataset, wo_trainer=True)
+        model = ModelFactory.build(configuration, device_configuration, dataset, with_trainer=False)
         print(model)
         sys.exit(0)
+
+    Experiments.load(args.experiments_configuration_path).run()
+
+    ConsoleLogger.success('Done.')

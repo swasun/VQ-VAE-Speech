@@ -2,7 +2,6 @@
  # MIT License                                                                       #
  #                                                                                   #
  # Copyright (C) 2019 Charly Lamothe                                                 #
- # Copyright (C) 2018 Zalando Research                                               #
  #                                                                                   #
  # This file is part of VQ-VAE-Speech.                                               #
  #                                                                                   #
@@ -25,15 +24,14 @@
  #   SOFTWARE.                                                                       #
  #####################################################################################
 
+from error_handling.console_logger import ConsoleLogger
+
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.signal import savgol_filter
-
-
-def cycle(iterable):
-    while True:
-        for x in iterable:
-            yield x
+from tqdm import tqdm
+import torch
+import os
 
 
 class Trainer(object):
@@ -44,37 +42,51 @@ class Trainer(object):
         self._optimizer = optimizer
         self._dataset = dataset
         self._verbose = verbose
-        self._train_res_recon_error = []
-        self._train_res_perplexity = []
         self._configuration = configuration
 
-    def train(self):
+    def train(self, experiments_path, experiment_name):
         self._model.train()
+        train_res_recon_error = []
+        train_res_perplexity = []
 
-        iterator = iter(cycle(self._dataset.training_loader))
-        for i in range(self._configuration['num_epochs']):
-            (data, _, _, quantized) = next(iterator)
-            data = data.to(self._device)
-            quantized = quantized.to(self._device)
-            self._optimizer.zero_grad()
+        ConsoleLogger.status('start epoch: {}'.format(self._configuration['start_epoch']))
+        ConsoleLogger.status('num epoch: {}'.format(self._configuration['num_epochs']))
 
-            """
-            The perplexity a useful value to track during training.
-            It indicates how many codes are 'active' on average.
-            """
-            loss, _, perplexity = self._model(data, quantized)
-            loss.mean().backward()
+        for epoch in range(self._configuration['start_epoch'], self._configuration['num_epochs']):
+            train_bar = tqdm(self._dataset.training_loader)
 
-            self._optimizer.step()
-            
-            self._train_res_recon_error.append(loss.item())
-            self._train_res_perplexity.append(perplexity.item())
+            for data in train_bar:
+                (data, _, _, quantized) = data
+                data = data.to(self._device)
+                quantized = quantized.to(self._device)
+                self._optimizer.zero_grad()
 
-            if self._verbose and (i % (self._configuration['num_epochs'] / 10) == 0):
-                print('Iteration #{}'.format(i + 1))
-                print('Reconstruction error: %.3f' % np.mean(self._train_res_recon_error[-100:]))
-                print('Perplexity: %.3f' % np.mean(self._train_res_perplexity[-100:]))
-                print()
+                """
+                The perplexity a useful value to track during training.
+                It indicates how many codes are 'active' on average.
+                """
+                loss, _, perplexity = self._model(data, quantized)
+                loss.mean().backward()
+
+                self._optimizer.step()
+
+                mean_loss = loss.mean().item()
+                mean_perplexity = perplexity.mean().item()
+                train_bar.set_description('Epoch {}: loss {:.4f} perplexity {:.3f}'.format(epoch + 1, mean_loss, mean_perplexity))
+                
+                train_res_recon_error.append(mean_loss)
+                train_res_perplexity.append(mean_perplexity)
+
+            torch.save({
+                    'experiment_name': experiment_name,
+                    'epoch': epoch + 1,
+                    'model': self._model.state_dict(),
+                    'optimizer': self._optimizer.state_dict(),
+                    'train_res_recon_error': train_res_recon_error,
+                    'train_res_perplexity': train_res_perplexity
+                },
+                os.path.join(experiments_path, '{}_{}_checkpoint.pth'.format(experiment_name, epoch + 1))
+            )
 
     def save_loss_plot(self, path):
         maximum_window_length = 201

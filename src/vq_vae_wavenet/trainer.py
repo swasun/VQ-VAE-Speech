@@ -2,7 +2,6 @@
  # MIT License                                                                       #
  #                                                                                   #
  # Copyright (C) 2019 Charly Lamothe                                                 #
- # Copyright (C) 2018 Zalando Research                                               #
  #                                                                                   #
  # This file is part of VQ-VAE-WaveNet.                                               #
  #                                                                                   #
@@ -47,8 +46,7 @@ class Trainer(object):
         self._train_res_perplexity = []
         self._configuration = configuration
 
-
-    def train(self):
+    def train(self, experiments_path, experiment_name):
         for epoch in range(self._configuration['start_epoch'], self._configuration['num_epochs']):
             train_bar = tqdm(self._dataset.training_loader)
             self._model.train()

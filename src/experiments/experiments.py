@@ -16,8 +16,10 @@ class Experiments(object):
     def run(self):
         Experiments.set_deterministic_on(self._seed)
 
-        for experiment in self._experiments:
-            experiment.process()
+        for i in range(len(self._experiments)):
+            self._experiments[i].run()
+            del self._experiments[i]
+            torch.cuda.empty_cache() # Release the GPU memory cache
 
     @staticmethod
     def set_deterministic_on(seed):
@@ -39,6 +41,8 @@ class Experiments(object):
 
             for experiment_configuration_key in experiment_configurations['experiments'].keys():
                 experiment = Experiment(
+                    name=experiment_configuration_key,
+                    experiments_path=experiment_configurations['experiments_path'],
                     results_path=experiment_configurations['results_path'],
                     global_configuration=configuration,
                     experiment_configuration=experiment_configurations['experiments'][experiment_configuration_key]

@@ -132,11 +132,3 @@ class FeaturesAutoEncoder(nn.Module):
 
         return loss, reconstructed_x, perplexity
 
-    def save(self, path):
-        torch.save(self.state_dict(), path)
-
-    @staticmethod
-    def load(path, configuration, device):
-        model = FeaturesAutoEncoder(configuration, device)
-        model.load_state_dict(torch.load(path, map_location=device))
-        return model

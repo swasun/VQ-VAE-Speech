@@ -1,5 +1,6 @@
 {
-    "results_path": "../results/",
+    "experiments_path": "../experiments",
+    "results_path": "../results",
     "configuration_path": "../configurations/vctk_features.yaml",
     "seed": 1234,
     "experiments": {
