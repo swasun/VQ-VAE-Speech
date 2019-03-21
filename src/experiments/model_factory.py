@@ -37,7 +37,7 @@ class ModelFactory(object):
         else:
             raise ValueError('Invalid configuration file: there is no decoder_type field')
 
-        auto_encoder = nn.DataParallel(auto_encoder, device_ids=device_configuration.device_ids) if device_configuration.use_data_parallel else auto_encoder
+        auto_encoder = nn.DataParallel(auto_encoder, device_ids=device_configuration.gpu_ids) if device_configuration.use_data_parallel else auto_encoder
 
         if with_trainer:
             return auto_encoder, trainer
@@ -157,6 +157,6 @@ class ModelFactory(object):
             raise ValueError('Invalid configuration file: there is no decoder_type field')
 
         # Use data parallelization if needed and available
-        model = nn.DataParallel(model, device_ids=device_configuration.device_ids) if device_configuration.use_data_parallel else model
+        model = nn.DataParallel(model, device_ids=device_configuration.gpu_ids) if device_configuration.use_data_parallel else model
 
         return model, trainer, configuration, dataset

@@ -37,7 +37,8 @@ class SpeechDataset(object):
         vctk = VCTK(configuration['data_root'], ratio=configuration['train_val_split'])
         self._training_data = VCTKDataset(vctk.audios_train, vctk.speaker_dic, configuration)
         self._validation_data = VCTKDataset(vctk.audios_val, vctk.speaker_dic, configuration)
-        self._training_loader = DataLoader(self._training_data, batch_size=configuration['batch_size'] * len(gpu_ids), shuffle=True,
+        factor = 1 if len(gpu_ids) == 0 else len(gpu_ids)
+        self._training_loader = DataLoader(self._training_data, batch_size=configuration['batch_size'] * factor, shuffle=True,
             num_workers=configuration['num_workers'], pin_memory=use_cuda)
         self._validation_loader = DataLoader(self._validation_data, batch_size=1, num_workers=configuration['num_workers'], pin_memory=use_cuda)
         self._speaker_dic = vctk.speaker_dic

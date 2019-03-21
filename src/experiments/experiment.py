@@ -64,7 +64,7 @@ class Experiment(object):
             # Build the model and the trainer from the configurations and the dataset
             model, trainer = ModelFactory.build(configuration, device_configuration, dataset)
 
-            return model, trainer, dataset
+            return model, trainer, dataset, configuration
 
         if self._configuration_file_already_exists:
             ConsoleLogger.status('Configuration file already exists. Loading...')
@@ -72,9 +72,9 @@ class Experiment(object):
                 self._model, self._trainer, _, self._dataset = ModelFactory.load(self._experiments_path, self._name)
             except:
                 ConsoleLogger.error('Failed to load existing configuration. Building a new model...')
-                self._model, self._trainer, self._dataset = create_from_scratch(self._configuration, self._device_configuration)
+                self._model, self._trainer, self._dataset, self._configuration = create_from_scratch(self._configuration, self._device_configuration)
         else:
-            self._model, self._trainer, self._dataset = create_from_scratch(self._configuration, self._device_configuration)
+            self._model, self._trainer, self._dataset, self._configuration = create_from_scratch(self._configuration, self._device_configuration)
 
         ConsoleLogger.status('Begins to train the model')
         self._trainer.train(self._experiments_path, self._name)
