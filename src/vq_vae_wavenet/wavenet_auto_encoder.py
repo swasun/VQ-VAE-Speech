@@ -54,21 +54,22 @@ class WaveNetAutoEncoder(nn.Module):
             in_channels=configuration['num_embeddings'],
             out_channels=configuration['embedding_dim'],
             kernel_size=1,
-            stride=1
+            stride=1,
+            padding=1
         )
 
         if configuration['decay'] > 0.0:
             self._vq = VectorQuantizerEMA(
-                num_embeddings=configuration['embedding_dim'],
-                embedding_dim=configuration['num_embeddings'],
+                num_embeddings=configuration['num_embeddings'],
+                embedding_dim=configuration['embedding_dim'],
                 commitment_cost=configuration['commitment_cost'],
                 decay=configuration['decay'],
                 device=device
             )
         else:
             self._vq = VectorQuantizer(
-                num_embeddings=configuration['embedding_dim'],
-                embedding_dim=configuration['num_embeddings'],
+                num_embeddings=configuration['num_embeddings'],
+                embedding_dim=configuration['embedding_dim'],
                 commitment_cost=configuration['commitment_cost'],
                 device=device
             )

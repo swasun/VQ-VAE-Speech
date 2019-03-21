@@ -25,20 +25,19 @@
  #   SOFTWARE.                                                                       #
  #####################################################################################
 
+from vq_vae_speech.mu_law import MuLaw
+
 import torch
-import numpy as np
 import matplotlib.pyplot as plt
 from scipy.signal import savgol_filter
 import os
+from tqdm import tqdm
+import librosa
 
-def cycle(iterable):
-    while True:
-        for x in iterable:
-            yield x
 
 class Trainer(object):
 
-    def __init__(self, device, model, optimizer, dataset, verbose=True):
+    def __init__(self, device, model, optimizer, dataset, configuration, verbose=True):
         self._device = device
         self._model = model
         self._optimizer = optimizer
@@ -46,35 +45,49 @@ class Trainer(object):
         self._verbose = verbose
         self._train_res_recon_error = []
         self._train_res_perplexity = []
+        self._configuration = configuration
 
-    def train(self, num_training_updates):
-        self._model.train()
 
-        iterator = iter(cycle(self._dataset.training_loader))
-        for i in range(num_training_updates):
-            (data, _) = next(iterator)
-            data = data.to(self._device)
-            self._optimizer.zero_grad()
+    def train(self):
+        for epoch in range(self._configuration['start_epoch'], self._configuration['num_epochs']):
+            train_bar = tqdm(self._dataset.training_loader)
+            self._model.train()
+            for data in train_bar:
+                x_enc, x_dec, speaker_id, quantized = data
+                x_enc, x_dec, speaker_id, quantized = x_enc.to(self._device), x_dec.to(self._device), speaker_id.to(self._device), quantized.to(self._device)
 
-            """
-            The perplexity a useful value to track during training.
-            It indicates how many codes are 'active' on average.
-            """
-            vq_loss, data_recon, perplexity = self._model(data)
-            recon_error = torch.mean((data_recon - data)**2) / self._dataset.train_data_variance
-            loss = recon_error + vq_loss
-            loss.backward()
+                self._optimizer.zero_grad()
+                loss, _, _ = self._model(x_enc, x_dec, speaker_id, quantized)
+                loss.mean().backward()
+                self._optimizer.step()
+                #self._train_res_recon_error.append(recon_error.item())
+                #self._train_res_perplexity.append(perplexity.item())
 
-            self._optimizer.step()
-            
-            self._train_res_recon_error.append(recon_error.item())
-            self._train_res_perplexity.append(perplexity.item())
+                train_bar.set_description('Epoch {}: loss {:.4f}'.format(epoch + 1, loss.mean().item()))
 
-            if self._verbose and (i % (num_training_updates / 10) == 0):
-                print('Iteration #{}'.format(i + 1))
-                print('Reconstruction error: %.3f' % np.mean(self._train_res_recon_error[-100:]))
-                print('Perplexity: %.3f' % np.mean(self._train_res_perplexity[-100:]))
-                print()
+            self._model.eval()
+            data_val = next(iter(self._dataset.validation_loader))
+            with torch.no_grad():
+                x_enc_val, x_dec_val, speaker_id_val, quantized_val = data_val
+                x_enc_val, x_dec_val, speaker_id_val, quantized_val = x_enc_val.to(self._device), x_dec_val.to(self._device), speaker_id_val.to(self._device), quantized_val.to(self._device)
+                _, out = self._model(x_enc_val, x_dec_val, speaker_id_val, quantized_val)
+
+                output = out.argmax(dim=1).detach().cpu().numpy().squeeze()
+                input_mu = x_dec_val.argmax(dim=1).detach().cpu().numpy().squeeze()
+                input = x_enc_val.detach().cpu().numpy().squeeze()
+
+                output = MuLaw.decode(output)
+                input_mu = MuLaw.decode(input_mu)
+
+                #librosa.output.write_wav(os.path.join(save_path, '{}_output.wav'.format(epoch)), output, self._configuration['sampling_rate'])
+                #librosa.output.write_wav(os.path.join(save_path, '{}_input_mu.wav'.format(epoch)), input_mu, self._configuration['sampling_rate'])
+                #librosa.output.write_wav(os.path.join(save_path, '{}_input.wav'.format(epoch)), input, self._configuration['sampling_rate'])
+
+            """torch.save({'epoch': epoch,
+                        'encoder': encoder.state_dict(),
+                        'decoder': decoder.state_dict(),
+                        'vq': vq.state_dict()
+                        }, os.path.join(save_path, '{}_checkpoint.pth'.format(epoch)))"""
 
     def save_loss_plot(self, path):
         maximum_window_length = 201

@@ -9,4 +9,3 @@ nnmnkwii
 tensorboardX
 pyyaml
 tqdm
-torchsummary

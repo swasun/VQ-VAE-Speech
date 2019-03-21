@@ -55,7 +55,7 @@ class WaveNetDecoder(nn.Module):
         self._conv_1 = Conv1DBuilder.build(
             in_channels=64,
             out_channels=768,
-            kernel_size=3,
+            kernel_size=2,
             use_kaiming_normal=configuration['use_kaiming_normal']
         )
 
@@ -72,7 +72,8 @@ class WaveNetDecoder(nn.Module):
             gin_channels=configuration['global_condition_dim'],
             n_speakers=len(speaker_dic),
             upsample_conditional_features=True,
-            upsample_scales=[2, 2, 2, 2, 2, 2, 12] # 768
+            upsample_scales=[2, 2, 2, 2, 2, 12] # 768
+            #upsample_scales=[2, 2, 2, 2, 12]
         )
 
         self._device = device

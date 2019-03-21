@@ -38,7 +38,7 @@ def cycle(iterable):
 
 class Trainer(object):
 
-    def __init__(self, device, model, optimizer, dataset, verbose=True):
+    def __init__(self, device, model, optimizer, dataset, configuration, verbose=True):
         self._device = device
         self._model = model
         self._optimizer = optimizer
@@ -46,12 +46,13 @@ class Trainer(object):
         self._verbose = verbose
         self._train_res_recon_error = []
         self._train_res_perplexity = []
+        self._configuration = configuration
 
-    def train(self, num_training_updates):
+    def train(self):
         self._model.train()
 
         iterator = iter(cycle(self._dataset.training_loader))
-        for i in range(num_training_updates):
+        for i in range(self._configuration['num_epochs']):
             (data, _, _, quantized) = next(iterator)
             data = data.to(self._device)
             quantized = quantized.to(self._device)
@@ -69,7 +70,7 @@ class Trainer(object):
             self._train_res_recon_error.append(loss.item())
             self._train_res_perplexity.append(perplexity.item())
 
-            if self._verbose and (i % (num_training_updates / 10) == 0):
+            if self._verbose and (i % (self._configuration['num_epochs'] / 10) == 0):
                 print('Iteration #{}'.format(i + 1))
                 print('Reconstruction error: %.3f' % np.mean(self._train_res_recon_error[-100:]))
                 print('Perplexity: %.3f' % np.mean(self._train_res_perplexity[-100:]))

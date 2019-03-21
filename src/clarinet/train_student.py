@@ -39,73 +39,6 @@ import argparse
 import json
 import time
 
-torch.backends.cudnn.benchmark = True
-np.set_printoptions(precision=4)
-
-parser = argparse.ArgumentParser(description='Train WaveNet of LJSpeech',
-                                 formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-parser.add_argument('--data_path', type=str, default='../DATASETS/ljspeech/', help='Dataset Path')
-parser.add_argument('--sample_path', type=str, default='../samples', help='Sample Path')
-parser.add_argument('--save', '-s', type=str, default='../params', help='Folder to save checkpoints.')
-parser.add_argument('--load', '-l', type=str, default='../params', help='Checkpoint path to resume / test.')
-parser.add_argument('--loss', type=str, default='../loss', help='Folder to save loss')
-parser.add_argument('--log', type=str, default='../log', help='Log folder.')
-
-parser.add_argument('--teacher_name', type=str, default='wavenet_gaussian_01', help='Model Name')
-parser.add_argument('--model_name', type=str, default='wavenet_student_gaussian_01', help='Model Name')
-parser.add_argument('--teacher_load_step', type=int, default=0, help='Teacher Load Step')
-parser.add_argument('--load_step', type=int, default=0, help='Student Load Step')
-
-parser.add_argument('--KL_type', type=str, default='qp', help='KL_pq vs KL_qp')
-parser.add_argument('--epochs', '-e', type=int, default=1000, help='Number of epochs to train.')
-parser.add_argument('--batch_size', '-b', type=int, default=4, help='Batch size.')
-parser.add_argument('--learning_rate', '-lr', type=float, default=1e-3, help='The Learning Rate.')
-parser.add_argument('--ema_decay', type=float, default=0.9999, help='Exponential Moving Average Decay')
-parser.add_argument('--num_blocks_t', type=int, default=4, help='Number of blocks (Teacher)')
-parser.add_argument('--num_layers_t', type=int, default=6, help='Number of layers (Teacher)')
-parser.add_argument('--num_layers_s', type=int, default=6, help='Number of layers (Student)')
-parser.add_argument('--residual_channels', type=int, default=128, help='Residual Channels')
-parser.add_argument('--gate_channels', type=int, default=256, help='Gate Channels')
-parser.add_argument('--skip_channels', type=int, default=128, help='Skip Channels')
-parser.add_argument('--kernel_size', type=int, default=3, help='Kernel Size')
-parser.add_argument('--cin_channels', type=int, default=80, help='Cin Channels')
-parser.add_argument('--num_workers', type=int, default=3, help='Number of workers')
-
-args = parser.parse_args()
-
-# Init logger
-if not os.path.isdir(args.log):
-    os.makedirs(args.log)
-
-# Checkpoint dir
-if not os.path.isdir(args.save):
-    os.makedirs(args.save)
-if not os.path.isdir(args.loss):
-    os.makedirs(args.loss)
-if not os.path.isdir(os.path.join(args.save, args.teacher_name)):
-    os.makedirs(os.path.join(args.save, args.teacher_name))
-if not os.path.isdir(os.path.join(args.save, args.teacher_name, args.model_name)):
-    os.makedirs(os.path.join(args.save, args.teacher_name, args.model_name))
-if not os.path.isdir(os.path.join(args.sample_path, args.teacher_name)):
-    os.makedirs(os.path.join(args.sample_path, args.teacher_name))
-if not os.path.isdir(os.path.join(args.sample_path, args.teacher_name, args.model_name)):
-    os.makedirs(os.path.join(args.sample_path, args.teacher_name, args.model_name))
-
-use_cuda = torch.cuda.is_available()
-device = torch.device("cuda" if use_cuda else "cpu")
-
-# LOAD DATASETS
-train_dataset = LJspeechDataset(args.data_path, True, 0.1)
-test_dataset = LJspeechDataset(args.data_path, False, 0.1)
-
-train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, collate_fn=collate_fn,
-                          num_workers=args.num_workers, pin_memory=True)
-test_loader = DataLoader(test_dataset, batch_size=args.batch_size, collate_fn=collate_fn,
-                         num_workers=args.num_workers)
-synth_loader = DataLoader(test_dataset, batch_size=1, collate_fn=collate_fn_synthesize,
-                          num_workers=args.num_workers, pin_memory=True)
-
-
 def build_model():
     model_t = Wavenet(out_channels=2,
                       num_blocks=args.num_blocks_t,
@@ -335,69 +268,136 @@ def load_teacher_checkpoint(path, model_t):
     model_t.load_state_dict(checkpoint["state_dict"])
     return model_t
 
+if __name__ == "__main__":
+    torch.backends.cudnn.benchmark = True
+    np.set_printoptions(precision=4)
 
-teacher_step = args.teacher_load_step
-path = os.path.join(args.load, args.teacher_name, "checkpoint_step{:09d}_ema.pth".format(teacher_step))
-model_t = build_model()
-model_t = load_teacher_checkpoint(path, model_t)
-model_s = build_student()
-stft = STFT(filter_length=1024, hop_length=256)
+    parser = argparse.ArgumentParser(description='Train WaveNet of LJSpeech',
+                                    formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('--data_path', type=str, default='../DATASETS/ljspeech/', help='Dataset Path')
+    parser.add_argument('--sample_path', type=str, default='../samples', help='Sample Path')
+    parser.add_argument('--save', '-s', type=str, default='../params', help='Folder to save checkpoints.')
+    parser.add_argument('--load', '-l', type=str, default='../params', help='Checkpoint path to resume / test.')
+    parser.add_argument('--loss', type=str, default='../loss', help='Folder to save loss')
+    parser.add_argument('--log', type=str, default='../log', help='Log folder.')
 
-model_t.to(device)
-model_s.to(device)
-stft.to(device)
+    parser.add_argument('--teacher_name', type=str, default='wavenet_gaussian_01', help='Model Name')
+    parser.add_argument('--model_name', type=str, default='wavenet_student_gaussian_01', help='Model Name')
+    parser.add_argument('--teacher_load_step', type=int, default=0, help='Teacher Load Step')
+    parser.add_argument('--load_step', type=int, default=0, help='Student Load Step')
 
-optimizer = optim.Adam(model_s.parameters(), lr=args.learning_rate)
-criterion_t = KL_Loss()
-criterion_frame = nn.MSELoss()
+    parser.add_argument('--KL_type', type=str, default='qp', help='KL_pq vs KL_qp')
+    parser.add_argument('--epochs', '-e', type=int, default=1000, help='Number of epochs to train.')
+    parser.add_argument('--batch_size', '-b', type=int, default=4, help='Batch size.')
+    parser.add_argument('--learning_rate', '-lr', type=float, default=1e-3, help='The Learning Rate.')
+    parser.add_argument('--ema_decay', type=float, default=0.9999, help='Exponential Moving Average Decay')
+    parser.add_argument('--num_blocks_t', type=int, default=4, help='Number of blocks (Teacher)')
+    parser.add_argument('--num_layers_t', type=int, default=6, help='Number of layers (Teacher)')
+    parser.add_argument('--num_layers_s', type=int, default=6, help='Number of layers (Student)')
+    parser.add_argument('--residual_channels', type=int, default=128, help='Residual Channels')
+    parser.add_argument('--gate_channels', type=int, default=256, help='Gate Channels')
+    parser.add_argument('--skip_channels', type=int, default=128, help='Skip Channels')
+    parser.add_argument('--kernel_size', type=int, default=3, help='Kernel Size')
+    parser.add_argument('--cin_channels', type=int, default=80, help='Cin Channels')
+    parser.add_argument('--num_workers', type=int, default=3, help='Number of workers')
 
-ema = ExponentialMovingAverage(args.ema_decay)
-for name, param in model_s.named_parameters():
-    if param.requires_grad:
-        ema.register(name, param.data)
-for name, param in model_t.named_parameters():
-    if param.requires_grad:
-        param.requires_grad = False
+    args = parser.parse_args()
 
-global_step, global_epoch = 0, 0
-load_step = args.load_step
+    # Init logger
+    if not os.path.isdir(args.log):
+        os.makedirs(args.log)
 
-log = open(os.path.join(args.log, '{}.txt'.format(args.model_name)), 'w')
-state = {k: v for k, v in args._get_kwargs()}
+    # Checkpoint dir
+    if not os.path.isdir(args.save):
+        os.makedirs(args.save)
+    if not os.path.isdir(args.loss):
+        os.makedirs(args.loss)
+    if not os.path.isdir(os.path.join(args.save, args.teacher_name)):
+        os.makedirs(os.path.join(args.save, args.teacher_name))
+    if not os.path.isdir(os.path.join(args.save, args.teacher_name, args.model_name)):
+        os.makedirs(os.path.join(args.save, args.teacher_name, args.model_name))
+    if not os.path.isdir(os.path.join(args.sample_path, args.teacher_name)):
+        os.makedirs(os.path.join(args.sample_path, args.teacher_name))
+    if not os.path.isdir(os.path.join(args.sample_path, args.teacher_name, args.model_name)):
+        os.makedirs(os.path.join(args.sample_path, args.teacher_name, args.model_name))
 
-if load_step == 0:
-    list_train_loss, list_loss = [], []
-    log.write(json.dumps(state) + '\n')
-    test_loss = 100.0
-else:
-    model_s, optimizer, ema = load_checkpoint(load_step, model_s, optimizer, ema)
-    list_train_loss = np.load('{}/{}_train.npy'.format(args.loss, args.model_name)).tolist()
-    list_loss = np.load('{}/{}.npy'.format(args.loss, args.model_name)).tolist()
-    list_train_loss = list_train_loss[:global_epoch]
-    list_loss = list_loss[:global_epoch]
-    test_loss = np.min(list_loss)
+    use_cuda = torch.cuda.is_available()
+    device = torch.device("cuda" if use_cuda else "cpu")
 
-for epoch in range(global_epoch + 1, args.epochs + 1):
-    training_epoch_loss = train(epoch, model_t, model_s, optimizer, ema)
-    with torch.no_grad():
-        test_epoch_loss = evaluate(model_t, model_s, ema)
+    # LOAD DATASETS
+    train_dataset = LJspeechDataset(args.data_path, True, 0.1)
+    test_dataset = LJspeechDataset(args.data_path, False, 0.1)
 
-    state['training_loss'] = training_epoch_loss
-    state['eval_loss'] = test_epoch_loss
-    state['epoch'] = epoch
-    list_train_loss.append(training_epoch_loss)
-    list_loss.append(test_epoch_loss)
+    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, collate_fn=collate_fn,
+                            num_workers=args.num_workers, pin_memory=True)
+    test_loader = DataLoader(test_dataset, batch_size=args.batch_size, collate_fn=collate_fn,
+                            num_workers=args.num_workers)
+    synth_loader = DataLoader(test_dataset, batch_size=1, collate_fn=collate_fn_synthesize,
+                            num_workers=args.num_workers, pin_memory=True)
 
-    if test_loss > test_epoch_loss:
-        test_loss = test_epoch_loss
-        save_checkpoint(model_s, optimizer, global_step, epoch, ema)
-        print('Epoch {} Model Saved! Loss : {:.4f}'.format(epoch, test_loss))
-        synthesize(model_t, model_s, ema)
-    np.save('{}/{}_train.npy'.format(args.loss, args.model_name), list_train_loss)
-    np.save('{}/{}.npy'.format(args.loss, args.model_name), list_loss)
 
-    log.write('%s\n' % json.dumps(state))
-    log.flush()
-    print(state)
+    teacher_step = args.teacher_load_step
+    path = os.path.join(args.load, args.teacher_name, "checkpoint_step{:09d}_ema.pth".format(teacher_step))
+    model_t = build_model()
+    model_t = load_teacher_checkpoint(path, model_t)
+    model_s = build_student()
+    stft = STFT(filter_length=1024, hop_length=256)
 
-log.close()
+    model_t.to(device)
+    model_s.to(device)
+    stft.to(device)
+
+    optimizer = optim.Adam(model_s.parameters(), lr=args.learning_rate)
+    criterion_t = KL_Loss()
+    criterion_frame = nn.MSELoss()
+
+    ema = ExponentialMovingAverage(args.ema_decay)
+    for name, param in model_s.named_parameters():
+        if param.requires_grad:
+            ema.register(name, param.data)
+    for name, param in model_t.named_parameters():
+        if param.requires_grad:
+            param.requires_grad = False
+
+    global_step, global_epoch = 0, 0
+    load_step = args.load_step
+
+    log = open(os.path.join(args.log, '{}.txt'.format(args.model_name)), 'w')
+    state = {k: v for k, v in args._get_kwargs()}
+
+    if load_step == 0:
+        list_train_loss, list_loss = [], []
+        log.write(json.dumps(state) + '\n')
+        test_loss = 100.0
+    else:
+        model_s, optimizer, ema = load_checkpoint(load_step, model_s, optimizer, ema)
+        list_train_loss = np.load('{}/{}_train.npy'.format(args.loss, args.model_name)).tolist()
+        list_loss = np.load('{}/{}.npy'.format(args.loss, args.model_name)).tolist()
+        list_train_loss = list_train_loss[:global_epoch]
+        list_loss = list_loss[:global_epoch]
+        test_loss = np.min(list_loss)
+
+    for epoch in range(global_epoch + 1, args.epochs + 1):
+        training_epoch_loss = train(epoch, model_t, model_s, optimizer, ema)
+        with torch.no_grad():
+            test_epoch_loss = evaluate(model_t, model_s, ema)
+
+        state['training_loss'] = training_epoch_loss
+        state['eval_loss'] = test_epoch_loss
+        state['epoch'] = epoch
+        list_train_loss.append(training_epoch_loss)
+        list_loss.append(test_epoch_loss)
+
+        if test_loss > test_epoch_loss:
+            test_loss = test_epoch_loss
+            save_checkpoint(model_s, optimizer, global_step, epoch, ema)
+            print('Epoch {} Model Saved! Loss : {:.4f}'.format(epoch, test_loss))
+            synthesize(model_t, model_s, ema)
+        np.save('{}/{}_train.npy'.format(args.loss, args.model_name), list_train_loss)
+        np.save('{}/{}.npy'.format(args.loss, args.model_name), list_loss)
+
+        log.write('%s\n' % json.dumps(state))
+        log.flush()
+        print(state)
+
+    log.close()

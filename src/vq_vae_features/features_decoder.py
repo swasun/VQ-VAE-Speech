@@ -89,24 +89,18 @@ class FeaturesDecoder(nn.Module):
 
     def forward(self, inputs):
         x = inputs
-        #print('x.size(): {}'.format(x.size()))
 
         if self._use_jitter and self.training:
             x = self._jitter(x)
 
         x = self._conv_1(x)
-        #print('x.size(): {}'.format(x.size()))
         
         x = self._residual_stack(x)
-        #print('x.size(): {}'.format(x.size()))
         
         x = F.relu(self._conv_trans_1(x))
-        #print('x.size(): {}'.format(x.size()))
 
         x = F.relu(self._conv_trans_2(x))
-        #print('x.size(): {}'.format(x.size()))
 
         x = self._conv_trans_3(x)
-        #print('x.size(): {}'.format(x.size()))
         
         return x

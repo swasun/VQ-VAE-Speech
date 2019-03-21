@@ -1,12 +1,19 @@
+decoder_type: 'features'
+
 # Training
 batch_size: 2 # batch_size per a GPU
 data_root: './' # ./ == vctk/raw/VCTK-Corpus
 start_epoch: 0
-num_epochs: 1500
+num_epochs: 500
 checkpoint: 
 num_workers: 1
 train_val_split: 0.8
 learning_rate: 0.0002
+
+# Cuda
+use_cuda: True
+use_data_parallel: True
+use_device: 
 
 # Audio
 sampling_rate: 16000 # Sampling rate
@@ -40,7 +47,7 @@ commitment_cost: 0.25
 # of the optimizer. In the original VQ-VAE paper [van den Oord et al., 2017],
 # EMA updates were not used (but suggested in appendix) and compared in
 # [Roy et al., 2018].
-decay: 0.80
+decay: 0.99
 
 # Residual
 residual_channels: 768
@@ -59,8 +66,8 @@ features_filters: 13
 # The model seems to converge faster using it.
 # In addition to that, I used nn.utils.weight_norm() before each use of kaiming_normal(),
 # as they do in [ksw0306/ClariNet], because it works better.
-use_kaiming_normal: True
+use_kaiming_normal: False
 
 # jitter layer
 jitter_probability: 0.12
-use_jitter: True
+use_jitter: False

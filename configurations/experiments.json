@@ -1,0 +1,68 @@
+{
+    "results_path": "../results/",
+    "configuration_path": "../configurations/vctk_features.yaml",
+    "seed": 1234,
+    "experiments": {
+        "n500": {
+            "num_epochs": 500
+        },
+    
+        "n500_ema": {
+            "num_epochs": 500,
+            "decay": 0.99
+        },
+    
+        "n500_jitter12_ema": {
+            "num_epochs": 500,
+            "use_jitter": true,
+            "jitter_probability": 0.12,
+            "decay": 0.99
+        },
+    
+        "n500_jitter30_ema": {
+            "num_epochs": 500,
+            "use_jitter": true,
+            "jitter_probability": 0.30,
+            "decay": 0.99
+        },
+    
+        "n1000_jitter12_kaiming": {
+            "num_epochs": 1000,
+            "use_jitter": true,
+            "jitter_probability": 0.12,
+            "use_kaiming_normal": true
+        },
+    
+        "n500_jitter12_ema_kaiming": {
+            "num_epochs": 500,
+            "use_jitter": true,
+            "jitter_probability": 0.12,
+            "decay": 0.99,
+            "use_kaiming_normal": true
+        },
+    
+        "n500_jitter12_ema-80_kaiming": {
+            "num_epochs": 500,
+            "use_jitter": true,
+            "jitter_probability": 0.12,
+            "decay": 0.80,
+            "use_kaiming_normal": true
+        },
+    
+        "n1000_jitter12_ema-80_kaiming": {
+            "num_epochs": 1000,
+            "use_jitter": true,
+            "jitter_probability": 0.12,
+            "decay": 0.80,
+            "use_kaiming_normal": true
+        },
+    
+        "n1500_jitter12_ema-80_kaiming": {
+            "num_epochs": 1500,
+            "use_jitter": true,
+            "jitter_probability": 0.12,
+            "decay": 0.80,
+            "use_kaiming_normal": true
+        }
+    }
+}

@@ -125,20 +125,14 @@ class SpeechEncoder(nn.Module):
 
         x_conv_1 = F.relu(self._conv_1(features_tensor))
 
-        #print('x_conv_1.size(): {}'.format(x_conv_1.size()))
         x = F.relu(self._conv_2(x_conv_1)) + x_conv_1
-        #print('x_conv_2.size(): {}'.format(x.size()))
         
         x_conv_3 = F.relu(self._conv_3(x))
-        #print('x_conv_3.size(): {}'.format(x_conv_3.size()))
 
         x_conv_4 = F.relu(self._conv_4(x_conv_3)) + x_conv_3
-        #print('x_conv_4.size(): {}'.format(x_conv_4.size()))
 
         x_conv_5 = F.relu(self._conv_5(x_conv_4)) + x_conv_4
-        #print('x_conv_5.size(): {}'.format(x_conv_5.size()))
 
         x = self._residual_stack(x_conv_5) + x_conv_5
-        #print('x.size(): {}'.format(x.size()))
 
         return x
