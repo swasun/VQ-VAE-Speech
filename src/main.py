@@ -37,7 +37,7 @@ import sys
 
 
 if __name__ == "__main__":
-    default_experiments_configuration_path = '..' + os.sep + 'configurations' + os.sep + 'experiments_test.json'
+    default_experiments_configuration_path = '..' + os.sep + 'configurations' + os.sep + 'experiments.json'
     default_experiments_path = '..' + os.sep + 'experiments'
 
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
