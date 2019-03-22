@@ -3,6 +3,5 @@
 * plot spectrogram of input/output features
 * plot/compare vq output with/wo jitter
 * Update README
-* Compute all MFCC of datasets before the training
 * LibriSpeech dataloader with the right dataset
 * Handle the flow_wavenet and clarinet as possible decoders in vq_vae_wavenet decoder
