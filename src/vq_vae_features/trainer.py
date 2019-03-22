@@ -62,7 +62,7 @@ class Trainer(object):
                 data = data.to(self._device)
                 quantized = quantized.to(self._device)
 
-                #self._optimizer.zero_grad()
+                self._optimizer.zero_grad()
 
                 """
                 The perplexity a useful value to track during training.
