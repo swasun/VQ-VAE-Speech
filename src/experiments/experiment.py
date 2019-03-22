@@ -53,6 +53,10 @@ class Experiment(object):
     def device_configuration(self):
         return self._device_configuration
 
+    @property
+    def name(self):
+        return self._name
+
     def run(self):
         ConsoleLogger.status("Running the experiment called '{}'".format(self._name))
 
@@ -77,6 +81,6 @@ class Experiment(object):
             self._model, self._trainer, self._data_stream, self._configuration = create_from_scratch(self._configuration, self._device_configuration)
 
         ConsoleLogger.status('Begins to train the model')
-        #self._trainer.train(self._experiments_path, self._name)
+        self._trainer.train(self._experiments_path, self._name)
 
         ConsoleLogger.success("Succeed to runned the experiment called '{}'".format(self._name))

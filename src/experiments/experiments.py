@@ -1,4 +1,5 @@
 from experiments.experiment import Experiment
+from error_handling.console_logger import ConsoleLogger
 
 import json
 import yaml
@@ -16,10 +17,13 @@ class Experiments(object):
     def run(self):
         Experiments.set_deterministic_on(self._seed)
 
-        for i in range(len(self._experiments)):
-            self._experiments[i].run()
+        i = 0
+        for experiment in self._experiments:
+            experiment.run()
+            del experiment
             del self._experiments[i]
             torch.cuda.empty_cache() # Release the GPU memory cache
+            i += 1
 
     @staticmethod
     def set_deterministic_on(seed):
