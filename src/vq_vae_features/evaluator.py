@@ -30,22 +30,22 @@ import matplotlib.pyplot as plt
 
 class Evaluator(object):
 
-    def __init__(self, device, model, dataset):
+    def __init__(self, device, model, data_stream):
         self._device = device
         self._model = model
-        self._dataset = dataset
+        self._data_stream = data_stream
 
     def reconstruct(self):
         self._model.eval()
 
-        (self._valid_originals, _, _, _) = next(iter(self._dataset.validation_loader))
+        (self._valid_originals, _, _, _) = next(iter(self._data_stream.validation_loader))
         self._valid_originals = self._valid_originals.to(self._device)
 
         vq_output_eval = self._model.pre_vq_conv(self._model.encoder(self._valid_originals))
         _, valid_quantize, _, _ = self._model.vq(vq_output_eval)
         self._valid_reconstructions = self._model.decoder(valid_quantize)
 
-        (train_originals, _, _, _) = next(iter(self._dataset.training_loader))
+        (train_originals, _, _, _) = next(iter(self._data_stream.training_loader))
         train_originals = train_originals.to(self._device)
         _, self._train_reconstructions, _, _ = self._model.vq(train_originals)
 

@@ -33,14 +33,16 @@ from tqdm import tqdm
 import torch
 import os
 
+from vq_vae_speech.speech_features import SpeechFeatures
+
 
 class Trainer(object):
 
-    def __init__(self, device, model, optimizer, dataset, configuration, verbose=True):
+    def __init__(self, device, model, optimizer, data_stream, configuration, verbose=True):
         self._device = device
         self._model = model
         self._optimizer = optimizer
-        self._dataset = dataset
+        self._data_stream = data_stream
         self._verbose = verbose
         self._configuration = configuration
 
@@ -53,13 +55,14 @@ class Trainer(object):
         ConsoleLogger.status('num epoch: {}'.format(self._configuration['num_epochs']))
 
         for epoch in range(self._configuration['start_epoch'], self._configuration['num_epochs']):
-            train_bar = tqdm(self._dataset.training_loader)
+            train_bar = tqdm(self._data_stream.training_loader)
 
             for data in train_bar:
                 (data, _, _, quantized) = data
                 data = data.to(self._device)
                 quantized = quantized.to(self._device)
-                self._optimizer.zero_grad()
+
+                #self._optimizer.zero_grad()
 
                 """
                 The perplexity a useful value to track during training.

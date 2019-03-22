@@ -25,7 +25,7 @@
  #####################################################################################
 
 from vq_vae_features.features_auto_encoder import FeaturesAutoEncoder
-from dataset.speech_dataset import SpeechDataset
+from dataset.vctk_speech_stream import VCTKSpeechStream
 from vq_vae_speech.speech_features import SpeechFeatures
 
 import os
@@ -57,11 +57,11 @@ if __name__ == "__main__":
     device = 'cuda:0'
     gpu_ids = [0]
     
-    dataset = SpeechDataset(configuration, gpu_ids, use_cuda)
+    data_stream = VCTKSpeechStream(configuration, gpu_ids, use_cuda)
 
     auto_encoder.eval()
 
-    valid_originals, _, _, _ = next(iter(dataset.training_loader))
+    valid_originals, _, _, _ = next(iter(data_stream.training_loader))
     valid_originals = valid_originals.to(device)
 
     vq_output_eval = auto_encoder.pre_vq_conv(auto_encoder.encoder(valid_originals))
@@ -75,7 +75,7 @@ if __name__ == "__main__":
 
     features = SpeechFeatures.features_from_name(
         name='mfcc',
-        signal=valid_reconstructions.detach(),
+        signal=valid_reconstructions.detach().cpu(),
         rate=16000,
         filters_number=13
     )

@@ -36,11 +36,11 @@ import librosa
 
 class Trainer(object):
 
-    def __init__(self, device, model, optimizer, dataset, configuration, verbose=True):
+    def __init__(self, device, model, optimizer, data_stream, configuration, verbose=True):
         self._device = device
         self._model = model
         self._optimizer = optimizer
-        self._dataset = dataset
+        self._data_stream = data_stream
         self._verbose = verbose
         self._train_res_recon_error = []
         self._train_res_perplexity = []
@@ -48,7 +48,7 @@ class Trainer(object):
 
     def train(self, experiments_path, experiment_name):
         for epoch in range(self._configuration['start_epoch'], self._configuration['num_epochs']):
-            train_bar = tqdm(self._dataset.training_loader)
+            train_bar = tqdm(self._data_stream.training_loader)
             self._model.train()
             for data in train_bar:
                 x_enc, x_dec, speaker_id, quantized = data
@@ -64,7 +64,7 @@ class Trainer(object):
                 train_bar.set_description('Epoch {}: loss {:.4f}'.format(epoch + 1, loss.mean().item()))
 
             self._model.eval()
-            data_val = next(iter(self._dataset.validation_loader))
+            data_val = next(iter(self._data_stream.validation_loader))
             with torch.no_grad():
                 x_enc_val, x_dec_val, speaker_id_val, quantized_val = data_val
                 x_enc_val, x_dec_val, speaker_id_val, quantized_val = x_enc_val.to(self._device), x_dec_val.to(self._device), speaker_id_val.to(self._device), quantized_val.to(self._device)

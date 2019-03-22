@@ -1,7 +1,7 @@
 from experiments.device_configuration import DeviceConfiguration
 from experiments.model_factory import ModelFactory
 from error_handling.console_logger import ConsoleLogger
-from dataset.speech_dataset import SpeechDataset
+from dataset.vctk_features_stream import VCTKFeaturesStream
 
 import os
 import yaml
@@ -57,26 +57,26 @@ class Experiment(object):
         ConsoleLogger.status("Running the experiment called '{}'".format(self._name))
 
         def create_from_scratch(configuration, device_configuration):
-            # Load the speech dataset
-            ConsoleLogger.status('Loading speech dataset')
-            dataset = SpeechDataset(configuration, device_configuration.gpu_ids, device_configuration.use_cuda)
+            # Load the data stream
+            ConsoleLogger.status('Loading data stream')
+            data_stream = VCTKFeaturesStream('../data/vctk', configuration, device_configuration.gpu_ids, device_configuration.use_cuda)
 
-            # Build the model and the trainer from the configurations and the dataset
-            model, trainer = ModelFactory.build(configuration, device_configuration, dataset)
+            # Build the model and the trainer from the configurations and the data stream
+            model, trainer = ModelFactory.build(configuration, device_configuration, data_stream)
 
-            return model, trainer, dataset, configuration
+            return model, trainer, data_stream, configuration
 
         if self._configuration_file_already_exists:
             ConsoleLogger.status('Configuration file already exists. Loading...')
             try:
-                self._model, self._trainer, _, self._dataset = ModelFactory.load(self._experiments_path, self._name)
+                self._model, self._trainer, _, self._data_stream = ModelFactory.load(self._experiments_path, self._name)
             except:
                 ConsoleLogger.error('Failed to load existing configuration. Building a new model...')
-                self._model, self._trainer, self._dataset, self._configuration = create_from_scratch(self._configuration, self._device_configuration)
+                self._model, self._trainer, self._data_stream, self._configuration = create_from_scratch(self._configuration, self._device_configuration)
         else:
-            self._model, self._trainer, self._dataset, self._configuration = create_from_scratch(self._configuration, self._device_configuration)
+            self._model, self._trainer, self._data_stream, self._configuration = create_from_scratch(self._configuration, self._device_configuration)
 
         ConsoleLogger.status('Begins to train the model')
-        self._trainer.train(self._experiments_path, self._name)
+        #self._trainer.train(self._experiments_path, self._name)
 
         ConsoleLogger.success("Succeed to runned the experiment called '{}'".format(self._name))

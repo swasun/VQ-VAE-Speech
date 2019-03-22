@@ -47,7 +47,6 @@ class FeaturesDecoder(nn.Module):
             in_channels=in_channels,
             out_channels=num_hiddens,
             kernel_size=3,
-            #stride=2,
             padding=1,
             use_kaiming_normal=use_kaiming_normal
         )

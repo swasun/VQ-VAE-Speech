@@ -24,25 +24,24 @@
  #   SOFTWARE.                                                                       #
  #####################################################################################
 
-from dataset.vctk_dataset import VCTKDataset
-from dataset.vctk import VCTK
+from dataset.vctk_features_dataset import VCTKFeaturesDataset
 
 from torch.utils.data import DataLoader
 import numpy as np
+import pathlib
+import os
 
 
-class SpeechDataset(object):
+class VCTKFeaturesStream(object):
 
-    def __init__(self, configuration, gpu_ids, use_cuda):
-        vctk = VCTK(configuration['data_root'], ratio=configuration['train_val_split'])
-        self._training_data = VCTKDataset(vctk.audios_train, vctk.speaker_dic, configuration)
-        self._validation_data = VCTKDataset(vctk.audios_val, vctk.speaker_dic, configuration)
+    def __init__(self, vctk_path, configuration, gpu_ids, use_cuda):
+        self._training_data = VCTKFeaturesDataset(vctk_path, 'train')
+        self._validation_data = VCTKFeaturesDataset(vctk_path, 'val')
         factor = 1 if len(gpu_ids) == 0 else len(gpu_ids)
         self._training_loader = DataLoader(self._training_data, batch_size=configuration['batch_size'] * factor, shuffle=True,
             num_workers=configuration['num_workers'], pin_memory=use_cuda)
         self._validation_loader = DataLoader(self._validation_data, batch_size=1, num_workers=configuration['num_workers'], pin_memory=use_cuda)
-        self._speaker_dic = vctk.speaker_dic
-        self._train_data_variance = np.var(self._training_data.quantize / 255.0)
+        self._speaker_dic = self._make_speaker_dic(vctk_path + os.sep + 'VCTK-Corpus')
 
     @property
     def training_data(self):
@@ -64,6 +63,9 @@ class SpeechDataset(object):
     def speaker_dic(self):
         return self._speaker_dic
 
-    @property
-    def train_data_variance(self):
-        return self._train_data_variance
+    def _make_speaker_dic(self, root):
+        speakers = [
+            str(speaker.name) for speaker in pathlib.Path(root).glob('wav48/*/')]
+        speakers = sorted([speaker for speaker in speakers])
+        speaker_dic = {speaker: i for i, speaker in enumerate(speakers)}
+        return speaker_dic

@@ -25,7 +25,8 @@
  #####################################################################################
 
 from error_handling.console_logger import ConsoleLogger
-from dataset.speech_dataset import SpeechDataset
+from dataset.vctk_speech_stream import VCTKSpeechStream
+from dataset.vctk_features_stream import VCTKFeaturesStream
 from experiments.model_factory import ModelFactory
 from experiments.device_configuration import DeviceConfiguration
 from experiments.experiments import Experiments
@@ -42,6 +43,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--summary', nargs='?', default=None, type=str, help='The summary of the model regarding a specified configuration file')
+    parser.add_argument('--export_to_features', action='store_true', help='Export the VCTK dataset files to features')
     parser.add_argument('--experiments_configuration_path', nargs='?', default=default_experiments_configuration_path, type=str, help='The path of the experiments configuration file')
     parser.add_argument('--experiments_path', nargs='?', default=default_experiments_path, type=str, help='The path of the experiments ouput directory')
     args = parser.parse_args()
@@ -55,11 +57,20 @@ if __name__ == "__main__":
             configuration = yaml.load(configuration_file)
         ConsoleLogger.status('Printing the summary of the model...')
         device_configuration = DeviceConfiguration.load_from_configuration(configuration)
-        dataset = SpeechDataset(configuration, device_configuration.gpu_ids, device_configuration.use_cuda)
-        model = ModelFactory.build(configuration, device_configuration, dataset, with_trainer=False)
+        data_stream = VCTKFeaturesStream('../data/vctk', configuration, device_configuration.gpu_ids, device_configuration.use_cuda)
+        model = ModelFactory.build(configuration, device_configuration, data_stream, with_trainer=False)
         print(model)
         sys.exit(0)
 
-    Experiments.load(args.experiments_configuration_path).run()
+    if args.export_to_features:
+        configuration = None
+        with open('../configurations/vctk_features.yaml', 'r') as configuration_file:
+            configuration = yaml.load(configuration_file)
+        device_configuration = DeviceConfiguration.load_from_configuration(configuration)
+        data_stream = VCTKSpeechStream(configuration, device_configuration.gpu_ids, device_configuration.use_cuda)
+        data_stream.export_to_features('../data/vctk')
+        ConsoleLogger.success("VCTK exported to a new features dataset at: '../data/vctk/features'")
+        sys.exit(0)
 
-    ConsoleLogger.success('Done.')
+    Experiments.load(args.experiments_configuration_path).run()
+    ConsoleLogger.success('All experiments done')

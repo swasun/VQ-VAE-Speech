@@ -4,7 +4,7 @@ from error_handling.console_logger import ConsoleLogger
 from vq_vae_wavenet.wavenet_auto_encoder import WaveNetAutoEncoder
 from vq_vae_wavenet.trainer import Trainer as WaveNetTrainer
 from experiments.device_configuration import DeviceConfiguration
-from dataset.speech_dataset import SpeechDataset
+from dataset.vctk_features_stream import VCTKFeaturesStream
 
 from torch import nn
 import torch.optim as optim
@@ -16,7 +16,7 @@ import yaml
 class ModelFactory(object):
 
     @staticmethod
-    def build(configuration, device_configuration, dataset, with_trainer=True):
+    def build(configuration, device_configuration, data_stream, with_trainer=True):
         ConsoleLogger.status('Building model...')
         if configuration['decoder_type'] == 'deconvolutional':
             auto_encoder = FeaturesAutoEncoder(configuration, device_configuration.device).to(device_configuration.device)
@@ -26,14 +26,14 @@ class ModelFactory(object):
                     device_configuration.device,
                     auto_encoder,
                     optimizer,
-                    dataset,
+                    data_stream,
                     configuration
                 )
         elif configuration['decoder_type'] == 'wavenet':
-            auto_encoder = WaveNetAutoEncoder(configuration, dataset.speaker_dic, device_configuration.device).to(device_configuration.device)
+            auto_encoder = WaveNetAutoEncoder(configuration, data_stream.speaker_dic, device_configuration.device).to(device_configuration.device)
             optimizer = optim.Adam(auto_encoder.parameters(), lr=configuration['learning_rate'], amsgrad=True) # Create an Adam optimizer instance
             if with_trainer:
-                trainer = WaveNetTrainer(device_configuration.device, auto_encoder, optimizer, dataset, configuration)
+                trainer = WaveNetTrainer(device_configuration.device, auto_encoder, optimizer, data_stream, configuration)
         else:
             raise ValueError('Invalid configuration file: there is no decoder_type field')
 
@@ -103,9 +103,9 @@ class ModelFactory(object):
         ConsoleLogger.status("Loading the checkpoint file '{}'".format(checkpoint_path))
         checkpoint = torch.load(checkpoint_path, map_location=device_configuration.device)
 
-        # Load the speech dataset
-        ConsoleLogger.status('Loading the speech dataset')
-        dataset = SpeechDataset(configuration, device_configuration.gpu_ids, device_configuration.use_cuda)
+        # Load the data stream
+        ConsoleLogger.status('Loading the data stream')
+        data_stream = VCTKFeaturesStream('../data/vctk', configuration, device_configuration.gpu_ids, device_configuration.use_cuda)
 
         def load_state_dicts(model, checkpoint):
             # Load the state dict from the checkpoint to the model
@@ -134,13 +134,13 @@ class ModelFactory(object):
                 device_configuration.device,
                 model,
                 optimizer,
-                dataset,
+                data_stream,
                 configuration
             )
         # Else if the decoder is a wavenet
         elif configuration['decoder_type'] == 'wavenet':
             # Create the model and map it to the specified device
-            model = WaveNetAutoEncoder(configuration, dataset.speaker_dic, device_configuration.device).to(device_configuration.device)
+            model = WaveNetAutoEncoder(configuration, data_stream.speaker_dic, device_configuration.device).to(device_configuration.device)
 
             # Load the model and optimizer state dicts
             model, optimizer = load_state_dicts(model, checkpoint)
@@ -150,7 +150,7 @@ class ModelFactory(object):
                 device_configuration.device,
                 model,
                 optimizer,
-                dataset,
+                data_stream,
                 configuration
             )
         else:
@@ -159,4 +159,4 @@ class ModelFactory(object):
         # Use data parallelization if needed and available
         model = nn.DataParallel(model, device_ids=device_configuration.gpu_ids) if device_configuration.use_data_parallel else model
 
-        return model, trainer, configuration, dataset
+        return model, trainer, configuration, data_stream

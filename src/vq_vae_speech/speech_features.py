@@ -10,7 +10,7 @@ class SpeechFeatures(object):
 
     @staticmethod
     def mfcc(signal, rate=default_rate, filters_number=default_filters_number):
-        mfcc_features = mfcc(signal.cpu(), rate, numcep=filters_number)
+        mfcc_features = mfcc(signal, rate, numcep=filters_number)
         d_mfcc_features = delta(mfcc_features, 2)
         a_mfcc_features = delta(d_mfcc_features, 2)
         concatenated_features = np.concatenate((
@@ -24,7 +24,7 @@ class SpeechFeatures(object):
 
     @staticmethod
     def logfbank(signal, rate=default_rate, filters_number=default_filters_number):
-        logfbank_features = logfbank(signal.cpu(), rate, nfilt=filters_number)
+        logfbank_features = logfbank(signal, rate, nfilt=filters_number)
         d_logfbank_features = delta(logfbank_features, 2)
         a_logfbank_features = delta(d_logfbank_features, 2)
         concatenated_features = np.concatenate((

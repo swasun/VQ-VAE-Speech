@@ -25,7 +25,6 @@
  #####################################################################################
 
 from vq_vae_speech.speech_encoder import SpeechEncoder
-from vq_vae_speech.speech_features import SpeechFeatures
 from vq_vae_features.features_decoder import FeaturesDecoder
 from vq.vector_quantizer import VectorQuantizer
 from vq.vector_quantizer_ema import VectorQuantizerEMA
@@ -118,17 +117,9 @@ class FeaturesAutoEncoder(nn.Module):
 
         reconstructed_x = self._decoder(quantized)
 
-        reconstructed_x = reconstructed_x.view(-1, self._features_filters * 3)
-        y_features = SpeechFeatures.features_from_name(
-            name=self._output_features_type,
-            signal=y,
-            rate=self._sampling_rate,
-            filters_number=self._features_filters
-        )
-        tensor_y_features = torch.tensor(y_features, dtype=torch.float).to(self._device)
-
-        reconstruction_loss = self._criterion(reconstructed_x, tensor_y_features)
+        reconstructed_x = reconstructed_x.view(-1, reconstructed_x.shape[1], self._features_filters * 3)
+        
+        reconstruction_loss = self._criterion(reconstructed_x, y.float())
         loss = vq_loss + reconstruction_loss
 
         return loss, reconstructed_x, perplexity
-

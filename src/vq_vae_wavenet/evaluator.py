@@ -31,10 +31,10 @@ import numpy as np
 
 class Evaluator(object):
 
-    def __init__(self, device, model, dataset):
+    def __init__(self, device, model, data_stream):
         self._device = device
         self._model = model
-        self._dataset = dataset
+        self._data_stream = data_stream
 
     def save_embedding_plot(self, path):
         try:

@@ -8,33 +8,33 @@
             "num_epochs": 2
         },
     
-        "n2_ema": {
+        "n2-ema": {
             "num_epochs": 2,
             "decay": 0.99
         },
     
-        "n2_jitter12_ema": {
+        "n2-jitter12-ema": {
             "num_epochs": 2,
             "use_jitter": true,
             "jitter_probability": 0.12,
             "decay": 0.99
         },
     
-        "n2_jitter30_ema": {
+        "n2-jitter30-ema": {
             "num_epochs": 2,
             "use_jitter": true,
             "jitter_probability": 0.30,
             "decay": 0.99
         },
     
-        "n4_jitter12_kaiming": {
+        "n4-jitter12-kaiming": {
             "num_epochs": 4,
             "use_jitter": true,
             "jitter_probability": 0.12,
             "use_kaiming_normal": true
         },
     
-        "n2_jitter12_ema_kaiming": {
+        "n2-jitter12-ema-kaiming": {
             "num_epochs": 2,
             "use_jitter": true,
             "jitter_probability": 0.12,
@@ -42,7 +42,7 @@
             "use_kaiming_normal": true
         },
     
-        "n2_jitter12_ema-80_kaiming": {
+        "n2-jitter12-ema80-kaiming": {
             "num_epochs": 2,
             "use_jitter": true,
             "jitter_probability": 0.12,
@@ -50,7 +50,7 @@
             "use_kaiming_normal": true
         },
     
-        "n4_jitter12_ema-80_kaiming": {
+        "n4-jitter12-ema80-kaiming": {
             "num_epochs": 4,
             "use_jitter": true,
             "jitter_probability": 0.12,
@@ -58,7 +58,7 @@
             "use_kaiming_normal": true
         },
     
-        "n6_jitter12_ema-80_kaiming": {
+        "n6-jitter12-ema80-kaiming": {
             "num_epochs": 6,
             "use_jitter": true,
             "jitter_probability": 0.12,
