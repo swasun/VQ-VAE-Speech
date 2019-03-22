@@ -47,7 +47,7 @@ commitment_cost: 0.25
 # of the optimizer. In the original VQ-VAE paper [van den Oord et al., 2017],
 # EMA updates were not used (but suggested in appendix) and compared in
 # [Roy et al., 2018].
-decay:
+decay: 0.0
 
 # Residual
 residual_channels: 768

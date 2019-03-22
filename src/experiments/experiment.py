@@ -5,6 +5,7 @@ from dataset.vctk_features_stream import VCTKFeaturesStream
 
 import os
 import yaml
+import copy
 
 
 class Experiment(object):
@@ -36,7 +37,7 @@ class Experiment(object):
             self._device_configuration = DeviceConfiguration.load_from_configuration(global_configuration)
 
             # Create a new configuration state from the default and the experiment specific aspects
-            self._configuration = self._global_configuration
+            self._configuration = copy.deepcopy(self._global_configuration)
             for experiment_key in experiment_configuration.keys():
                 if experiment_key in self._configuration:
                     self._configuration[experiment_key] = experiment_configuration[experiment_key]
