@@ -74,7 +74,17 @@ class Experiment(object):
         if self._configuration_file_already_exists:
             ConsoleLogger.status('Configuration file already exists. Loading...')
             try:
-                self._model, self._trainer, _, self._data_stream = ModelFactory.load(self._experiments_path, self._name)
+                results = ModelFactory.load(self._experiments_path, self._name)
+                if len(results) == 4:
+                    self._model, self._trainer, _, self._data_stream = results
+                else:
+                    configuration_file = results[0]
+                    # Load the configuration file
+                    ConsoleLogger.status('Loading the configuration file')
+                    configuration = None
+                    with open(self._experiments_path + os.sep + configuration_file, 'r') as file:
+                        configuration = yaml.load(file)
+                    self._model, self._trainer, self._data_stream, self._configuration = create_from_scratch(configuration, self._device_configuration)
             except:
                 ConsoleLogger.error('Failed to load existing configuration. Building a new model...')
                 self._model, self._trainer, self._data_stream, self._configuration = create_from_scratch(self._configuration, self._device_configuration)

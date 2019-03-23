@@ -74,7 +74,8 @@ class ModelFactory(object):
 
         # Check if at least one checkpoint file was found
         if len(checkpoint_files) == 0:
-            raise ValueError('No checkpoint files found with name: {}'.format(experiment_name))
+            ConsoleLogger.warn('No checkpoint files found with name: {}'.format(experiment_name))
+            return [configuration_file]
 
         # Search the latest checkpoint file
         ConsoleLogger.status('Searching the latest checkpoint file')
@@ -89,8 +90,8 @@ class ModelFactory(object):
         # Load the configuration file
         ConsoleLogger.status('Loading the configuration file')
         configuration = None
-        with open(experiment_path + os.sep + configuration_file, 'r') as configuration_file:
-            configuration = yaml.load(configuration_file)
+        with open(experiment_path + os.sep + configuration_file, 'r') as file:
+            configuration = yaml.load(file)
 
         # Update the epoch number to begin with for the future training
         configuration['start_epoch'] = latest_epoch
@@ -159,4 +160,4 @@ class ModelFactory(object):
         # Use data parallelization if needed and available
         model = nn.DataParallel(model, device_ids=device_configuration.gpu_ids) if device_configuration.use_data_parallel else model
 
-        return model, trainer, configuration, data_stream
+        return [model, trainer, configuration, data_stream]
