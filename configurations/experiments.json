@@ -5,48 +5,33 @@
     "seed": 1234,
     "experiments": {    
         "baseline": {
-            "num_epochs": 10
+            "num_epochs": 15
         },
     
         "ema": {
-            "num_epochs": 10,
+            "num_epochs": 15,
             "decay": 0.99
         },
     
         "jitter12-ema": {
-            "num_epochs": 10,
+            "num_epochs": 15,
             "use_jitter": true,
             "jitter_probability": 0.12,
             "decay": 0.99
         },
     
-        "jitter30-ema": {
-            "num_epochs": 10,
-            "use_jitter": true,
-            "jitter_probability": 0.30,
-            "decay": 0.99
-        },
-    
         "jitter12-kaiming": {
-            "num_epochs": 10,
+            "num_epochs": 15,
             "use_jitter": true,
             "jitter_probability": 0.12,
             "use_kaiming_normal": true
         },
     
         "jitter12-ema-kaiming": {
-            "num_epochs": 10,
+            "num_epochs": 15,
             "use_jitter": true,
             "jitter_probability": 0.12,
             "decay": 0.99,
-            "use_kaiming_normal": true
-        },
-    
-        "jitter12-ema80-kaiming": {
-            "num_epochs": 10,
-            "use_jitter": true,
-            "jitter_probability": 0.12,
-            "decay": 0.80,
             "use_kaiming_normal": true
         }
     }

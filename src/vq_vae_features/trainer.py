@@ -69,16 +69,16 @@ class Trainer(object):
                 It indicates how many codes are 'active' on average.
                 """
                 loss, _, perplexity = self._model(data, quantized)
-                loss.mean().backward()
+                loss.backward()
 
                 self._optimizer.step()
 
-                mean_loss = loss.mean().item()
-                mean_perplexity = perplexity.mean().item()
-                train_bar.set_description('Epoch {}: loss {:.4f} perplexity {:.3f}'.format(epoch + 1, mean_loss, mean_perplexity))
+                loss_value = loss.item()
+                perplexity_value = perplexity.item()
+                train_bar.set_description('Epoch {}: loss {:.4f} perplexity {:.3f}'.format(epoch + 1, loss_value, perplexity_value))
                 
-                train_res_recon_error.append(mean_loss)
-                train_res_perplexity.append(mean_perplexity)
+                train_res_recon_error.append(loss_value)
+                train_res_perplexity.append(perplexity_value)
 
             torch.save({
                     'experiment_name': experiment_name,
