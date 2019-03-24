@@ -1,9 +1,10 @@
+from experiments.device_configuration import DeviceConfiguration
+from experiments.checkpoint_utils import CheckpointUtils
 from vq_vae_features.features_auto_encoder import FeaturesAutoEncoder
 from vq_vae_features.trainer import Trainer as FeaturesTrainer
-from error_handling.console_logger import ConsoleLogger
 from vq_vae_wavenet.wavenet_auto_encoder import WaveNetAutoEncoder
 from vq_vae_wavenet.trainer import Trainer as WaveNetTrainer
-from experiments.device_configuration import DeviceConfiguration
+from error_handling.console_logger import ConsoleLogger
 from dataset.vctk_features_stream import VCTKFeaturesStream
 
 from torch import nn
@@ -46,27 +47,7 @@ class ModelFactory(object):
 
     @staticmethod
     def load(experiment_path, experiment_name):
-        # Check if the specified experiment path exists
-        ConsoleLogger.status("Checking if the experiment path '{}' exists".format(experiment_path))
-        if not os.path.isdir(experiment_path):
-            raise ValueError("Specified experiment path '{}' doesn't not exist".format(experiment_path))
-
-        # List all the files from this directory and raise an error if it's empty
-        ConsoleLogger.status('Listing the specified experiment path directory')
-        files = os.listdir(experiment_path)
-        if not files or len(files) == 0:
-            raise ValueError("Specified experiment path '{}' is empty".format(experiment_path))
-
-        # Search the configuration file and the checkpoint files of the specified experiment
-        ConsoleLogger.status('Searching the configuration file and the checkpoint files')
-        checkpoint_files = list()
-        configuration_file = None
-        for file in files:
-            split_file = file.split('_')
-            if len(split_file) > 1 and split_file[0] == experiment_name and split_file[1] == 'configuration.yaml':
-                configuration_file = file
-            elif len(split_file) > 1 and split_file[0] == experiment_name and split_file[1] != 'configuration.yaml':
-                checkpoint_files.append(file)
+        configuration_file, checkpoint_files = CheckpointUtils.search_configuration_and_checkpoints_files(experiment_path, experiment_name)
 
         # Check if a configuration file was found
         if not configuration_file:
@@ -77,15 +58,7 @@ class ModelFactory(object):
             ConsoleLogger.warn('No checkpoint files found with name: {}'.format(experiment_name))
             return [configuration_file]
 
-        # Search the latest checkpoint file
-        ConsoleLogger.status('Searching the latest checkpoint file')
-        latest_checkpoint_file = checkpoint_files[0]
-        latest_epoch = int(checkpoint_files[0].split('_')[1])
-        for i in range(1, len(checkpoint_files)):
-            epoch = int(checkpoint_files[i].split('_')[1])
-            if epoch > latest_epoch:
-                latest_checkpoint_file = checkpoint_files[i]
-                latest_epoch = epoch
+        latest_checkpoint_file, latest_epoch = CheckpointUtils.search_latest_checkpoint_file(checkpoint_files)
 
         # Load the configuration file
         ConsoleLogger.status('Loading the configuration file')

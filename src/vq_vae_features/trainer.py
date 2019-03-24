@@ -48,14 +48,14 @@ class Trainer(object):
 
     def train(self, experiments_path, experiment_name):
         self._model.train()
-        train_res_recon_error = []
-        train_res_perplexity = []
 
         ConsoleLogger.status('start epoch: {}'.format(self._configuration['start_epoch']))
         ConsoleLogger.status('num epoch: {}'.format(self._configuration['num_epochs']))
 
         for epoch in range(self._configuration['start_epoch'], self._configuration['num_epochs']):
             train_bar = tqdm(self._data_stream.training_loader)
+            train_res_recon_error = []
+            train_res_perplexity = []
 
             for data in train_bar:
                 (data, _, _, quantized) = data

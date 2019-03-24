@@ -55,8 +55,16 @@ class Experiment(object):
         return self._device_configuration
 
     @property
+    def experiment_path(self):
+        return self._experiments_path
+
+    @property
     def name(self):
         return self._name
+
+    @property
+    def results_path(self):
+        return self._results_path
 
     def run(self):
         ConsoleLogger.status("Running the experiment called '{}'".format(self._name))

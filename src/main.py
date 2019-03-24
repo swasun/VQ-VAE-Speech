@@ -42,10 +42,11 @@ if __name__ == "__main__":
     default_experiments_path = '..' + os.sep + 'experiments'
 
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--summary', nargs='?', default=None, type=str, help='The summary of the model regarding a specified configuration file')
+    parser.add_argument('--summary', nargs='?', default=None, type=str, help='The summary of the model based of a specified configuration file')
     parser.add_argument('--export_to_features', action='store_true', help='Export the VCTK dataset files to features')
     parser.add_argument('--experiments_configuration_path', nargs='?', default=default_experiments_configuration_path, type=str, help='The path of the experiments configuration file')
     parser.add_argument('--experiments_path', nargs='?', default=default_experiments_path, type=str, help='The path of the experiments ouput directory')
+    parser.add_argument('--plot_experiments_losses', action='store_true', help='Plot the losses of the experiments based of the specified file in --experiments_configuration_path option')
     args = parser.parse_args()
 
     # If specified, print the summary of the model using the CPU device
@@ -60,6 +61,11 @@ if __name__ == "__main__":
         data_stream = VCTKFeaturesStream('../data/vctk', configuration, device_configuration.gpu_ids, device_configuration.use_cuda)
         model = ModelFactory.build(configuration, device_configuration, data_stream, with_trainer=False)
         print(model)
+        sys.exit(0)
+
+    if args.plot_experiments_losses:
+        experiments = Experiments.load(args.experiments_configuration_path)
+        experiments.plot_losses(args.experiments_path)
         sys.exit(0)
 
     if args.export_to_features:

@@ -4,62 +4,46 @@
     "configuration_path": "../configurations/vctk_features.yaml",
     "seed": 1234,
     "experiments": {    
-        "n2": {
-            "num_epochs": 2
+        "baseline": {
+            "num_epochs": 10
         },
     
-        "n2-ema": {
-            "num_epochs": 2,
+        "ema": {
+            "num_epochs": 10,
             "decay": 0.99
         },
     
-        "n2-jitter12-ema": {
-            "num_epochs": 2,
+        "jitter12-ema": {
+            "num_epochs": 10,
             "use_jitter": true,
             "jitter_probability": 0.12,
             "decay": 0.99
         },
     
-        "n2-jitter30-ema": {
-            "num_epochs": 2,
+        "jitter30-ema": {
+            "num_epochs": 10,
             "use_jitter": true,
             "jitter_probability": 0.30,
             "decay": 0.99
         },
     
-        "n4-jitter12-kaiming": {
-            "num_epochs": 4,
+        "jitter12-kaiming": {
+            "num_epochs": 10,
             "use_jitter": true,
             "jitter_probability": 0.12,
             "use_kaiming_normal": true
         },
     
-        "n2-jitter12-ema-kaiming": {
-            "num_epochs": 2,
+        "jitter12-ema-kaiming": {
+            "num_epochs": 10,
             "use_jitter": true,
             "jitter_probability": 0.12,
             "decay": 0.99,
             "use_kaiming_normal": true
         },
     
-        "n2-jitter12-ema80-kaiming": {
-            "num_epochs": 2,
-            "use_jitter": true,
-            "jitter_probability": 0.12,
-            "decay": 0.80,
-            "use_kaiming_normal": true
-        },
-    
-        "n4-jitter12-ema80-kaiming": {
-            "num_epochs": 4,
-            "use_jitter": true,
-            "jitter_probability": 0.12,
-            "decay": 0.80,
-            "use_kaiming_normal": true
-        },
-
-        "n6-jitter12-ema80-kaiming": {
-            "num_epochs": 6,
+        "jitter12-ema80-kaiming": {
+            "num_epochs": 10,
             "use_jitter": true,
             "jitter_probability": 0.12,
             "decay": 0.80,
