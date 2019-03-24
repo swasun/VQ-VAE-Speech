@@ -86,38 +86,3 @@ class Trainer(object):
                         'decoder': decoder.state_dict(),
                         'vq': vq.state_dict()
                         }, os.path.join(save_path, '{}_checkpoint.pth'.format(epoch)))"""
-
-    def save_loss_plot(self, path):
-        maximum_window_length = 201
-        train_res_recon_error_len = len(self._train_res_recon_error)
-        train_res_recon_error_len = train_res_recon_error_len if train_res_recon_error_len % 2 == 1 else train_res_recon_error_len - 1
-        train_res_perplexity_len = len(self._train_res_perplexity)
-        train_res_perplexity_len = train_res_perplexity_len if train_res_perplexity_len % 2 == 1 else train_res_perplexity_len - 1
-        polyorder = 7
-
-        train_res_recon_error_smooth = savgol_filter(
-            self._train_res_recon_error,
-            maximum_window_length if train_res_recon_error_len > maximum_window_length else train_res_recon_error_len,
-            polyorder
-        )
-        train_res_perplexity_smooth = savgol_filter(
-            self._train_res_perplexity,
-            maximum_window_length if train_res_perplexity_len > maximum_window_length else train_res_perplexity_len,
-            polyorder
-        )
-
-        fig = plt.figure(figsize=(16, 8))
-
-        ax = fig.add_subplot(1, 2, 1)
-        ax.plot(train_res_recon_error_smooth)
-        ax.set_yscale('log')
-        ax.set_title('Smoothed NMSE.')
-        ax.set_xlabel('Iterations')
-
-        ax = fig.add_subplot(1, 2, 2)
-        ax.plot(train_res_perplexity_smooth)
-        ax.set_title('Smoothed Average codebook usage (perplexity).')
-        ax.set_xlabel('Iterations')
-
-        fig.savefig(path)
-        plt.close(fig)
