@@ -11,6 +11,7 @@ import random
 import os
 import matplotlib.pyplot as plt
 from scipy.signal import savgol_filter
+from itertools import cycle
 
 
 class Experiments(object):
@@ -145,19 +146,25 @@ class Experiments(object):
                 )
                 all_train_res_recon_error_smooth.append(train_res_recon_error_smooth)
                 all_train_res_perplexity_smooth.append(train_res_perplexity_smooth)
+                #all_train_res_recon_error_smooth.append(self._moving_average(train_res_recon_error_smooth))
+                #all_train_res_perplexity_smooth.append(self._moving_average(train_res_perplexity_smooth))
 
             epochs = range(1, latest_epoch + 1, 1)
+            linestyles = ['-', '--', '-.', ':']
+            linecycler = cycle(linestyles)
+            lines = [next(linecycler) for i in range(len(all_train_res_recon_error_smooth))]
+            linewidth = 0.5
 
             fig = plt.figure(figsize=(16, 8))
 
             ax = fig.add_subplot(1, 2, 1)
             for i in range(len(all_train_res_recon_error_smooth)):
-                ax.plot(all_train_res_recon_error_smooth[i], linewidth=1, label=all_experiments_names[i])
+                ax.plot(all_train_res_recon_error_smooth[i], linewidth=linewidth, linestyle=lines[i], label=all_experiments_names[i])
             ax = configure_ax1(ax, epochs, legend=True)
 
             ax = fig.add_subplot(1, 2, 2)
             for i in range(len(all_train_res_perplexity_smooth)):
-                ax.plot(all_train_res_perplexity_smooth[i], linewidth=1, label=all_experiments_names[i])
+                ax.plot(all_train_res_perplexity_smooth[i], linewidth=linewidth, linestyle=lines[i], label=all_experiments_names[i])
             ax = configure_ax2(ax, epochs, legend=True)
 
             fig.savefig(output_plot_path)
@@ -191,6 +198,14 @@ class Experiments(object):
                 plt.close(fig)
 
                 ConsoleLogger.success("Saved figure at path '{}'".format(output_plot_path))
+
+    def _moving_average(self, a, n=10):
+        """
+        https://stackoverflow.com/a/14314054
+        """
+        ret = np.cumsum(a, dtype=float)
+        ret[n:] = ret[n:] - ret[:-n]
+        return ret[n - 1:] / n
 
     def _smooth_losses(self, train_res_recon_errors, train_res_perplexities):
         maximum_window_length = 201
