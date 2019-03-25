@@ -46,7 +46,7 @@ if __name__ == "__main__":
     _, valid_quantize, _, _ = model.vq(vq_output_eval)
     valid_reconstructions = model.decoder(valid_quantize)
 
-    valid_reconstructions = valid_reconstructions.view(95, 13 * 3)
+    valid_reconstructions = valid_reconstructions.view(2, 95, 13 * 3)
 
     features = SpeechFeatures.features_from_name(
         name='mfcc',
@@ -57,5 +57,6 @@ if __name__ == "__main__":
     print('features.shape: {}'.format(features.shape))
     features = np.swapaxes(features, 0, 1)
     print('features.shape (swapped): {}'.format(features.shape))
-    plt.imshow(features)
-    plt.show()
+    plt.imsave('test_decoder_features.png', features)
+    #plt.imshow(features)
+    #plt.show()

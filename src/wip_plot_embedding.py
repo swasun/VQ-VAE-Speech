@@ -46,58 +46,74 @@ def save_embedding_plot(embedding, path):
         metric='euclidean'
     )
 
-    projection = map.fit_transform(embedding.weight.data.cpu())
+    projection = map.fit_transform(embedding.weight.data.cpu().detach().numpy())
 
     fig = plt.figure()
     plt.scatter(projection[:,0], projection[:,1], alpha=0.3)
     fig.savefig(path)
     plt.close(fig)
 
-def test_1(embedding):
+def test_1(embedding, output_path):
     save_embedding_plot(
         embedding=embedding,
-        path=results_path + os.sep + 'embedding.png'
+        path=output_path + os.sep + 'embedding.png'
     )
 
-def test_2(embedding_weight):
+def test_2(embedding_weight, output_path, experiment_name):
     embedding_element = embedding_weight[0, :]
+    fig = plt.figure()
     plt.specgram(embedding_element, Fs=16000)
-    plt.show()
+    fig.savefig(output_path + os.sep + experiment_name + '_specgram.png')
+    plt.close(fig)
 
-def test_3(embedding_weight):
-    plt.imshow(embedding_weight)
+def test_3(embedding_weight, output_path, experiment_name):
+    plt.imsave(output_path + os.sep + experiment_name + '_embedding_weight.png', embedding_weight)
 
-def test_4(embedding_weight):
+def test_4(embedding_weight, output_path, experiment_name):
     pylab.subplots_adjust(hspace=0.2)
     number_of_subplots = 3
+    fig = plt.figure()
     for i, v in enumerate(range(number_of_subplots)):
         v = v + 1
         ax1 = pylab.subplot(number_of_subplots, 1, v)
         ax1.specgram(embedding_weight[760+i, :], Fs=16000)
-    plt.show()
+    fig.savefig(output_path + os.sep + experiment_name + '_embedding_weight_cut.png')
+    plt.close(fig)
 
-def test_5(embedding):
+def test_5(embedding, output_path, experiment_name):
     reversed_embedding_weight = embedding.weight.data.cpu().detach().permute(1, 0).contiguous().numpy()
-    plt.imshow(reversed_embedding_weight)
+    plt.plot(reversed_embedding_weight)
+    plt.pcolor(reversed_embedding_weight)
     plt.colorbar()
-    plt.show()
+    plt.savefig(output_path + os.sep + experiment_name + '_embedding_weight_colorbar.png')
 
-def test_6(embedding):
+def test_6(embedding, output_path, experiment_name):
     features = SpeechFeatures.mfcc(
-        signal=embedding.weight.data.detach().permute(1, 0).contiguous()[range(10), :],
+        signal=embedding.weight.data.detach().permute(1, 0).contiguous(),
         rate=16000,
         filters_number=13
     )
     features = np.swapaxes(features, 0, 1)
-    plt.imshow(features)
-    plt.show()
+    plt.imsave(output_path + os.sep + experiment_name + '_embedding_weight_mfcc_features.png', features)
 
 
 if __name__ == "__main__":
-    model, _, configuration, data_stream = ModelFactory.load('../experiments', 'jitter12-ema')
-    device_configuration = DeviceConfiguration.load_from_configuration(configuration)
+    experiment_names = ['jitter12-ema', 'baseline', 'jitter30-ema']
 
-    model.eval()
+    for experiment_name in experiment_names:
+        model, _, configuration, data_stream = ModelFactory.load('../experiments', experiment_name)
+        device_configuration = DeviceConfiguration.load_from_configuration(configuration)
 
-    embedding = model.vq.embedding
-    embedding_weight = embedding.weight.data.cpu().detach().numpy()
+        model.eval()
+
+        embedding = model.vq.embedding
+        embedding_weight = embedding.weight.data.cpu().detach().numpy()
+        results_path = '..' + os.sep + 'results'
+        
+        #test_1(embedding, results_path)
+        #test_2(embedding_weight, results_path, experiment_name)
+        #test_3(embedding_weight, results_path, experiment_name)
+        #test_4(embedding_weight, results_path, experiment_name)
+        #test_5(embedding, results_path, experiment_name)
+        test_6(embedding, results_path, experiment_name)
+        
