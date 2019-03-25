@@ -24,54 +24,29 @@
  #   SOFTWARE.                                                                       #
  #####################################################################################
 
-from vq_vae_features.features_auto_encoder import FeaturesAutoEncoder
-from dataset.vctk_speech_stream import VCTKSpeechStream
+from experiments.model_factory import ModelFactory
+from experiments.device_configuration import DeviceConfiguration
 from vq_vae_speech.speech_features import SpeechFeatures
 
 import os
-import yaml
 import numpy as np
 import matplotlib.pyplot as plt
 
 
-def get_config(config):
-    with open(config, 'r') as stream:
-        return yaml.load(stream)
-
-
 if __name__ == "__main__":
-    # Dataset and model hyperparameters
-    configuration = get_config('../configurations/vctk_features.yaml')
+    model, _, configuration, data_stream = ModelFactory.load('../experiments', 'jitter12-ema')
+    device_configuration = DeviceConfiguration.load_from_configuration(configuration)
 
-    results_path = '..' + os.sep + 'results'
-    path = results_path + os.sep + 'loss_n1500_f13_jitter12_ema-80_kaming.pth'
-    device = 'cuda:0'
-
-    auto_encoder = FeaturesAutoEncoder.load(
-        path=path,
-        configuration=configuration,
-        device=device
-    ).to(device)
-
-    use_cuda = True
-    device = 'cuda:0'
-    gpu_ids = [0]
-    
-    data_stream = VCTKSpeechStream(configuration, gpu_ids, use_cuda)
-
-    auto_encoder.eval()
+    model.eval()
 
     valid_originals, _, _, _ = next(iter(data_stream.training_loader))
-    valid_originals = valid_originals.to(device)
+    valid_originals = valid_originals.to(device_configuration.device)
 
-    vq_output_eval = auto_encoder.pre_vq_conv(auto_encoder.encoder(valid_originals))
-    _, valid_quantize, _, _ = auto_encoder.vq(vq_output_eval)
-    valid_reconstructions = auto_encoder.decoder(valid_quantize)
-
-    print('valid_reconstructions.size(): {}'.format(valid_reconstructions.size()))
+    vq_output_eval = model.pre_vq_conv(model.encoder(valid_originals))
+    _, valid_quantize, _, _ = model.vq(vq_output_eval)
+    valid_reconstructions = model.decoder(valid_quantize)
 
     valid_reconstructions = valid_reconstructions.view(95, 13 * 3)
-    print('valid_reconstructions.size() (reshaped): {}'.format(valid_reconstructions.size()))
 
     features = SpeechFeatures.features_from_name(
         name='mfcc',

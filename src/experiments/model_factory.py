@@ -46,7 +46,7 @@ class ModelFactory(object):
         return auto_encoder
 
     @staticmethod
-    def load(experiment_path, experiment_name):
+    def load(experiment_path, experiment_name, data_path='../data'):
         configuration_file, checkpoint_files = CheckpointUtils.search_configuration_and_checkpoints_files(experiment_path, experiment_name)
 
         # Check if a configuration file was found
@@ -79,7 +79,7 @@ class ModelFactory(object):
 
         # Load the data stream
         ConsoleLogger.status('Loading the data stream')
-        data_stream = VCTKFeaturesStream('../data/vctk', configuration, device_configuration.gpu_ids, device_configuration.use_cuda)
+        data_stream = VCTKFeaturesStream(data_path + os.sep + 'vctk', configuration, device_configuration.gpu_ids, device_configuration.use_cuda)
 
         def load_state_dicts(model, checkpoint):
             # Load the state dict from the checkpoint to the model

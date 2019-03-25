@@ -24,19 +24,15 @@
  #   SOFTWARE.                                                                       #
  #####################################################################################
 
-from vq_vae_features.features_auto_encoder import FeaturesAutoEncoder
+from experiments.model_factory import ModelFactory
+from experiments.device_configuration import DeviceConfiguration
 from vq_vae_speech.speech_features import SpeechFeatures
 
 import os
-import yaml
 import matplotlib.pyplot as plt
 import pylab
 import numpy as np
 
-
-def get_config(config):
-    with open(config, 'r') as stream:
-        return yaml.load(stream)
 
 def save_embedding_plot(embedding, path):
     try:
@@ -98,18 +94,10 @@ def test_6(embedding):
 
 
 if __name__ == "__main__":
-    # Dataset and model hyperparameters
-    configuration = get_config('../configurations/vctk_features.yaml')
+    model, _, configuration, data_stream = ModelFactory.load('../experiments', 'jitter12-ema')
+    device_configuration = DeviceConfiguration.load_from_configuration(configuration)
 
-    results_path = '..' + os.sep + 'results'
-    path = results_path + os.sep + 'loss_n1500_f13_jitter12_ema-80_kaming.pth'
-    device = 'cuda:0'
+    model.eval()
 
-    auto_encoder = FeaturesAutoEncoder.load(
-        path=path,
-        configuration=configuration,
-        device=device
-    ).to(device)
-
-    embedding = auto_encoder.vq.embedding
+    embedding = model.vq.embedding
     embedding_weight = embedding.weight.data.cpu().detach().numpy()
