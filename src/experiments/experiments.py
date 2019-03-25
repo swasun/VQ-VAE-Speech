@@ -22,13 +22,9 @@ class Experiments(object):
     def run(self):
         Experiments.set_deterministic_on(self._seed)
 
-        i = 0
         for experiment in self._experiments:
             experiment.run()
-            del experiment
-            del self._experiments[i]
             torch.cuda.empty_cache() # Release the GPU memory cache
-            i += 1
 
     def plot_losses(self, experiments_path):
         all_train_res_recon_errors = list()

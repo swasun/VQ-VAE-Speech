@@ -1,0 +1,30 @@
+{
+    "experiments_path": "../experiments",
+    "results_path": "../results",
+    "configuration_path": "../configurations/vctk_features.yaml",
+    "seed": 1234,
+    "experiments": {    
+        "kaiming": {
+            "num_epochs": 15,
+            "use_kaiming_normal": true
+        },
+
+        "jitter12": {
+            "num_epochs": 15,
+            "use_jitter": true,
+            "jitter_probability": 0.12
+        },
+    
+        "ema": {
+            "num_epochs": 15,
+            "decay": 0.99
+        },
+    
+        "jitter12-kaiming": {
+            "num_epochs": 15,
+            "use_jitter": true,
+            "jitter_probability": 0.12,
+            "use_kaiming_normal": true
+        }
+    }
+}
