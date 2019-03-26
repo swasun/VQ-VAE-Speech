@@ -1,4 +1,6 @@
-PyTorch implementation of VQ-VAE + WaveNet by [Chorowski et al., 2019] and VQ-VAE on speech signals by [van den Oord et al., 2017]. The WaveNet [van den Oord et al., 2016] implementation is from [r9y9/wavenet_vocoder]. The VQ [van den Oord et al., 2016] implementation is inspired from [zalandoresearch/pytorch-vq-vae] and [deepmind/sonnet].
+PyTorch implementation of VQ-VAE + WaveNet by [Chorowski et al., 2019] and VQ-VAE on speech signals by [van den Oord et al., 2017].
+
+The WaveNet [van den Oord et al., 2016] implementation is from [r9y9/wavenet_vocoder]. The VQ [van den Oord et al., 2016] implementation is inspired from [zalandoresearch/pytorch-vq-vae] and [deepmind/sonnet].
 
 # Installation
 
@@ -43,6 +45,41 @@ optional arguments:
                         Plot the losses of the experiments based of the
                         specified file in --experiments_configuration_path
                         option (default: False)
+```
+
+First, we need to download the dataset (only VCTK is supported for now) and compute the MFCC features:
+```bash
+python3 main.py --export_to_features
+```
+
+Then, we have to create an experiments file (e.g., `../configurations/experiments_example.json`).
+Example of experiment file:
+```json
+{
+    "experiments_path": "../experiments",
+    "results_path": "../results",
+    "configuration_path": "../configurations/vctk_features.yaml",
+    "seed": 1234,
+    "experiments": {    
+        "just-a-test": {
+            "num_epochs": 15,
+            "use_jitter": true,
+            "jitter_probability": 0.12,
+            "decay": 0.99
+        }
+    }
+}
+```
+The parameters in the experiment will override the corresponding parameters from `vctk_features.yaml`.
+
+Thus, we can run the experiment(s) specified in the previous file:
+```bash
+python3 main.py --experiments_configuration_path ../configurations/experiments_example.json
+```
+
+Finally, we can plot the training evolution:
+```
+python3 main.py --plot_experiments_losses
 ```
 
 # References
