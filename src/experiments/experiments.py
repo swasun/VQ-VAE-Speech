@@ -100,7 +100,8 @@ class Experiments(object):
         return train_res_recon_errors, train_res_perplexities, len(checkpoint_files)
 
     def _plot_losses_figure(self, all_results_paths, all_experiments_names, all_train_res_recon_errors,
-        all_train_res_perplexities, all_latest_epochs, merge_figures):
+        all_train_res_perplexities, all_latest_epochs, merge_figures,
+        colormap_name='nipy_spectral'):
 
         def configure_ax1(ax, epochs, legend=False):
             ax.minorticks_off()
@@ -140,31 +141,46 @@ class Experiments(object):
             all_train_res_recon_error_smooth = list()
             all_train_res_perplexity_smooth = list()
             for i in range(len(all_train_res_recon_errors)):
-                train_res_recon_error_smooth, train_res_perplexity_smooth = self._smooth_losses(
+                train_res_recon_error_smooth, train_res_perplexity_smooth = smooth_losses(
                     all_train_res_recon_errors[i],
                     all_train_res_perplexities[i]
                 )
                 all_train_res_recon_error_smooth.append(train_res_recon_error_smooth)
                 all_train_res_perplexity_smooth.append(train_res_perplexity_smooth)
-                #all_train_res_recon_error_smooth.append(self._moving_average(train_res_recon_error_smooth))
-                #all_train_res_perplexity_smooth.append(self._moving_average(train_res_perplexity_smooth))
 
             epochs = range(1, latest_epoch + 1, 1)
-            linestyles = ['-', '--', '-.', ':']
-            linecycler = cycle(linestyles)
-            lines = [next(linecycler) for i in range(len(all_train_res_recon_error_smooth))]
-            linewidth = 0.5
+            linewidth = 2
+            n_colors = len(all_train_res_recon_error_smooth)
+            colors = [plt.get_cmap(colormap_name)(1. * i/n_colors) for i in range(n_colors)]
+
+            all_train_res_recon_error_smooth = np.asarray(all_train_res_recon_error_smooth)
+            all_train_res_perplexity_smooth = np.asarray(all_train_res_perplexity_smooth)
+
+            all_train_res_recon_error_smooth = np.reshape(all_train_res_recon_error_smooth, (7, latest_epoch, all_train_res_recon_error_smooth.shape[1] // latest_epoch))
+            all_train_res_perplexity_smooth = np.reshape(all_train_res_perplexity_smooth, (7, latest_epoch, all_train_res_perplexity_smooth.shape[1] // latest_epoch))
 
             fig = plt.figure(figsize=(16, 8))
 
             ax = fig.add_subplot(1, 2, 1)
             for i in range(len(all_train_res_recon_error_smooth)):
-                ax.plot(all_train_res_recon_error_smooth[i], linewidth=linewidth, linestyle=lines[i], label=all_experiments_names[i])
+                linecolor = (0.690, 0.654, 0.047, 1.0) if all_experiments_names[i] == 'jitter12' else colors[i]
+                facecolor = colors[i]
+                mu = np.mean(all_train_res_recon_error_smooth[i], axis=1)
+                sigma = np.std(all_train_res_recon_error_smooth[i], axis=1)
+                t = np.arange(len(all_train_res_recon_error_smooth[i]))
+                ax.plot(t, mu, linewidth=linewidth, label=all_experiments_names[i], c=linecolor)
+                ax.fill_between(t, mu+sigma, mu-sigma, facecolor=facecolor, alpha=0.5)
             ax = configure_ax1(ax, epochs, legend=True)
 
             ax = fig.add_subplot(1, 2, 2)
             for i in range(len(all_train_res_perplexity_smooth)):
-                ax.plot(all_train_res_perplexity_smooth[i], linewidth=linewidth, linestyle=lines[i], label=all_experiments_names[i])
+                linecolor = (0.690, 0.654, 0.047, 1.0) if all_experiments_names[i] == 'jitter12' else colors[i]
+                facecolor = colors[i]
+                mu = np.mean(all_train_res_perplexity_smooth[i], axis=1)
+                sigma = np.std(all_train_res_perplexity_smooth[i], axis=1)
+                t = np.arange(len(all_train_res_perplexity_smooth[i]))
+                ax.plot(t, mu, linewidth=linewidth, label=all_experiments_names[i], c=linecolor)
+                ax.fill_between(t, mu+sigma, mu-sigma, facecolor=facecolor, alpha=0.5)
             ax = configure_ax2(ax, epochs, legend=True)
 
             fig.savefig(output_plot_path)
