@@ -82,6 +82,29 @@ Finally, we can plot the training evolution:
 python3 main.py --plot_experiments_losses
 ```
 
+# Architectures
+
+## VQ-VAE-Speech encoder + Deconv decoder
+
+[vq_vae_speech](src/vq_vae_speech) for the encoder and [vq_vae_features](src/vq_vae_features) for the deconv decoder:
+
+![](architectures/vq_vae_features.png)
+
+This figure describes the layers of the VQ-VAE model we have used. All convolution layers are in 1D dimension. The light orange color represents the convolutional part, whereas the dark orange represents the ReLU activation in the encoder. The two envelopes represent residual stacks. The purple arrows represents residual connections. The purple blocks are the embedding vectors. The pink layer represents the time-jitter regularization [Chorowski et al., 2019]. The light blue color represents the convolutional part, whereas the dark blue represents the ReLU activation in the decoder. The three pictures are view examples of respectively speech signal in waveform, MFCC features and log filterbank features.
+
+## VQ-VAE-Speech encoder + WaveNet decoder
+
+[vq_vae_speech](src/vq_vae_speech) for the encoder and [vq_vae_wavenet](src/vq_vae_wavenet) for the WaveNet decoder. Figure from [Chorowski et al., 2019]:
+![](architectures/chorowski19.png)
+
+# Results
+
+## VQ-VAE-Speech encoder + Deconv decoder
+
+![](results/n15/merged_experiments_fill_between_alpha.png)
+
+This figure shows the training evolution of the VQ-VAE model using two metrics: the loss values (the lower the better), and the perplexity. The perplexity isn't the one from LM topic: here the higher the better, since a higher means a bigger usage of the codebook (i.e., the quantized vectors of the VQ embedding space). The model was trained during 15 epochs using the architecture described in Section `VQ-VAE-Speech encoder + Deconv decoder`. All experiments have been setted with a seed of 1234 for reproducibility. We tried several variants of the training: the kaiming normal (also known as He initialization) [He, K et al., 2015], the VQ-EMA [Roy et al., 2018], the jitter layer proposed in [Chorowski et al., 2019].
+
 # References
 
 * [Chorowski et al., 2019] [Jan Chorowski, Ron J. Weiss, Samy Bengio, and Aaron van den Oord. Unsupervised speech representation learning using WaveNet autoencoders. arXiv e-prints, page arXiv:1901.08810, 01 2019](https://arxiv.org/abs/1901.08810).
@@ -95,6 +118,10 @@ python3 main.py --plot_experiments_losses
 * [ksw0306/ClariNet] https://github.com/ksw0306/ClariNet.
 
 * [Kim et al., 2018] [Kim, Sungwon & Lee, Sang-gil & Song, Jongyoon & Yoon, Sungroh. (2018). FloWaveNet : A Generative Flow for Raw Audio](https://arxiv.org/abs/1811.02155).
+
+* [He, K et al., 2015] [He, K., Zhang, X., Ren, S and Sun, J. Deep Residual Learning for Image Recognition. arXiv e-prints arXiv:1502.01852](https://arxiv.org/abs/1512.03385).
+
+* [Roy et al., 2018] [A. Roy, A. Vaswani, A. Neelakantan, and N. Parmar. Theory and experiments on vector quantized autoencoders.arXiv preprint arXiv:1805.11063, 2018](https://arxiv.org/abs/1805.11063).
 
 * [ksw0306/FloWaveNet] https://github.com/ksw0306/FloWaveNet.
 
