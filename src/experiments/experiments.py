@@ -128,6 +128,10 @@ class Experiments(object):
             ax.grid(True)
             return ax
 
+        linewidth = 2
+        n_colors = len(all_train_res_recon_errors)
+        colors = [plt.get_cmap(colormap_name)(1. * i/n_colors) for i in range(n_colors)]
+
         if merge_figures:
             latest_epoch = all_latest_epochs[0]
             for i in range(1, len(all_latest_epochs)):
@@ -141,7 +145,7 @@ class Experiments(object):
             all_train_res_recon_error_smooth = list()
             all_train_res_perplexity_smooth = list()
             for i in range(len(all_train_res_recon_errors)):
-                train_res_recon_error_smooth, train_res_perplexity_smooth = smooth_losses(
+                train_res_recon_error_smooth, train_res_perplexity_smooth = self._smooth_losses(
                     all_train_res_recon_errors[i],
                     all_train_res_perplexities[i]
                 )
@@ -149,21 +153,18 @@ class Experiments(object):
                 all_train_res_perplexity_smooth.append(train_res_perplexity_smooth)
 
             epochs = range(1, latest_epoch + 1, 1)
-            linewidth = 2
-            n_colors = len(all_train_res_recon_error_smooth)
-            colors = [plt.get_cmap(colormap_name)(1. * i/n_colors) for i in range(n_colors)]
 
             all_train_res_recon_error_smooth = np.asarray(all_train_res_recon_error_smooth)
             all_train_res_perplexity_smooth = np.asarray(all_train_res_perplexity_smooth)
 
-            all_train_res_recon_error_smooth = np.reshape(all_train_res_recon_error_smooth, (7, latest_epoch, all_train_res_recon_error_smooth.shape[1] // latest_epoch))
-            all_train_res_perplexity_smooth = np.reshape(all_train_res_perplexity_smooth, (7, latest_epoch, all_train_res_perplexity_smooth.shape[1] // latest_epoch))
+            all_train_res_recon_error_smooth = np.reshape(all_train_res_recon_error_smooth, (n_colors, latest_epoch, all_train_res_recon_error_smooth.shape[1] // latest_epoch))
+            all_train_res_perplexity_smooth = np.reshape(all_train_res_perplexity_smooth, (n_colors, latest_epoch, all_train_res_perplexity_smooth.shape[1] // latest_epoch))
 
             fig = plt.figure(figsize=(16, 8))
 
             ax = fig.add_subplot(1, 2, 1)
             for i in range(len(all_train_res_recon_error_smooth)):
-                linecolor = (0.690, 0.654, 0.047, 1.0) if all_experiments_names[i] == 'jitter12' else colors[i]
+                linecolor = colors[i] # TODO: compute a darker linecolor than facecolor
                 facecolor = colors[i]
                 mu = np.mean(all_train_res_recon_error_smooth[i], axis=1)
                 sigma = np.std(all_train_res_recon_error_smooth[i], axis=1)
@@ -174,7 +175,7 @@ class Experiments(object):
 
             ax = fig.add_subplot(1, 2, 2)
             for i in range(len(all_train_res_perplexity_smooth)):
-                linecolor = (0.690, 0.654, 0.047, 1.0) if all_experiments_names[i] == 'jitter12' else colors[i]
+                linecolor = colors[i] # TODO: compute a darker linecolor than facecolor
                 facecolor = colors[i]
                 mu = np.mean(all_train_res_perplexity_smooth[i], axis=1)
                 sigma = np.std(all_train_res_perplexity_smooth[i], axis=1)
@@ -198,16 +199,36 @@ class Experiments(object):
                     all_train_res_perplexities[i]
                 )
 
-                epochs = range(1, all_latest_epochs[i] + 1, 1)
+                latest_epoch = all_latest_epochs[i]
+                linecolor = colors[i] # TODO: compute a darker linecolor than facecolor
+                facecolor = colors[i]
+
+                train_res_recon_error_smooth = np.asarray(train_res_recon_error_smooth)
+                train_res_perplexity_smooth = np.asarray(train_res_perplexity_smooth)
+
+                train_res_recon_error_smooth = np.reshape(train_res_recon_error_smooth, (latest_epoch, train_res_recon_error_smooth.shape[0] // latest_epoch))
+                train_res_perplexity_smooth = np.reshape(train_res_perplexity_smooth, (latest_epoch, train_res_perplexity_smooth.shape[0] // latest_epoch))
+
+                epochs = range(1, latest_epoch + 1, 1)
 
                 fig = plt.figure(figsize=(16, 8))
 
                 ax = fig.add_subplot(1, 2, 1)
-                ax.plot(train_res_recon_error_smooth)
+                mu = np.mean(train_res_recon_error_smooth, axis=1)
+                sigma = np.std(train_res_recon_error_smooth, axis=1)
+                t = np.arange(len(train_res_recon_error_smooth))
+                ax.plot(t, mu, linewidth=linewidth, label=all_experiments_names[i], c=linecolor)
+                ax.fill_between(t, mu+sigma, mu-sigma, facecolor=facecolor, alpha=0.5)
+                #ax.plot(train_res_recon_error_smooth)
                 ax = configure_ax1(ax, epochs)
 
                 ax = fig.add_subplot(1, 2, 2)
-                ax.plot(train_res_perplexity_smooth)
+                mu = np.mean(train_res_perplexity_smooth, axis=1)
+                sigma = np.std(train_res_perplexity_smooth, axis=1)
+                t = np.arange(len(train_res_perplexity_smooth))
+                ax.plot(t, mu, linewidth=linewidth, label=all_experiments_names[i], c=linecolor)
+                ax.fill_between(t, mu+sigma, mu-sigma, facecolor=facecolor, alpha=0.5)
+                #ax.plot(train_res_perplexity_smooth)
                 ax = configure_ax2(ax, epochs)
 
                 fig.savefig(output_plot_path)
