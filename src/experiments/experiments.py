@@ -219,7 +219,6 @@ class Experiments(object):
                 t = np.arange(len(train_res_recon_error_smooth))
                 ax.plot(t, mu, linewidth=linewidth, label=all_experiments_names[i], c=linecolor)
                 ax.fill_between(t, mu+sigma, mu-sigma, facecolor=facecolor, alpha=0.5)
-                #ax.plot(train_res_recon_error_smooth)
                 ax = configure_ax1(ax, epochs)
 
                 ax = fig.add_subplot(1, 2, 2)
@@ -228,7 +227,6 @@ class Experiments(object):
                 t = np.arange(len(train_res_perplexity_smooth))
                 ax.plot(t, mu, linewidth=linewidth, label=all_experiments_names[i], c=linecolor)
                 ax.fill_between(t, mu+sigma, mu-sigma, facecolor=facecolor, alpha=0.5)
-                #ax.plot(train_res_perplexity_smooth)
                 ax = configure_ax2(ax, epochs)
 
                 fig.savefig(output_plot_path)
