@@ -35,7 +35,10 @@ class Evaluator(object):
         self._model = model
         self._data_stream = data_stream
 
-    def reconstruct(self):
+    def evaluate(self):
+        self._reconstruct()
+
+    def _reconstruct(self):
         self._model.eval()
 
         (self._valid_originals, _, _, _) = next(iter(self._data_stream.validation_loader))
@@ -49,7 +52,7 @@ class Evaluator(object):
         train_originals = train_originals.to(self._device)
         _, self._train_reconstructions, _, _ = self._model.vq(train_originals)
 
-    def save_embedding_plot(self, path):
+    def _save_embedding_plot(self, path):
         try:
             import umap
         except ImportError:

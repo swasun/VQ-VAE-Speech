@@ -28,8 +28,10 @@ from experiments.device_configuration import DeviceConfiguration
 from experiments.checkpoint_utils import CheckpointUtils
 from vq_vae_features.features_auto_encoder import FeaturesAutoEncoder
 from vq_vae_features.trainer import Trainer as FeaturesTrainer
+from vq_vae_features.evaluator import Evaluator as FeaturesEvaluator
 from vq_vae_wavenet.wavenet_auto_encoder import WaveNetAutoEncoder
 from vq_vae_wavenet.trainer import Trainer as WaveNetTrainer
+from vq_vae_wavenet.evaluator import Evaluator as WaveNetEvaluator
 from error_handling.console_logger import ConsoleLogger
 from dataset.vctk_features_stream import VCTKFeaturesStream
 
@@ -137,6 +139,13 @@ class ModelFactory(object):
                 data_stream,
                 configuration
             )
+
+            # Create a evaluator instance associated with our model
+            evaluator = FeaturesEvaluator(
+                device_configuration.device,
+                model,
+                data_stream
+            )
         # Else if the decoder is a wavenet
         elif configuration['decoder_type'] == 'wavenet':
             # Create the model and map it to the specified device
@@ -153,10 +162,17 @@ class ModelFactory(object):
                 data_stream,
                 configuration
             )
+
+            # Create a evaluator instance associated with our model
+            evaluator = WaveNetEvaluator(
+                device_configuration.device,
+                model,
+                data_stream
+            )
         else:
             raise ValueError('Invalid configuration file: there is no decoder_type field')
 
         # Use data parallelization if needed and available
         model = nn.DataParallel(model, device_ids=device_configuration.gpu_ids) if device_configuration.use_data_parallel else model
 
-        return [model, trainer, configuration, data_stream]
+        return [model, trainer, evaluator, configuration, data_stream]

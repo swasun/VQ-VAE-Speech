@@ -46,11 +46,18 @@ class Experiments(object):
         self._experiments = experiments
         self._seed = seed
 
-    def run(self):
+    def train(self):
         Experiments.set_deterministic_on(self._seed)
 
         for experiment in self._experiments:
-            experiment.run()
+            experiment.train()
+            torch.cuda.empty_cache() # Release the GPU memory cache
+
+    def evaluate(self):
+        Experiments.set_deterministic_on(self._seed)
+
+        for experiment in self._experiments:
+            experiment.evaluate()
             torch.cuda.empty_cache() # Release the GPU memory cache
 
     def plot_losses(self, experiments_path):

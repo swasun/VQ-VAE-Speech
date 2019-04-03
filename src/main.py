@@ -47,6 +47,7 @@ if __name__ == "__main__":
     parser.add_argument('--experiments_configuration_path', nargs='?', default=default_experiments_configuration_path, type=str, help='The path of the experiments configuration file')
     parser.add_argument('--experiments_path', nargs='?', default=default_experiments_path, type=str, help='The path of the experiments ouput directory')
     parser.add_argument('--plot_experiments_losses', action='store_true', help='Plot the losses of the experiments based of the specified file in --experiments_configuration_path option')
+    parser.add_argument('--evaluate', action='store_true', help='Evaluate the model')
     args = parser.parse_args()
 
     # If specified, print the summary of the model using the CPU device
@@ -78,5 +79,10 @@ if __name__ == "__main__":
         ConsoleLogger.success("VCTK exported to a new features dataset at: '../data/vctk/features'")
         sys.exit(0)
 
-    Experiments.load(args.experiments_configuration_path).run()
-    ConsoleLogger.success('All experiments done')
+    if args.evaluate:
+        Experiments.load(args.experiments_configuration_path).evaluate()
+        ConsoleLogger.success('All evaluating experiments done')
+        sys.exit(0)
+
+    Experiments.load(args.experiments_configuration_path).train()
+    ConsoleLogger.success('All training experiments done')

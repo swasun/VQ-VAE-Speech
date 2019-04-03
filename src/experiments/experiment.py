@@ -92,18 +92,36 @@ class Experiment(object):
     def results_path(self):
         return self._results_path
 
-    def run(self):
+    def train(self):
         ConsoleLogger.status("Running the experiment called '{}'".format(self._name))
 
+        self._init()
+
+        ConsoleLogger.status('Begins to train the model')
+        self._trainer.train(self._experiments_path, self._name)
+
+        ConsoleLogger.success("Succeed to runned the experiment called '{}'".format(self._name))
+
+    def evaluate(self):
+        ConsoleLogger.status("Running the experiment called '{}'".format(self._name))
+
+        self._init()
+
+        ConsoleLogger.status('Begins to evaluate the model')
+        self._evaluator.evaluate(self._experiments_path, self._name)
+
+        ConsoleLogger.success("Succeed to runned the experiment called '{}'".format(self._name))
+
+    def _init(self):
         def create_from_scratch(configuration, device_configuration):
             # Load the data stream
             ConsoleLogger.status('Loading data stream')
             data_stream = VCTKFeaturesStream('../data/vctk', configuration, device_configuration.gpu_ids, device_configuration.use_cuda)
 
             # Build the model and the trainer from the configurations and the data stream
-            model, trainer = ModelFactory.build(configuration, device_configuration, data_stream)
+            model, trainer, evaluator, = ModelFactory.build(configuration, device_configuration, data_stream)
 
-            return model, trainer, data_stream, configuration
+            return model, trainer, evaluator, data_stream, configuration
 
         if self._configuration_file_already_exists:
             ConsoleLogger.status('Configuration file already exists. Loading...')
@@ -118,14 +136,18 @@ class Experiment(object):
                     configuration = None
                     with open(self._experiments_path + os.sep + configuration_file, 'r') as file:
                         configuration = yaml.load(file)
-                    self._model, self._trainer, self._data_stream, self._configuration = create_from_scratch(configuration, self._device_configuration)
+                    self._model, self._trainer, self._evaluator, self._data_stream, self._configuration = create_from_scratch(
+                        configuration,
+                        self._device_configuration
+                    )
             except:
                 ConsoleLogger.error('Failed to load existing configuration. Building a new model...')
-                self._model, self._trainer, self._data_stream, self._configuration = create_from_scratch(self._configuration, self._device_configuration)
+                self._model, self._trainer, self._evaluator, self._data_stream, self._configuration = create_from_scratch(
+                    self._configuration,
+                    self._device_configuration
+                )
         else:
-            self._model, self._trainer, self._data_stream, self._configuration = create_from_scratch(self._configuration, self._device_configuration)
-
-        ConsoleLogger.status('Begins to train the model')
-        self._trainer.train(self._experiments_path, self._name)
-
-        ConsoleLogger.success("Succeed to runned the experiment called '{}'".format(self._name))
+            self._model, self._trainer, self._evaluator, self._data_stream, self._configuration = create_from_scratch(
+                self._configuration,
+                self._device_configuration
+            )

@@ -1,0 +1,14 @@
+{
+    "experiments_path": "../experiments",
+    "results_path": "../results",
+    "configuration_path": "../configurations/vctk_features.yaml",
+    "seed": 1234,
+    "experiments": {
+        "jitter12-ema": {
+            "num_epochs": 15,
+            "use_jitter": true,
+            "jitter_probability": 0.12,
+            "decay": 0.99
+        }
+    }
+}
