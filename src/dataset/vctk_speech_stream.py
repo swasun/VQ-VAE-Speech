@@ -111,7 +111,7 @@ class VCTKSpeechStream(object):
         else:
             ConsoleLogger.status('Val features directory already created at path: {}'.format(val_features_path))
 
-        def process(loader, output_path, raw_feature_name, quantized_features_name, rate, filters_number, target_shape):
+        def process(loader, output_dir, raw_feature_name, quantized_features_name, rate, filters_number, target_shape):
             bar = tqdm(loader)
             i = 0
             for data in bar:
@@ -143,10 +143,13 @@ class VCTKSpeechStream(object):
                     'quantized_features': quantized_features
                 }
 
-                with open(output_path + os.sep + str(i) + '.pickle', 'wb') as file:
+                output_path = output_dir + os.sep + str(i) + '.pickle'
+                with open(output_path, 'wb') as file:
                     pickle.dump(output, file)
 
                 i += 1
+
+                bar.set_description('{}'.format(output_path))
 
         ConsoleLogger.status('Processing training part')
         process(
