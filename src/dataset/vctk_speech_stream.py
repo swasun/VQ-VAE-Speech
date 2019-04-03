@@ -43,9 +43,19 @@ class VCTKSpeechStream(object):
         self._training_data = VCTKDataset(vctk.audios_train, vctk.speaker_dic, configuration)
         self._validation_data = VCTKDataset(vctk.audios_val, vctk.speaker_dic, configuration)
         factor = 1 if len(gpu_ids) == 0 else len(gpu_ids)
-        self._training_loader = DataLoader(self._training_data, batch_size=configuration['batch_size'] * factor, shuffle=True,
-            num_workers=configuration['num_workers'], pin_memory=use_cuda)
-        self._validation_loader = DataLoader(self._validation_data, batch_size=1, num_workers=configuration['num_workers'], pin_memory=use_cuda)
+        self._training_loader = DataLoader(
+            self._training_data,
+            batch_size=configuration['batch_size'] * factor,
+            shuffle=True,
+            num_workers=configuration['num_workers'],
+            pin_memory=use_cuda
+        )
+        self._validation_loader = DataLoader(
+            self._validation_data,
+            batch_size=configuration['batch_size'] * factor,
+            num_workers=configuration['num_workers'],
+            pin_memory=use_cuda
+        )
         self._speaker_dic = vctk.speaker_dic
         self._train_data_variance = np.var(self._training_data.quantize / 255.0)
 
@@ -146,7 +156,7 @@ class VCTKSpeechStream(object):
             quantized_features_name,
             rate,
             filters_number,
-            (95, 39) # TODO: move it in the configuration
+            (47, 39) # TODO: move it in the configuration
         )
         ConsoleLogger.success('Training part processed')
 

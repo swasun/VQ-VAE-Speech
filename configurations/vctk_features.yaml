@@ -1,7 +1,7 @@
 decoder_type: 'deconvolutional'
 
 # Training
-batch_size: 2 # batch_size per a GPU
+batch_size: 1 # batch_size per a GPU
 data_root: './' # ./ == vctk/raw/VCTK-Corpus
 start_epoch: 0
 num_epochs: 5

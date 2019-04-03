@@ -38,9 +38,19 @@ class VCTKFeaturesStream(object):
         self._training_data = VCTKFeaturesDataset(vctk_path, 'train')
         self._validation_data = VCTKFeaturesDataset(vctk_path, 'val')
         factor = 1 if len(gpu_ids) == 0 else len(gpu_ids)
-        self._training_loader = DataLoader(self._training_data, batch_size=configuration['batch_size'] * factor, shuffle=True,
-            num_workers=configuration['num_workers'], pin_memory=use_cuda)
-        self._validation_loader = DataLoader(self._validation_data, batch_size=1, num_workers=configuration['num_workers'], pin_memory=use_cuda)
+        self._training_loader = DataLoader(
+            self._training_data,
+            batch_size=configuration['batch_size'] * factor,
+            shuffle=True,
+            num_workers=configuration['num_workers'],
+            pin_memory=use_cuda
+        )
+        self._validation_loader = DataLoader(
+            self._validation_data,
+            batch_size=configuration['batch_size'] * factor,
+            num_workers=configuration['num_workers'],
+            pin_memory=use_cuda
+        )
         self._speaker_dic = self._make_speaker_dic(vctk_path + os.sep + 'VCTK-Corpus')
 
     @property
