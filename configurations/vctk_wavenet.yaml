@@ -65,7 +65,7 @@ wavenet_type: 'WaveNet'
 
 # Features
 input_features_type: 'mfcc'
-features_dim: 95
+features_dim: 47
 features_filters: 13
 
 # Conv

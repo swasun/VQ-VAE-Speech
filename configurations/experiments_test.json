@@ -4,6 +4,10 @@
     "configuration_path": "../configurations/vctk_features.yaml",
     "seed": 1234,
     "experiments": {
+        "baseline": {
+            "num_epochs": 15
+        },
+
         "jitter12-ema": {
             "num_epochs": 15,
             "use_jitter": true,
