@@ -35,7 +35,7 @@ class Evaluator(object):
         self._model = model
         self._data_stream = data_stream
 
-    def evaluate(self):
+    def evaluate(self, experiments_path, experiment_name):
         self._reconstruct()
 
     def _reconstruct(self):

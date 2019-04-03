@@ -119,7 +119,7 @@ class Experiment(object):
             data_stream = VCTKFeaturesStream('../data/vctk', configuration, device_configuration.gpu_ids, device_configuration.use_cuda)
 
             # Build the model and the trainer from the configurations and the data stream
-            model, trainer, evaluator, = ModelFactory.build(configuration, device_configuration, data_stream)
+            model, trainer, evaluator = ModelFactory.build(configuration, device_configuration, data_stream)
 
             return model, trainer, evaluator, data_stream, configuration
 

@@ -48,30 +48,36 @@ class ModelFactory(object):
     def build(configuration, device_configuration, data_stream, with_trainer=True):
         ConsoleLogger.status('Building model...')
         if configuration['decoder_type'] == 'deconvolutional':
-            auto_encoder = FeaturesAutoEncoder(configuration, device_configuration.device).to(device_configuration.device)
-            optimizer = optim.Adam(auto_encoder.parameters(), lr=configuration['learning_rate'], amsgrad=True) # Create an Adam optimizer instance
+            model = FeaturesAutoEncoder(configuration, device_configuration.device).to(device_configuration.device)
+            optimizer = optim.Adam(model.parameters(), lr=configuration['learning_rate'], amsgrad=True) # Create an Adam optimizer instance
             if with_trainer:
                 trainer = FeaturesTrainer(
                     device_configuration.device,
-                    auto_encoder,
+                    model,
                     optimizer,
                     data_stream,
                     configuration
                 )
+                evaluator = FeaturesEvaluator(
+                    device_configuration.device,
+                    model,
+                    data_stream
+                )
         elif configuration['decoder_type'] == 'wavenet':
-            auto_encoder = WaveNetAutoEncoder(configuration, data_stream.speaker_dic, device_configuration.device).to(device_configuration.device)
-            optimizer = optim.Adam(auto_encoder.parameters(), lr=configuration['learning_rate'], amsgrad=True) # Create an Adam optimizer instance
+            model = WaveNetAutoEncoder(configuration, data_stream.speaker_dic, device_configuration.device).to(device_configuration.device)
+            optimizer = optim.Adam(model.parameters(), lr=configuration['learning_rate'], amsgrad=True) # Create an Adam optimizer instance
             if with_trainer:
-                trainer = WaveNetTrainer(device_configuration.device, auto_encoder, optimizer, data_stream, configuration)
+                trainer = WaveNetTrainer(device_configuration.device, model, optimizer, data_stream, configuration)
+                evaluator = WaveNetEvaluator(device_configuration.device, model, data_stream)
         else:
             raise ValueError('Invalid configuration file: there is no decoder_type field')
 
-        auto_encoder = nn.DataParallel(auto_encoder, device_ids=device_configuration.gpu_ids) if device_configuration.use_data_parallel else auto_encoder
+        model = nn.DataParallel(model, device_ids=device_configuration.gpu_ids) if device_configuration.use_data_parallel else model
 
         if with_trainer:
-            return auto_encoder, trainer
+            return model, trainer, evaluator
 
-        return auto_encoder
+        return model
 
     @staticmethod
     def load(experiment_path, experiment_name, data_path='../data'):
