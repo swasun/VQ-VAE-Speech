@@ -5,14 +5,16 @@
     "seed": 1234,
     "experiments": {
         "baseline": {
-            "num_epochs": 15
+            "num_epochs": 15,
+            "batch_size": 2
         },
-
+        
         "jitter12-ema": {
             "num_epochs": 15,
             "use_jitter": true,
             "jitter_probability": 0.12,
-            "decay": 0.99
+            "decay": 0.99,
+            "batch_size": 2
         }
     }
 }
