@@ -10,7 +10,7 @@
         },
         
         "jitter12-ema": {
-            "num_epochs": 15,
+            "num_epochs": 4,
             "use_jitter": true,
             "jitter_probability": 0.12,
             "decay": 0.99,

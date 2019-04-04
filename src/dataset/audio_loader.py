@@ -24,34 +24,16 @@
  #   SOFTWARE.                                                                       #
  #####################################################################################
 
-import matplotlib.pyplot as plt
+import librosa
 import numpy as np
 
 
-class Evaluator(object):
+class AudioLoader(object):
 
-    def __init__(self, device, model, data_stream):
-        self._device = device
-        self._model = model
-        self._data_stream = data_stream
-
-    def save_embedding_plot(self, path):
-        # Copyright (C) 2018 Zalando Research
-        
-        try:
-            import umap
-        except ImportError:
-            raise ValueError('umap-learn not installed')
-
-        map = umap.UMAP(
-            n_neighbors=3,
-            min_dist=0.1,
-            metric='euclidean'
-        )
-
-        projection = map.fit_transform(self._model.vq.embedding.weight.data.cpu())
-
-        fig = plt.figure()
-        plt.scatter(projection[:,0], projection[:,1], alpha=0.3)
-        fig.savefig(path)
-        plt.close(fig)
+    @staticmethod
+    def load(path):
+        raw, _ = librosa.load(path, 16000)
+        raw, _ = librosa.effects.trim(raw)
+        raw /= np.abs(raw).max()
+        raw = raw.astype(np.float32)
+        return raw

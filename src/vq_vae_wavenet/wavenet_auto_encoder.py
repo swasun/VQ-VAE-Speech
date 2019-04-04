@@ -104,7 +104,7 @@ class WaveNetAutoEncoder(nn.Module):
 
         z = self._pre_vq_conv(z)
 
-        vq_loss, quantized, perplexity, _ = self._vq(z)
+        vq_loss, quantized, perplexity, _, _ = self._vq(z)
 
         local_condition = quantized
         local_condition = local_condition.squeeze(-1)

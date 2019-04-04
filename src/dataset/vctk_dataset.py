@@ -88,7 +88,7 @@ class VCTKDataset(Dataset):
 
         raw, one_hot, quantized = self._preprocessing(raw, quantized)
 
-        return raw, one_hot, speaker_id, quantized
+        return raw, one_hot, speaker_id, quantized, wav_filename
 
     def __len__(self):
         return len(self._audios)

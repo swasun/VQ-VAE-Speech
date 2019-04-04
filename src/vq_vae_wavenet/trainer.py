@@ -3,7 +3,7 @@
  #                                                                                   #
  # Copyright (C) 2019 Charly Lamothe                                                 #
  #                                                                                   #
- # This file is part of VQ-VAE-WaveNet.                                               #
+ # This file is part of VQ-VAE-Speech.                                               #
  #                                                                                   #
  #   Permission is hereby granted, free of charge, to any person obtaining a copy    #
  #   of this software and associated documentation files (the "Software"), to deal   #
@@ -51,7 +51,7 @@ class Trainer(object):
             train_bar = tqdm(self._data_stream.training_loader)
             self._model.train()
             for data in train_bar:
-                x_enc, x_dec, speaker_id, quantized = data
+                x_enc, x_dec, speaker_id, quantized, _ = data
                 x_enc, x_dec, speaker_id, quantized = x_enc.to(self._device), x_dec.to(self._device), speaker_id.to(self._device), quantized.to(self._device)
 
                 self._optimizer.zero_grad()

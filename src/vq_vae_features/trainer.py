@@ -58,7 +58,7 @@ class Trainer(object):
             train_res_perplexity = []
 
             for data in train_bar:
-                (data, _, _, quantized) = data
+                (data, _, _, quantized, _) = data
                 data = data.to(self._device)
                 quantized = quantized.to(self._device)
 

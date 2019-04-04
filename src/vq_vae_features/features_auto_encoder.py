@@ -85,9 +85,6 @@ class FeaturesAutoEncoder(nn.Module):
         )
 
         self._features_filters = configuration['features_filters']
-        self._output_features_type = configuration['output_features_type']
-        self._features_dim = configuration['features_dim']
-        self._sampling_rate = configuration['sampling_rate']
         self._device = device
 
         self._criterion = nn.MSELoss()
@@ -113,12 +110,12 @@ class FeaturesAutoEncoder(nn.Module):
         
         z = self._pre_vq_conv(z)
 
-        vq_loss, quantized, perplexity, _ = self._vq(z)
+        vq_loss, quantized, perplexity, _, _ = self._vq(z)
 
         reconstructed_x = self._decoder(quantized)
 
         reconstructed_x = reconstructed_x.view(-1, reconstructed_x.shape[1], self._features_filters * 3)
-        
+
         reconstruction_loss = self._criterion(reconstructed_x, y.float())
         loss = vq_loss + reconstruction_loss
 

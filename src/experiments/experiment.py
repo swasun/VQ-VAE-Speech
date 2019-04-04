@@ -127,8 +127,8 @@ class Experiment(object):
             ConsoleLogger.status('Configuration file already exists. Loading...')
             try:
                 results = ModelFactory.load(self._experiments_path, self._name)
-                if len(results) == 4:
-                    self._model, self._trainer, _, self._data_stream = results
+                if len(results) == 5:
+                    self._model, self._trainer, self._evaluator, _, self._data_stream = results
                 else:
                     configuration_file = results[0]
                     # Load the configuration file

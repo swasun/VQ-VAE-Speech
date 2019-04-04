@@ -3,7 +3,7 @@
  #                                                                                   #
  # Copyright (C) 2019 Charly Lamothe                                                 #
  #                                                                                   #
- # This file is part of VQ-VAE-WaveNet.                                               #
+ # This file is part of VQ-VAE-Speech.                                               #
  #                                                                                   #
  #   Permission is hereby granted, free of charge, to any person obtaining a copy    #
  #   of this software and associated documentation files (the "Software"), to deal   #

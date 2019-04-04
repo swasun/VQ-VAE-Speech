@@ -143,7 +143,7 @@ class VectorQuantizerEMA(nn.Module):
         perplexity = torch.exp(-torch.sum(avg_probs * torch.log(avg_probs + 1e-10)))
         
         # Convert quantized from BHWC -> BCHW
-        return loss, quantized.permute(2, 0, 1).contiguous(), perplexity, encodings
+        return loss, quantized.permute(2, 0, 1).contiguous(), perplexity, encodings, distances
 
     @property
     def embedding(self):

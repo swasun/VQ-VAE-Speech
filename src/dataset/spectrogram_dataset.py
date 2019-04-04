@@ -1,9 +1,7 @@
  #####################################################################################
  # MIT License                                                                       #
  #                                                                                   #
- # Copyright (C) 2019 Charly Lamothe                                                 #
- #                                                                                   #
- # This file is part of VQ-VAE-Speech.                                               #
+ # Copyright (c) 2017 Sean Naren                                                     #
  #                                                                                   #
  #   Permission is hereby granted, free of charge, to any person obtaining a copy    #
  #   of this software and associated documentation files (the "Software"), to deal   #
@@ -24,26 +22,47 @@
  #   SOFTWARE.                                                                       #
  #####################################################################################
 
+from dataset.spectrogram_parser import SpectrogramParser
+
 from torch.utils.data import Dataset
-import pickle
-import os
 
 
-class VCTKFeaturesDataset(Dataset):
+class SpectrogramDataset(Dataset, SpectrogramParser):
 
-    def __init__(self, vctk_path, subdirectory):
-        self._vctk_path = vctk_path
-        self._subdirectory = subdirectory
-        features_path = self._vctk_path + os.sep + 'features'
-        self._sub_features_path = features_path + os.sep + self._subdirectory
-        self._files_number = len(os.listdir(self._sub_features_path))
+    def __init__(self, audio_conf, manifest_filepath, labels, normalize=False, augment=False):
+        """
+        Dataset that loads tensors via a csv containing file paths to audio files and transcripts separated by
+        a comma. Each new line is a different sample. Example below:
+
+        /path/to/audio.wav,/path/to/audio.txt
+        ...
+
+        :param audio_conf: Dictionary containing the sample rate, window and the window length/stride in seconds
+        :param manifest_filepath: Path to manifest csv as describe above
+        :param labels: String containing all the possible characters to map to
+        :param normalize: Apply standard mean and deviation normalization to audio tensor
+        :param augment(default False):  Apply random tempo and gain perturbations
+        """
+        with open(manifest_filepath) as f:
+            ids = f.readlines()
+        ids = [x.strip().split(',') for x in ids]
+        self.ids = ids
+        self.size = len(ids)
+        self.labels_map = dict([(labels[i], i) for i in range(len(labels))])
+        super(SpectrogramDataset, self).__init__(audio_conf, normalize, augment)
 
     def __getitem__(self, index):
-        dic = None
-        with open(self._sub_features_path + os.sep + str(index) + '.pickle', 'rb') as file:
-            dic = pickle.load(file)
+        sample = self.ids[index]
+        audio_path, transcript_path = sample[0], sample[1]
+        spect = self.parse_audio(audio_path)
+        transcript = self.parse_transcript(transcript_path)
+        return spect, transcript
 
-        return dic['raw_features'], dic['one_hot'], dic['speaker_id'], dic['quantized_features'], dic['wav_filename']
+    def parse_transcript(self, transcript_path):
+        with open(transcript_path, 'r') as transcript_file:
+            transcript = transcript_file.read().replace('\n', '')
+        transcript = list(filter(None, [self.labels_map.get(x) for x in list(transcript)]))
+        return transcript
 
     def __len__(self):
-        return self._files_number
+        return self.size

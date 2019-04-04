@@ -1,9 +1,7 @@
  #####################################################################################
  # MIT License                                                                       #
  #                                                                                   #
- # Copyright (C) 2019 Charly Lamothe                                                 #
- #                                                                                   #
- # This file is part of VQ-VAE-Speech.                                               #
+ # Copyright (c) 2017 Sean Naren                                                     #
  #                                                                                   #
  #   Permission is hereby granted, free of charge, to any person obtaining a copy    #
  #   of this software and associated documentation files (the "Software"), to deal   #
@@ -24,34 +22,18 @@
  #   SOFTWARE.                                                                       #
  #####################################################################################
 
-import matplotlib.pyplot as plt
-import numpy as np
+class AudioParser(object):
 
+    def parse_transcript(self, transcript_path):
+        """
+        :param transcript_path: Path where transcript is stored from the manifest file
+        :return: Transcript in training/testing format
+        """
+        raise NotImplementedError
 
-class Evaluator(object):
-
-    def __init__(self, device, model, data_stream):
-        self._device = device
-        self._model = model
-        self._data_stream = data_stream
-
-    def save_embedding_plot(self, path):
-        # Copyright (C) 2018 Zalando Research
-        
-        try:
-            import umap
-        except ImportError:
-            raise ValueError('umap-learn not installed')
-
-        map = umap.UMAP(
-            n_neighbors=3,
-            min_dist=0.1,
-            metric='euclidean'
-        )
-
-        projection = map.fit_transform(self._model.vq.embedding.weight.data.cpu())
-
-        fig = plt.figure()
-        plt.scatter(projection[:,0], projection[:,1], alpha=0.3)
-        fig.savefig(path)
-        plt.close(fig)
+    def parse_audio(self, audio_path):
+        """
+        :param audio_path: Path where audio is stored from the manifest file
+        :return: Audio in training/testing format
+        """
+        raise NotImplementedError

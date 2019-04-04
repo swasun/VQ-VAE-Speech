@@ -115,7 +115,7 @@ class VCTKSpeechStream(object):
             bar = tqdm(loader)
             i = 0
             for data in bar:
-                (raw, one_hot, speaker_id, quantized) = data
+                (raw, one_hot, speaker_id, quantized, wav_filename) = data
 
                 raw_features = SpeechFeatures.features_from_name(
                     name=raw_feature_name,
@@ -137,6 +137,7 @@ class VCTKSpeechStream(object):
                 )
 
                 output = {
+                    'wav_filename': wav_filename,
                     'raw_features': raw_features,
                     'one_hot': one_hot,
                     'speaker_id': speaker_id,
