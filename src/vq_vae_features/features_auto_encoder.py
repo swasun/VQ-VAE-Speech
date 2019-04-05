@@ -39,13 +39,13 @@ class FeaturesAutoEncoder(nn.Module):
         super(FeaturesAutoEncoder, self).__init__()
 
         self._encoder = SpeechEncoder(
-            in_channels=configuration['features_dim'],
+            in_channels=configuration['input_features_dim'],
             num_hiddens=configuration['num_hiddens'],
             num_residual_layers=configuration['num_residual_layers'],
             num_residual_hiddens=configuration['num_hiddens'],
             use_kaiming_normal=configuration['use_kaiming_normal'],
             input_features_type=configuration['input_features_type'],
-            features_filters=configuration['features_filters'],
+            features_filters=configuration['input_features_filters'] * 3 if configuration['augment_intput_features'] else configuration['input_features_filters'],
             sampling_rate=configuration['sampling_rate'],
             device=device
         )
@@ -75,7 +75,7 @@ class FeaturesAutoEncoder(nn.Module):
 
         self._decoder = FeaturesDecoder(
             in_channels=configuration['embedding_dim'],
-            out_channels=configuration['features_dim'],
+            out_channels=configuration['output_features_dim'],
             num_hiddens=configuration['num_hiddens'],
             num_residual_layers=configuration['num_residual_layers'],
             num_residual_hiddens=configuration['residual_channels'],
@@ -84,7 +84,7 @@ class FeaturesAutoEncoder(nn.Module):
             jitter_probability=configuration['jitter_probability']
         )
 
-        self._features_filters = configuration['features_filters']
+        self._output_features_filters = configuration['output_features_filters'] * 3 if configuration['augment_output_features'] else configuration['output_features_filters']
         self._device = device
 
         self._criterion = nn.MSELoss()
@@ -114,7 +114,7 @@ class FeaturesAutoEncoder(nn.Module):
 
         reconstructed_x = self._decoder(quantized)
 
-        reconstructed_x = reconstructed_x.view(-1, reconstructed_x.shape[1], self._features_filters * 3)
+        reconstructed_x = reconstructed_x.view(-1, reconstructed_x.shape[1], self._output_features_filters)
         
         reconstruction_loss = self._criterion(reconstructed_x, y.float())
         loss = vq_loss + reconstruction_loss

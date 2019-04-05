@@ -59,7 +59,8 @@ class Evaluator(object):
         z = self._model.pre_vq_conv(z)
         _, self._quantized, _, _, self._distances = self._model.vq(z)
         reconstructed_x = self._model.decoder(self._quantized)
-        self._valid_reconstructions = reconstructed_x.view(-1, reconstructed_x.shape[1], self._configuration['features_filters'] * 3)
+        output_features_filters = self._configuration['output_features_filters'] * 3 if self._configuration['augment_output_filters'] else self._configuration['output_features_filters']
+        self._valid_reconstructions = reconstructed_x.view(-1, reconstructed_x.shape[1], output_features_filters)
 
     def _compute_comparaison_plot(self, results_path, experiment_name):
         spectrogram_parser = SpectrogramParser()

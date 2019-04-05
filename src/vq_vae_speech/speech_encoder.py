@@ -114,7 +114,7 @@ class SpeechEncoder(nn.Module):
         self._device = device
 
     def forward(self, inputs):
-        x_conv_1 = F.relu(self._conv_1(inputs.view(-1, inputs.shape[1], self._features_filters * 3).float()))
+        x_conv_1 = F.relu(self._conv_1(inputs.view(-1, inputs.shape[1], self._features_filters).float()))
 
         x = F.relu(self._conv_2(x_conv_1)) + x_conv_1
         

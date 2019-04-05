@@ -111,39 +111,40 @@ class VCTKSpeechStream(object):
         else:
             ConsoleLogger.status('Val features directory already created at path: {}'.format(val_features_path))
 
-        def process(loader, output_dir, raw_feature_name, quantized_features_name,
-            rate, filters_number, target_shape):
+        def process(loader, output_dir, input_features_name, output_features_name,
+            rate, input_filters_number, output_filters_number, input_target_shape):
 
             bar = tqdm(loader)
             i = 0
             for data in bar:
-                (raw, one_hot, speaker_id, quantized, wav_filename) = data
+                (raw, one_hot, speaker_id, _, wav_filename) = data # TODO: add an option in configuration to save quantized or not
 
-                raw_features = SpeechFeatures.features_from_name(
-                    name=raw_feature_name,
+                intput_features = SpeechFeatures.features_from_name(
+                    name=input_features_name,
                     signal=raw,
                     rate=rate,
-                    filters_number=filters_number
+                    filters_number=input_filters_number
                 )
 
-                if raw_features.shape[0] != target_shape[0] or raw_features.shape[1] != target_shape[1]:
-                    ConsoleLogger.warn("Raw features number {} with invalid dimension {} will not be saved. Target shape: {}".format(i, raw_features.shape, target_shape))
+                if intput_features.shape[0] != input_target_shape[0] or intput_features.shape[1] != input_target_shape[1]:
+                    ConsoleLogger.warn("Raw features number {} with invalid dimension {} will not be saved. Target shape: {}".format(i, intput_features.shape, input_target_shape))
                     i += 1
                     continue
 
-                quantized_features = SpeechFeatures.features_from_name(
-                    name=quantized_features_name,
-                    signal=quantized,
+                output_features = SpeechFeatures.features_from_name(
+                    name=output_features_name,
+                    signal=raw,
                     rate=rate,
-                    filters_number=filters_number
+                    filters_number=output_filters_number,
+                    augmented=False if output_features_name == 'logfbank' else False
                 )
 
                 output = {
                     'wav_filename': wav_filename,
-                    'raw_features': raw_features,
+                    'intput_features': intput_features,
                     'one_hot': one_hot,
                     'speaker_id': speaker_id,
-                    'quantized_features': quantized_features
+                    'output_features': output_features
                 }
 
                 output_path = output_dir + os.sep + str(i) + '.pickle'
@@ -158,11 +159,12 @@ class VCTKSpeechStream(object):
         process(
             loader=self._training_loader,
             output_dir=train_features_path,
-            raw_feature_name=configuration['input_features_type'],
-            quantized_features_name=configuration['output_features_type'],
+            input_features_name=configuration['input_features_type'],
+            output_features_name=configuration['output_features_type'],
             rate=configuration['sampling_rate'],
-            filters_number=configuration['features_filters'],
-            target_shape=(configuration['features_dim'], configuration['features_filters'] * 3)
+            input_filters_number=configuration['input_features_filters'],
+            output_filters_number=configuration['output_features_filters'],
+            input_target_shape=(configuration['input_features_dim'], configuration['input_features_filters'] * 3)
         )
         ConsoleLogger.success('Training part processed')
 
@@ -170,10 +172,11 @@ class VCTKSpeechStream(object):
         process(
             loader=self._validation_loader,
             output_dir=val_features_path,
-            raw_feature_name=configuration['input_features_type'],
-            quantized_features_name=configuration['output_features_type'],
+            input_features_name=configuration['input_features_type'],
+            output_features_name=configuration['output_features_type'],
             rate=configuration['sampling_rate'],
-            filters_number=configuration['features_filters'],
-            target_shape=(configuration['features_dim'], configuration['features_filters'] * 3)
+            input_filters_number=configuration['input_features_filters'],
+            output_filters_number=configuration['output_features_filters'],
+            input_target_shape=(configuration['input_features_dim'], configuration['input_features_filters'] * 3)
         )
         ConsoleLogger.success('Validation part processed')
