@@ -28,7 +28,7 @@ num_hiddens: 768
 input_dim: 256
 
 # VQ
-num_embeddings: 768 # The higher this value, the higher the capacity in the information bottleneck.
+num_embeddings: 29 # The higher this value, the higher the capacity in the information bottleneck.
 
 # This value is not that important, usually 64 works.
 # This will not change the capacity in the information-bottleneck.

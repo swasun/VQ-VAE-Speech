@@ -51,7 +51,7 @@ class FeaturesAutoEncoder(nn.Module):
         )
 
         self._pre_vq_conv = nn.Conv1d(
-            in_channels=configuration['num_embeddings'],
+            in_channels=configuration['num_hiddens'],
             out_channels=configuration['embedding_dim'],
             kernel_size=1,
             stride=1
@@ -76,7 +76,7 @@ class FeaturesAutoEncoder(nn.Module):
         self._decoder = FeaturesDecoder(
             in_channels=configuration['embedding_dim'],
             out_channels=configuration['features_dim'],
-            num_hiddens=configuration['num_embeddings'],
+            num_hiddens=configuration['num_hiddens'],
             num_residual_layers=configuration['num_residual_layers'],
             num_residual_hiddens=configuration['residual_channels'],
             use_kaiming_normal=configuration['use_kaiming_normal'],
