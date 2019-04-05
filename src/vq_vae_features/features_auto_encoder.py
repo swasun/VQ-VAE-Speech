@@ -115,7 +115,7 @@ class FeaturesAutoEncoder(nn.Module):
         reconstructed_x = self._decoder(quantized)
 
         reconstructed_x = reconstructed_x.view(-1, reconstructed_x.shape[1], self._features_filters * 3)
-
+        
         reconstruction_loss = self._criterion(reconstructed_x, y.float())
         loss = vq_loss + reconstruction_loss
 

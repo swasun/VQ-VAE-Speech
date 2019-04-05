@@ -133,7 +133,7 @@ class VectorQuantizerEMA(nn.Module):
         
         # Quantize and unflatten
         quantized = torch.matmul(encodings, self._embedding.weight).view(input_shape)
-
+        
         # Loss
         e_latent_loss = torch.mean((quantized.detach() - inputs)**2)
         loss = self._commitment_cost * e_latent_loss

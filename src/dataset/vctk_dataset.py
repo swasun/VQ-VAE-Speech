@@ -61,7 +61,7 @@ class VCTKDataset(Dataset):
                 raw = raw[start:start + self._length ]
                 quantized = quantized[start:start + self._length ]
 
-        # ont_hot for input of wavenet
+        # ont_hot for input
         one_hot = np.identity(
             self._quantize,
             dtype=np.float32
@@ -71,7 +71,7 @@ class VCTKDataset(Dataset):
         raw = np.expand_dims(raw, 0) # expand channel
         raw = np.expand_dims(raw, -1) # expand height
 
-        # target for wavenet
+        # target
         quantized = np.expand_dims(quantized, 1)
 
         return raw, one_hot[:, :-1],quantized[1:]
