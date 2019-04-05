@@ -83,7 +83,7 @@ class VCTKSpeechStream(object):
     def train_data_variance(self):
         return self._train_data_variance
 
-    def export_to_features(self, vctk_path, raw_feature_name='mfcc', quantized_features_name='logfbank', rate=16000, filters_number=13):
+    def export_to_features(self, vctk_path, configuration):
         if not os.path.isdir(vctk_path):
             raise ValueError("VCTK dataset not found at path '{}'".format(vctk_path))
 
@@ -111,7 +111,9 @@ class VCTKSpeechStream(object):
         else:
             ConsoleLogger.status('Val features directory already created at path: {}'.format(val_features_path))
 
-        def process(loader, output_dir, raw_feature_name, quantized_features_name, rate, filters_number, target_shape):
+        def process(loader, output_dir, raw_feature_name, quantized_features_name,
+            rate, filters_number, target_shape):
+
             bar = tqdm(loader)
             i = 0
             for data in bar:
@@ -154,24 +156,24 @@ class VCTKSpeechStream(object):
 
         ConsoleLogger.status('Processing training part')
         process(
-            self._training_loader,
-            train_features_path,
-            raw_feature_name,
-            quantized_features_name,
-            rate,
-            filters_number,
-            (47, 39) # TODO: move it in the configuration
+            loader=self._training_loader,
+            output_dir=train_features_path,
+            raw_feature_name=configuration['input_features_type'],
+            quantized_features_name=configuration['output_features_type'],
+            rate=configuration['sampling_rate'],
+            filters_number=configuration['features_filters'],
+            target_shape=(configuration['features_dim'], configuration['features_filters'] * 3)
         )
         ConsoleLogger.success('Training part processed')
 
         ConsoleLogger.status('Processing validation part')
         process(
-            self._validation_loader,
-            val_features_path,
-            raw_feature_name,
-            quantized_features_name,
-            rate,
-            filters_number,
-            (47, 39) # TODO: move it in the configuration
+            loader=self._validation_loader,
+            output_dir=val_features_path,
+            raw_feature_name=configuration['input_features_type'],
+            quantized_features_name=configuration['output_features_type'],
+            rate=configuration['sampling_rate'],
+            filters_number=configuration['features_filters'],
+            target_shape=(configuration['features_dim'], configuration['features_filters'] * 3)
         )
         ConsoleLogger.success('Validation part processed')

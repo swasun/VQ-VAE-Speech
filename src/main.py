@@ -75,7 +75,7 @@ if __name__ == "__main__":
             configuration = yaml.load(configuration_file)
         device_configuration = DeviceConfiguration.load_from_configuration(configuration)
         data_stream = VCTKSpeechStream(configuration, device_configuration.gpu_ids, device_configuration.use_cuda)
-        data_stream.export_to_features('../data/vctk')
+        data_stream.export_to_features('../data/vctk', configuration)
         ConsoleLogger.success("VCTK exported to a new features dataset at: '../data/vctk/features'")
         sys.exit(0)
 

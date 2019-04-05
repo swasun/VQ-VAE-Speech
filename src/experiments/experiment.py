@@ -108,7 +108,7 @@ class Experiment(object):
         self._init()
 
         ConsoleLogger.status('Begins to evaluate the model')
-        self._evaluator.evaluate(self._experiments_path, self._name)
+        self._evaluator.evaluate(self._results_path, self._name)
 
         ConsoleLogger.success("Succeed to runned the experiment called '{}'".format(self._name))
 

@@ -4,5 +4,6 @@ log/
 loss/
 params/
 samples/
+wip/
 /experiments/*
 *.pth

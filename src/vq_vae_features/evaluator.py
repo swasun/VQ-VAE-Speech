@@ -28,20 +28,24 @@ from dataset.spectrogram_parser import SpectrogramParser
 
 import matplotlib.pyplot as plt
 import torch.nn.functional as F
+import os
+import librosa
 
 
 class Evaluator(object):
 
-    def __init__(self, device, model, data_stream):
+    def __init__(self, device, model, data_stream, configuration):
         self._device = device
         self._model = model
         self._data_stream = data_stream
+        self._configuration = configuration
 
-    def evaluate(self, experiments_path, experiment_name):
-        self._reconstruct()
-        self._plot()
+    def evaluate(self, results_path, experiment_name):
+        self._reconstruct(results_path, experiment_name)
+        self._compute_comparaison_plot(results_path, experiment_name)
+        #self._compute_embedding_plot(results_path, experiment_name)
 
-    def _reconstruct(self):
+    def _reconstruct(self, results_path, experiment_name):
         self._model.eval()
 
         (self._valid_originals, _, _, self._target, self._wav_filename) = next(iter(self._data_stream.validation_loader))
@@ -55,28 +59,42 @@ class Evaluator(object):
         z = self._model.pre_vq_conv(z)
         _, self._quantized, _, _, self._distances = self._model.vq(z)
         reconstructed_x = self._model.decoder(self._quantized)
-        self._valid_reconstructions = reconstructed_x.view(-1, reconstructed_x.shape[1], 13 * 3)
+        self._valid_reconstructions = reconstructed_x.view(-1, reconstructed_x.shape[1], self._configuration['features_filters'] * 3)
 
-    def _plot(self):
+    def _compute_comparaison_plot(self, results_path, experiment_name):
         spectrogram_parser = SpectrogramParser()
         spectrogram = spectrogram_parser.parse_audio(self._wav_filename).contiguous()
         spectrogram = spectrogram.detach().cpu().numpy()
 
-        probs = F.softmax(self._distances).detach().cpu().transpose(0, 1).contiguous()
+        probs = F.softmax(self._distances, dim=1).detach().cpu().transpose(0, 1).contiguous()
 
         target = self._target.detach().cpu()[0].transpose(0, 1).numpy()
 
         valid_reconstructions = self._valid_reconstructions.detach().cpu()[0].transpose(0, 1).numpy()
 
         _, axs = plt.subplots(4, 1, figsize=(20, 20))
-        axs[0].pcolor(spectrogram) # Spectrogram of the original speech signal
-        axs[1].pcolor(target) # logfbank of quantized target to reconstruct
-        axs[2].pcolor(probs) # Softmax of distances computed in VQ
-        axs[3].pcolor(valid_reconstructions) # Actual reconstruction
-        plt.savefig('test_evaluation.png', bbox_inches='tight', pad_inches=0)
+
+        # Spectrogram of the original speech signal
+        axs[0].set_title('Spectrogram of the original speech signal')
+        axs[0].pcolor(spectrogram)
+
+        # logfbank of quantized target to reconstruct
+        axs[1].set_title('logfbank of quantized target to reconstruct')
+        axs[1].pcolor(target)
+
+        # Softmax of distances computed in VQ
+        axs[2].set_title('Softmax of distances computed in VQ\n($||z_e(x) - e_i||^2_2$ with $z_e(x)$ the output of the encoder prior to quantization)')
+        axs[2].pcolor(probs)
+
+        # Actual reconstruction
+        axs[3].set_title('Actual reconstruction')
+        axs[3].pcolor(valid_reconstructions)
+
+        output_path = results_path + os.sep + experiment_name + '_evaluation-comparaison-plot.png'
+        plt.savefig(output_path, bbox_inches='tight', pad_inches=0)
         plt.close()
 
-    def _save_embedding_plot(self, path):
+    def _compute_embedding_plot(self, results_path, experiment_name):
         # Copyright (C) 2018 Zalando Research
 
         try:
@@ -90,9 +108,10 @@ class Evaluator(object):
             metric='euclidean'
         )
 
-        projection = map.fit_transform(self._model.vq.embedding.weight.data.cpu())
+        projection = map.fit_transform(self._model.vq.embedding.weight.data.cpu().detach().numpy())
 
         fig = plt.figure()
         plt.scatter(projection[:,0], projection[:,1], alpha=0.3)
-        fig.savefig(path)
+        output_path = results_path + os.sep + experiment_name + '_evaluation-embedding-plot.png'
+        fig.savefig(output_path)
         plt.close(fig)

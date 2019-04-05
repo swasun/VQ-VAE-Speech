@@ -31,8 +31,8 @@ import numpy as np
 class AudioLoader(object):
 
     @staticmethod
-    def load(path):
-        raw, _ = librosa.load(path, 16000)
+    def load(path, rate=16000):
+        raw, _ = librosa.load(path, rate)
         raw, _ = librosa.effects.trim(raw)
         raw /= np.abs(raw).max()
         raw = raw.astype(np.float32)

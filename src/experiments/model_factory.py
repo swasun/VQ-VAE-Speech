@@ -61,7 +61,8 @@ class ModelFactory(object):
                 evaluator = FeaturesEvaluator(
                     device_configuration.device,
                     model,
-                    data_stream
+                    data_stream,
+                    configuration
                 )
         elif configuration['decoder_type'] == 'wavenet':
             model = WaveNetAutoEncoder(configuration, data_stream.speaker_dic, device_configuration.device).to(device_configuration.device)
@@ -150,7 +151,8 @@ class ModelFactory(object):
             evaluator = FeaturesEvaluator(
                 device_configuration.device,
                 model,
-                data_stream
+                data_stream,
+                configuration
             )
         # Else if the decoder is a wavenet
         elif configuration['decoder_type'] == 'wavenet':
