@@ -68,7 +68,7 @@ input_features_type: 'mfcc'
 input_features_dim: 47
 input_features_filters: 13
 output_features_dim: 47
-output_features_filters: 80
+output_features_filters: 79
 augment_input_features: True
 augment_output_features: False
 

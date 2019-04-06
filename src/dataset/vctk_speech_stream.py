@@ -119,15 +119,15 @@ class VCTKSpeechStream(object):
             for data in bar:
                 (raw, one_hot, speaker_id, _, wav_filename) = data # TODO: add an option in configuration to save quantized or not
 
-                intput_features = SpeechFeatures.features_from_name(
+                input_features = SpeechFeatures.features_from_name(
                     name=input_features_name,
                     signal=raw,
                     rate=rate,
                     filters_number=input_filters_number
                 )
 
-                if intput_features.shape[0] != input_target_shape[0] or intput_features.shape[1] != input_target_shape[1]:
-                    ConsoleLogger.warn("Raw features number {} with invalid dimension {} will not be saved. Target shape: {}".format(i, intput_features.shape, input_target_shape))
+                if input_features.shape[0] != input_target_shape[0] or input_features.shape[1] != input_target_shape[1]:
+                    ConsoleLogger.warn("Raw features number {} with invalid dimension {} will not be saved. Target shape: {}".format(i, input_features.shape, input_target_shape))
                     i += 1
                     continue
 
@@ -141,7 +141,7 @@ class VCTKSpeechStream(object):
 
                 output = {
                     'wav_filename': wav_filename,
-                    'intput_features': intput_features,
+                    'input_features': input_features,
                     'one_hot': one_hot,
                     'speaker_id': speaker_id,
                     'output_features': output_features

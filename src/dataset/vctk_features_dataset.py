@@ -43,7 +43,7 @@ class VCTKFeaturesDataset(Dataset):
         with open(self._sub_features_path + os.sep + str(index) + '.pickle', 'rb') as file:
             dic = pickle.load(file)
 
-        return dic['raw_features'], dic['one_hot'], dic['speaker_id'], dic['quantized_features'], dic['wav_filename']
+        return dic['input_features'], dic['one_hot'], dic['speaker_id'], dic['output_features'], dic['wav_filename']
 
     def __len__(self):
         return self._files_number

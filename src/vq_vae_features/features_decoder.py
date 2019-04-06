@@ -77,6 +77,15 @@ class FeaturesDecoder(nn.Module):
         
         self._conv_trans_3 = ConvTranspose1DBuilder.build(
             in_channels=num_hiddens,
+            out_channels=num_hiddens,
+            kernel_size=3, 
+            stride=2,
+            padding=0,
+            use_kaiming_normal=use_kaiming_normal
+        )
+
+        self._conv_trans_4 = ConvTranspose1DBuilder.build(
+            in_channels=num_hiddens,
             out_channels=out_channels,
             kernel_size=3, 
             stride=2,
@@ -99,5 +108,7 @@ class FeaturesDecoder(nn.Module):
         x = F.relu(self._conv_trans_2(x))
 
         x = self._conv_trans_3(x)
+
+        x = self._conv_trans_4(x)
         
         return x

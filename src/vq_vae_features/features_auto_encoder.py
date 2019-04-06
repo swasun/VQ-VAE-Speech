@@ -45,7 +45,7 @@ class FeaturesAutoEncoder(nn.Module):
             num_residual_hiddens=configuration['num_hiddens'],
             use_kaiming_normal=configuration['use_kaiming_normal'],
             input_features_type=configuration['input_features_type'],
-            features_filters=configuration['input_features_filters'] * 3 if configuration['augment_intput_features'] else configuration['input_features_filters'],
+            features_filters=configuration['input_features_filters'] * 3 if configuration['augment_input_features'] else configuration['input_features_filters'],
             sampling_rate=configuration['sampling_rate'],
             device=device
         )
