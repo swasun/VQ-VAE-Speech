@@ -59,7 +59,7 @@ class Evaluator(object):
         z = self._model.pre_vq_conv(z)
         _, self._quantized, _, _, self._distances = self._model.vq(z)
         reconstructed_x = self._model.decoder(self._quantized)
-        output_features_filters = self._configuration['output_features_filters'] * 3 if self._configuration['augment_output_filters'] else self._configuration['output_features_filters']
+        output_features_filters = self._configuration['output_features_filters'] * 3 if self._configuration['augment_output_features'] else self._configuration['output_features_filters']
         self._valid_reconstructions = reconstructed_x.view(-1, reconstructed_x.shape[1], output_features_filters)
 
     def _compute_comparaison_plot(self, results_path, experiment_name):
@@ -67,29 +67,35 @@ class Evaluator(object):
         spectrogram = spectrogram_parser.parse_audio(self._wav_filename).contiguous()
         spectrogram = spectrogram.detach().cpu().numpy()
 
+        valid_originals = self._valid_originals.detach().cpu()[0].transpose(0, 1).numpy()
+
         probs = F.softmax(self._distances, dim=1).detach().cpu().transpose(0, 1).contiguous()
 
         target = self._target.detach().cpu()[0].transpose(0, 1).numpy()
 
         valid_reconstructions = self._valid_reconstructions.detach().cpu()[0].transpose(0, 1).numpy()
 
-        _, axs = plt.subplots(4, 1, figsize=(20, 20))
+        _, axs = plt.subplots(5, 1, figsize=(30, 20))
 
         # Spectrogram of the original speech signal
         axs[0].set_title('Spectrogram of the original speech signal')
         axs[0].pcolor(spectrogram)
 
+        # MFCC + d + a of the original speech signal
+        axs[1].set_title('Augmented MFCC + d + a #filters=13+13+13 of the original speech signal')
+        axs[1].pcolor(valid_originals)
+
         # logfbank of quantized target to reconstruct
-        axs[1].set_title('logfbank of quantized target to reconstruct')
-        axs[1].pcolor(target)
+        axs[2].set_title('logfbank of quantized target to reconstruct')
+        axs[2].pcolor(target)
 
         # Softmax of distances computed in VQ
-        axs[2].set_title('Softmax of distances computed in VQ\n($||z_e(x) - e_i||^2_2$ with $z_e(x)$ the output of the encoder prior to quantization)')
-        axs[2].pcolor(probs)
+        axs[3].set_title('Softmax of distances computed in VQ\n($||z_e(x) - e_i||^2_2$ with $z_e(x)$ the output of the encoder prior to quantization)')
+        axs[3].pcolor(probs)
 
         # Actual reconstruction
-        axs[3].set_title('Actual reconstruction')
-        axs[3].pcolor(valid_reconstructions)
+        axs[4].set_title('Actual reconstruction')
+        axs[4].pcolor(valid_reconstructions)
 
         output_path = results_path + os.sep + experiment_name + '_evaluation-comparaison-plot.png'
         plt.savefig(output_path, bbox_inches='tight', pad_inches=0)

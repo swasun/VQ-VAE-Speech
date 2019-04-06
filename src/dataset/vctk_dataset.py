@@ -74,7 +74,7 @@ class VCTKDataset(Dataset):
         # target
         quantized = np.expand_dims(quantized, 1)
 
-        return raw, one_hot[:, :-1],quantized[1:]
+        return raw, one_hot[:, :-1], quantized[1:]
 
     def __getitem__(self, index):
         wav_filename = self._audios[index]
