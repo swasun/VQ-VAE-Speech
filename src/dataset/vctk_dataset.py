@@ -45,7 +45,7 @@ class VCTKDataset(Dataset):
         self._length = None if configuration['length'] is None else configuration['length'] + 1
         self._quantize = configuration['quantize']
 
-    def _preprocessing_quantized(self, raw, quantized):
+    def _preprocessing(self, raw, quantized):
         if self._length is not None:
             if len(raw) <=self._length :
                 # padding
@@ -86,7 +86,7 @@ class VCTKDataset(Dataset):
 
         speaker_id = np.array(self._speaker_dic[speaker], dtype=np.long)
 
-        raw, one_hot, quantized = self._preprocessing_quantized(raw, quantized)
+        raw, one_hot, quantized = self._preprocessing(raw, quantized)
 
         return raw, one_hot, speaker_id, quantized, wav_filename
 
