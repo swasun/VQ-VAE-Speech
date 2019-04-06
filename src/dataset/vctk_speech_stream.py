@@ -112,7 +112,8 @@ class VCTKSpeechStream(object):
             ConsoleLogger.status('Val features directory already created at path: {}'.format(val_features_path))
 
         def process(loader, output_dir, input_features_name, output_features_name,
-            rate, input_filters_number, output_filters_number, input_target_shape):
+            rate, input_filters_number, output_filters_number, input_target_shape,
+            augment_output_features):
 
             bar = tqdm(loader)
             i = 0
@@ -136,7 +137,7 @@ class VCTKSpeechStream(object):
                     signal=raw,
                     rate=rate,
                     filters_number=output_filters_number,
-                    augmented=False if output_features_name == 'logfbank' else False
+                    augmented=augment_output_features
                 )
 
                 output = {
@@ -164,7 +165,8 @@ class VCTKSpeechStream(object):
             rate=configuration['sampling_rate'],
             input_filters_number=configuration['input_features_filters'],
             output_filters_number=configuration['output_features_filters'],
-            input_target_shape=(configuration['input_features_dim'], configuration['input_features_filters'] * 3)
+            input_target_shape=(configuration['input_features_dim'], configuration['input_features_filters'] * 3),
+            augment_output_features=configuration['augment_output_features']
         )
         ConsoleLogger.success('Training part processed')
 
@@ -177,6 +179,7 @@ class VCTKSpeechStream(object):
             rate=configuration['sampling_rate'],
             input_filters_number=configuration['input_features_filters'],
             output_filters_number=configuration['output_features_filters'],
-            input_target_shape=(configuration['input_features_dim'], configuration['input_features_filters'] * 3)
+            input_target_shape=(configuration['input_features_dim'], configuration['input_features_filters'] * 3),
+            augment_output_features=configuration['augment_output_features']
         )
         ConsoleLogger.success('Validation part processed')
