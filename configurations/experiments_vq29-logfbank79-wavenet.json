@@ -1,31 +1,35 @@
 {
-    "experiments_path": "../experiments",
+    "experiments_path": "../experiments-vq29-logfbank79-wavenet",
     "results_path": "../results",
-    "configuration_path": "../configurations/vctk_features.yaml",
+    "configuration_path": "../configurations/vctk_wavenet.yaml",
     "seed": 1234,
-    "experiments": {    
+    "experiments": {
         "baseline": {
             "num_epochs": 15,
-            "batch_size": 2
+            "batch_size": 2,
+            "num_embeddings": 29
         },
     
         "ema": {
             "num_epochs": 15,
             "decay": 0.99,
-            "batch_size": 2
+            "batch_size": 2,
+            "num_embeddings": 29
         },
 
         "kaiming": {
             "num_epochs": 15,
             "use_kaiming_normal": true,
-            "batch_size": 2
+            "batch_size": 2,
+            "num_embeddings": 29
         },
 
         "jitter12": {
             "num_epochs": 15,
             "use_jitter": true,
             "jitter_probability": 0.12,
-            "batch_size": 2
+            "batch_size": 2,
+            "num_embeddings": 29
         },
     
         "jitter12-ema": {
@@ -33,7 +37,8 @@
             "use_jitter": true,
             "jitter_probability": 0.12,
             "decay": 0.99,
-            "batch_size": 2
+            "batch_size": 2,
+            "num_embeddings": 29
         },
     
         "jitter12-kaiming": {
@@ -41,7 +46,8 @@
             "use_jitter": true,
             "jitter_probability": 0.12,
             "use_kaiming_normal": true,
-            "batch_size": 2
+            "batch_size": 2,
+            "num_embeddings": 29
         },
     
         "jitter12-ema-kaiming": {
@@ -50,7 +56,8 @@
             "jitter_probability": 0.12,
             "decay": 0.99,
             "use_kaiming_normal": true,
-            "batch_size": 2
+            "batch_size": 2,
+            "num_embeddings": 29
         }
     }
 }
