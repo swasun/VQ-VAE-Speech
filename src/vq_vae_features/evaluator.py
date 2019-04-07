@@ -25,11 +25,16 @@
  #####################################################################################
 
 from dataset.spectrogram_parser import SpectrogramParser
+from vq_vae_speech.mu_law import MuLaw
 
 import matplotlib.pyplot as plt
+import torch
 import torch.nn.functional as F
 import os
 import librosa
+import librosa.output
+from python_speech_features.base import mel2hz
+import numpy as np
 
 
 class Evaluator(object):
@@ -44,6 +49,8 @@ class Evaluator(object):
         self._reconstruct(results_path, experiment_name)
         self._compute_comparaison_plot(results_path, experiment_name)
         #self._compute_embedding_plot(results_path, experiment_name)
+        #self._compute_wav(results_path, experiment_name)
+        #self._test(results_path, experiment_name)
 
     def _reconstruct(self, results_path, experiment_name):
         self._model.eval()
@@ -57,7 +64,7 @@ class Evaluator(object):
 
         z = self._model.encoder(self._valid_originals)
         z = self._model.pre_vq_conv(z)
-        _, self._quantized, _, _, self._distances = self._model.vq(z)
+        _, self._quantized, _, self._encodings, self._distances = self._model.vq(z)
         reconstructed_x = self._model.decoder(self._quantized)
         output_features_filters = self._configuration['output_features_filters'] * 3 if self._configuration['augment_output_features'] else self._configuration['output_features_filters']
         self._valid_reconstructions = reconstructed_x.view(-1, reconstructed_x.shape[1], output_features_filters)
@@ -122,3 +129,28 @@ class Evaluator(object):
         output_path = results_path + os.sep + experiment_name + '_evaluation-embedding-plot.png'
         fig.savefig(output_path)
         plt.close(fig)
+
+    def _compute_wav(self, results_path, experiment_name):
+        output_mu = self._valid_reconstructions.argmax(dim=1).detach().cpu().float().numpy().squeeze()
+        #output_mu = MuLaw.decode(output_mu)
+
+        output_path = results_path + os.sep + experiment_name + '_output.wav'
+        librosa.output.write_wav(output_path, output_mu, self._configuration['sampling_rate'])
+
+    def _test(self, results_path, experiment_name):
+        avg_probs = torch.mean(self._encodings, dim=0)
+        avg_probs = avg_probs.detach().cpu().numpy()
+
+        encodings = self._encodings.detach().cpu().numpy()
+
+        _, axs = plt.subplots(2, 1, figsize=(20, 20))
+
+        axs[0].set_title('Encodings')
+        axs[0].pcolor(encodings.transpose())
+
+        axs[1].set_title('Average probs')
+        axs[1].plot(avg_probs, np.arange(len(avg_probs)))
+
+        output_path = results_path + os.sep + experiment_name + '_evaluation-test.png'
+        plt.savefig(output_path, bbox_inches='tight', pad_inches=0)
+        plt.close()

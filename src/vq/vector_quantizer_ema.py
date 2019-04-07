@@ -66,11 +66,11 @@ class VectorQuantizerEMA(nn.Module):
 
         self._num_embeddings = num_embeddings
         self._embedding_dim = embedding_dim
-        
+
         self._embedding = nn.Embedding(self._num_embeddings, self._embedding_dim)
         self._embedding.weight.data.normal_()
         self._commitment_cost = commitment_cost
-        
+
         self.register_buffer('_ema_cluster_size', torch.zeros(num_embeddings))
         self._ema_w = nn.Parameter(torch.Tensor(num_embeddings, self._embedding_dim))
         self._ema_w.data.normal_()
@@ -88,14 +88,12 @@ class VectorQuantizerEMA(nn.Module):
                 leading dimensions will be flattened and treated as a large batch.
         
         Returns:
-            dict containing the following keys and values:
-            quantize: Tensor containing the quantized version of the input.
             loss: Tensor containing the loss to optimize.
+            quantize: Tensor containing the quantized version of the input.
             perplexity: Tensor containing the perplexity of the encodings.
             encodings: Tensor containing the discrete encodings, ie which element
                 of the quantized space each input element was mapped to.
-            encoding_indices: Tensor containing the discrete encoding indices, ie
-                which element of the quantized space each input element was mapped to.
+            distances
         """
 
         # Convert inputs from BCHW -> BHWC
@@ -110,7 +108,10 @@ class VectorQuantizerEMA(nn.Module):
                     + torch.sum(self._embedding.weight**2, dim=1)
                     - 2 * torch.matmul(flat_input, self._embedding.weight.t()))
 
-        # Encoding
+        """
+        encoding_indices: Tensor containing the discrete encoding indices, ie
+        which element of the quantized space each input element was mapped to.
+        """
         encoding_indices = torch.argmin(distances, dim=1).unsqueeze(1)
         encodings = torch.zeros(encoding_indices.shape[0], self._num_embeddings, dtype=torch.float).to(self._device)
         encodings.scatter_(1, encoding_indices, 1)
@@ -119,29 +120,29 @@ class VectorQuantizerEMA(nn.Module):
         if self.training:
             self._ema_cluster_size = self._ema_cluster_size * self._decay + \
                 (1 - self._decay) * torch.sum(encodings, 0)
-    
+
             n = torch.sum(self._ema_cluster_size.data)
             self._ema_cluster_size = (
                 (self._ema_cluster_size + self._epsilon)
                 / (n + self._num_embeddings * self._epsilon) * n
             )
-            
+
             dw = torch.matmul(encodings.t(), flat_input)
             self._ema_w = nn.Parameter(self._ema_w * self._decay + (1 - self._decay) * dw)
-            
+
             self._embedding.weight = nn.Parameter(self._ema_w / self._ema_cluster_size.unsqueeze(1))
-        
+
         # Quantize and unflatten
         quantized = torch.matmul(encodings, self._embedding.weight).view(input_shape)
-        
+
         # Loss
         e_latent_loss = torch.mean((quantized.detach() - inputs)**2)
         loss = self._commitment_cost * e_latent_loss
-        
+
         quantized = inputs + (quantized - inputs).detach()
         avg_probs = torch.mean(encodings, dim=0)
         perplexity = torch.exp(-torch.sum(avg_probs * torch.log(avg_probs + 1e-10)))
-        
+
         # Convert quantized from BHWC -> BCHW
         return loss, quantized.permute(2, 0, 1).contiguous(), perplexity, encodings, distances
 

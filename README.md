@@ -106,7 +106,7 @@ This figure describes the layers of the VQ-VAE model we have used. All convoluti
 
 ### Training
 
-![](results/train/vq29/merged_experiments.png)
+![](results/vq29/train/merged_experiments.png)
 
 This figure shows the training evolution of the VQ-VAE model using two metrics: the loss values (the lower the better), and the perplexity. The perplexity isn't the one from LM topic: here the higher the better, since a higher means a bigger usage of the codebook (i.e., the quantized vectors of the VQ embedding space). The model was trained during 10 epochs using the architecture described in Section `VQ-VAE-Speech encoder + Deconv decoder`. We use an 29 vectors of dim 64 as the VQ space (we alternatively trained 768 vectors of dim 64, but the codebook usage wasn't good. cf [here](results/train/vq768/merged_experiments.png)) All experiments have been setted with a seed of 1234 for reproducibility. We tried several variants of the training: the kaiming normal (also known as He initialization) [He, K et al., 2015], the VQ-EMA [Roy et al., 2018], the jitter layer proposed in [Chorowski et al., 2019].
 

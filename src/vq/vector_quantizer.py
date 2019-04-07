@@ -56,7 +56,7 @@ class VectorQuantizer(nn.Module):
     
     def __init__(self, num_embeddings, embedding_dim, commitment_cost, device):
         super(VectorQuantizer, self).__init__()
-        
+
         self._embedding_dim = embedding_dim
         self._num_embeddings = num_embeddings
         
@@ -73,47 +73,48 @@ class VectorQuantizer(nn.Module):
         Args:
             inputs: Tensor, final dimension must be equal to embedding_dim. All other
                 leading dimensions will be flattened and treated as a large batch.
-        
+
         Returns:
-            dict containing the following keys and values:
-            quantize: Tensor containing the quantized version of the input.
             loss: Tensor containing the loss to optimize.
+            quantize: Tensor containing the quantized version of the input.
             perplexity: Tensor containing the perplexity of the encodings.
             encodings: Tensor containing the discrete encodings, ie which element
                 of the quantized space each input element was mapped to.
-            encoding_indices: Tensor containing the discrete encoding indices, ie
-                which element of the quantized space each input element was mapped to.
+            distances
         """
 
         # Convert inputs from BCHW -> BHWC
         inputs = inputs.permute(1, 2, 0).contiguous()
         input_shape = inputs.shape
-        
+
         # Flatten input
         flat_input = inputs.view(-1, self._embedding_dim)
-        
+
         # Calculate distances
         distances = (torch.sum(flat_input**2, dim=1, keepdim=True) 
             + torch.sum(self._embedding.weight**2, dim=1)
             - 2 * torch.matmul(flat_input, self._embedding.weight.t()))
-            
-        # Encoding
+
+        """
+        encoding_indices: Tensor containing the discrete encoding indices, ie
+        which element of the quantized space each input element was mapped to.
+        """
         encoding_indices = torch.argmin(distances, dim=1).unsqueeze(1)
         encodings = torch.zeros(encoding_indices.shape[0], self._num_embeddings, dtype=torch.float).to(self._device)
         encodings.scatter_(1, encoding_indices, 1)
-        
+
         # Quantize and unflatten
         quantized = torch.matmul(encodings, self._embedding.weight).view(input_shape)
-        
+
         # Loss
         e_latent_loss = torch.mean((quantized.detach() - inputs)**2)
         q_latent_loss = torch.mean((quantized - inputs.detach())**2)
         loss = q_latent_loss + self._commitment_cost * e_latent_loss
-        
+
         quantized = inputs + (quantized - inputs).detach()
         avg_probs = torch.mean(encodings, dim=0)
         perplexity = torch.exp(-torch.sum(avg_probs * torch.log(avg_probs + 1e-10)))
-        
+
         # Convert quantized from BHWC -> BCHW
         return loss, quantized.permute(2, 0, 1).contiguous(), perplexity, encodings, distances
 

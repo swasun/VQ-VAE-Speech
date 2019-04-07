@@ -31,6 +31,7 @@ from vq.vector_quantizer_ema import VectorQuantizerEMA
 
 import torch.nn as nn
 import torch
+import torch.nn.functional as F
 
 
 class FeaturesAutoEncoder(nn.Module):
@@ -88,6 +89,7 @@ class FeaturesAutoEncoder(nn.Module):
         self._device = device
 
         self._criterion = nn.MSELoss()
+        #self._criterion = nn.KLDivLoss()
 
     @property
     def vq(self):
@@ -116,6 +118,7 @@ class FeaturesAutoEncoder(nn.Module):
 
         reconstructed_x = reconstructed_x.view(-1, reconstructed_x.shape[1], self._output_features_filters)
         
+        #reconstruction_loss = self._criterion(torch.log(F.softmax(reconstructed_x, dim=0)), F.softmax(y.float(), dim=0))
         reconstruction_loss = self._criterion(reconstructed_x, y.float())
         loss = vq_loss + reconstruction_loss
 

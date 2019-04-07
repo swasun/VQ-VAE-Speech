@@ -1,20 +1,16 @@
 {
-    "experiments_path": "../experiments",
+    "experiments_path": "../experiments-vq29-logfbank79-wavenet",
     "results_path": "../results",
-    "configuration_path": "../configurations/vctk_features.yaml",
+    "configuration_path": "../configurations/vctk_wavenet.yaml",
     "seed": 1234,
     "experiments": {
-        "baseline": {
-            "num_epochs": 15,
-            "batch_size": 2
-        },
-        
         "jitter12-ema": {
             "num_epochs": 4,
             "use_jitter": true,
             "jitter_probability": 0.12,
             "decay": 0.99,
-            "batch_size": 2
+            "batch_size": 1,
+            "num_embeddings": 29
         }
     }
 }

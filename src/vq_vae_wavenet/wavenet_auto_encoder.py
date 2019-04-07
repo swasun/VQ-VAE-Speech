@@ -51,7 +51,7 @@ class WaveNetAutoEncoder(nn.Module):
         )
 
         self._pre_vq_conv = nn.Conv1d(
-            in_channels=configuration['num_embeddings'],
+            in_channels=configuration['num_hiddens'],
             out_channels=configuration['embedding_dim'],
             kernel_size=1,
             stride=1,
@@ -109,7 +109,7 @@ class WaveNetAutoEncoder(nn.Module):
         local_condition = quantized
         local_condition = local_condition.squeeze(-1)
         x_dec = x_dec.squeeze(-1)
-        
+
         reconstructed_x = self._decoder(x_dec, local_condition, global_condition)
         reconstructed_x = reconstructed_x.unsqueeze(-1)
         x_dec = x_dec.unsqueeze(-1)
