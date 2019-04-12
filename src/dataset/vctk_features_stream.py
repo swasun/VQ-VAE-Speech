@@ -38,6 +38,10 @@ class VCTKFeaturesStream(object):
         self._training_data = VCTKFeaturesDataset(vctk_path, 'train')
         self._validation_data = VCTKFeaturesDataset(vctk_path, 'val')
         factor = 1 if len(gpu_ids) == 0 else len(gpu_ids)
+
+        factor = 1
+        configuration['batch_size'] = 1
+
         self._training_loader = DataLoader(
             self._training_data,
             batch_size=configuration['batch_size'] * factor,

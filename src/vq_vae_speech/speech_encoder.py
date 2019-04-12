@@ -46,7 +46,7 @@ class SpeechEncoder(nn.Module):
         """
 
         self._conv_1 = Conv1DBuilder.build(
-            in_channels=in_channels,
+            in_channels=39,
             out_channels=num_hiddens,
             kernel_size=3,
             use_kaiming_normal=use_kaiming_normal,
@@ -72,7 +72,7 @@ class SpeechEncoder(nn.Module):
             kernel_size=4,
             stride=2,
             use_kaiming_normal=use_kaiming_normal,
-            padding=1
+            padding=2
         )
 
         """
@@ -114,7 +114,9 @@ class SpeechEncoder(nn.Module):
         self._device = device
 
     def forward(self, inputs):
-        x_conv_1 = F.relu(self._conv_1(inputs.view(-1, inputs.shape[1], self._features_filters).float()))
+        x = inputs.permute(0, 2, 1).contiguous().float()
+
+        x_conv_1 = F.relu(self._conv_1(x))
 
         x = F.relu(self._conv_2(x_conv_1)) + x_conv_1
         

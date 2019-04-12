@@ -103,7 +103,7 @@ class ModelFactory(object):
 
         # Update the epoch number to begin with for the future training
         configuration['start_epoch'] = latest_epoch
-        
+
         # Load the device configuration from the configuration state
         device_configuration = DeviceConfiguration.load_from_configuration(configuration)
 

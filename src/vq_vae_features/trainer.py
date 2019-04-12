@@ -60,6 +60,7 @@ class Trainer(object):
             for data in train_bar:
                 (data, _, _, quantized, _) = data
                 data = data.to(self._device)
+
                 quantized = quantized.to(self._device)
 
                 self._optimizer.zero_grad()

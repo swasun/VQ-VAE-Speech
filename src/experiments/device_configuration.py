@@ -59,6 +59,12 @@ class DeviceConfiguration(object):
         default_device = 'cuda' if use_cuda else 'cpu' # Use default cuda device if possible or use the cpu
         device = configuration['use_device'] if configuration['use_device'] is not None else default_device # Use a defined device if specified
         gpu_ids = [i for i in range(torch.cuda.device_count())] if configuration['use_data_parallel'] else [0] # Resolve the gpu ids if gpu parallelization is specified
+        if configuration['use_device'] and ':' in configuration['use_device']:
+            gpu_ids = [int(configuration['use_device'].split(':')[1])]
+
+        device = 'cuda:1'
+        gpu_ids = '[1]'
+
         use_data_parallel = True if configuration['use_data_parallel'] and use_cuda and len(gpu_ids) > 1 else False
 
         ConsoleLogger.status('The used device is: {}'.format(device))

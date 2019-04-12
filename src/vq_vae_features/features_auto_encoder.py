@@ -25,6 +25,7 @@
  #####################################################################################
 
 from vq_vae_speech.speech_encoder import SpeechEncoder
+from vq_vae_speech.speech_features import SpeechFeatures
 from vq_vae_features.features_decoder import FeaturesDecoder
 from vq.vector_quantizer import VectorQuantizer
 from vq.vector_quantizer_ema import VectorQuantizerEMA
@@ -76,7 +77,7 @@ class FeaturesAutoEncoder(nn.Module):
 
         self._decoder = FeaturesDecoder(
             in_channels=configuration['embedding_dim'],
-            out_channels=configuration['output_features_dim'],
+            out_channels=1,
             num_hiddens=configuration['num_hiddens'],
             num_residual_layers=configuration['num_residual_layers'],
             num_residual_hiddens=configuration['residual_channels'],
@@ -86,6 +87,7 @@ class FeaturesAutoEncoder(nn.Module):
         )
 
         self._output_features_filters = configuration['output_features_filters'] * 3 if configuration['augment_output_features'] else configuration['output_features_filters']
+        self._output_features_dim = configuration['output_features_dim']
         self._device = device
 
         self._criterion = nn.MSELoss()
@@ -109,17 +111,26 @@ class FeaturesAutoEncoder(nn.Module):
 
     def forward(self, x, y):
         z = self._encoder(x)
-        
+
         z = self._pre_vq_conv(z)
 
         vq_loss, quantized, perplexity, _, _ = self._vq(z)
 
         reconstructed_x = self._decoder(quantized)
 
-        reconstructed_x = reconstructed_x.view(-1, reconstructed_x.shape[1], self._output_features_filters)
-        
-        #reconstruction_loss = self._criterion(torch.log(F.softmax(reconstructed_x, dim=0)), F.softmax(y.float(), dim=0))
-        reconstruction_loss = self._criterion(reconstructed_x, y.float())
+        reconstructed_x_features = SpeechFeatures.features_from_name(
+            name='logfbank',
+            signal=reconstructed_x.detach().cpu(),
+            rate=16000,
+            filters_number=self._output_features_filters,
+            augmented=False
+        )
+        reconstructed_x_features = torch.tensor(reconstructed_x_features, dtype=torch.float).to(self._device)
+
+        reconstruction_loss = self._criterion(reconstructed_x_features.view(1, self._output_features_dim, self._output_features_filters), y.float()) # MSELoss
+
+        #reconstruction_loss = self._criterion(F.log_softmax(reconstructed_x, dim=1), F.softmax(y.float(), dim=1)) # KLDivLoss
+
         loss = vq_loss + reconstruction_loss
 
         return loss, reconstructed_x, perplexity
