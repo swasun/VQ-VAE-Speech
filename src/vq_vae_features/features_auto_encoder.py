@@ -110,6 +110,9 @@ class FeaturesAutoEncoder(nn.Module):
         return self._decoder
 
     def forward(self, x, y):
+        x = x.permute(0, 2, 1).contiguous().float()
+        y = y.permute(0, 2, 1).contiguous().float()
+
         z = self._encoder(x)
 
         z = self._pre_vq_conv(z)
@@ -127,7 +130,7 @@ class FeaturesAutoEncoder(nn.Module):
         )
         reconstructed_x_features = torch.tensor(reconstructed_x_features, dtype=torch.float).to(self._device)
 
-        reconstruction_loss = self._criterion(reconstructed_x_features.view(1, self._output_features_dim, self._output_features_filters), y.float()) # MSELoss
+        reconstruction_loss = self._criterion(reconstructed_x_features.view(1, self._output_features_filters, self._output_features_dim), y.float()) # MSELoss
 
         #reconstruction_loss = self._criterion(F.log_softmax(reconstructed_x, dim=1), F.softmax(y.float(), dim=1)) # KLDivLoss
 
