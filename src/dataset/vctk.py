@@ -52,7 +52,6 @@ def load_txts(dir):
     return utterences
 
 class VCTK(Dataset):
-    raw_folder = '../data/vctk/raw'
     url = 'http://homepages.inf.ed.ac.uk/jyamagis/release/VCTK-Corpus.tar.gz'
     dset_path = 'VCTK-Corpus'
 
@@ -63,10 +62,13 @@ class VCTK(Dataset):
         speaker_dic = {speaker: i for i, speaker in enumerate(speakers)}
         return speaker_dic
 
-    def __init__(self,root, downsample=True, transform=None, target_transform=None, download=True, dev_mode=False, ratio=0.8):
+    def __init__(self, root, downsample=True, transform=None, target_transform=None, download=True, dev_mode=False, ratio=0.8):
         super(VCTK, self).__init__()
 
         self.root = os.path.expanduser(root)
+        self.raw_folder = '../data/vctk/raw'
+        if os.path.isdir('..' + os.sep + self.raw_folder):
+            self.raw_folder = '..' + os.sep + self.raw_folder
         self.downsample = downsample
         self.transform = transform
         self.target_transform = target_transform
