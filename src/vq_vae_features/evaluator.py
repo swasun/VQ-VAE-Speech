@@ -26,6 +26,7 @@
 
 from dataset.spectrogram_parser import SpectrogramParser
 from vq_vae_speech.mu_law import MuLaw
+from vq_vae_speech.speech_features import SpeechFeatures
 
 import matplotlib.pyplot as plt
 import torch
@@ -56,8 +57,8 @@ class Evaluator(object):
         self._model.eval()
 
         (self._valid_originals, _, _, self._target, self._wav_filename) = next(iter(self._data_stream.validation_loader))
-        self._valid_originals = self._valid_originals[0].view(1, self._valid_originals.size(1), self._valid_originals.size(2))
-        self._target = self._target[0].view(1, self._target.size(1), self._target.size(2))
+        self._valid_originals = self._valid_originals.permute(0, 2, 1).contiguous().float()
+        self._target = self._target.permute(0, 2, 1).contiguous().float()
         self._wav_filename = self._wav_filename[0][0]
         self._valid_originals = self._valid_originals.to(self._device)
         self._target = self._target.to(self._device)
@@ -67,20 +68,35 @@ class Evaluator(object):
         _, self._quantized, _, self._encodings, self._distances = self._model.vq(z)
         reconstructed_x = self._model.decoder(self._quantized)
         output_features_filters = self._configuration['output_features_filters'] * 3 if self._configuration['augment_output_features'] else self._configuration['output_features_filters']
-        self._valid_reconstructions = reconstructed_x.view(-1, reconstructed_x.shape[1], output_features_filters)
+
+        reconstructed_x_features = SpeechFeatures.features_from_name(
+            name='logfbank',
+            signal=reconstructed_x.detach().cpu(),
+            rate=16000,
+            filters_number=output_features_filters,
+            augmented=False
+        )
+        reconstructed_x_features = torch.tensor(reconstructed_x_features, dtype=torch.float).to(self._device)
+
+        #self._valid_reconstructions = reconstructed_x_features.view(1, reconstructed_x_features.size(1), reconstructed_x_features.size(0))
+        self._valid_reconstructions = reconstructed_x_features.permute(1, 0).contiguous().float()
 
     def _compute_comparaison_plot(self, results_path, experiment_name):
         spectrogram_parser = SpectrogramParser()
         spectrogram = spectrogram_parser.parse_audio(self._wav_filename).contiguous()
         spectrogram = spectrogram.detach().cpu().numpy()
 
-        valid_originals = self._valid_originals.detach().cpu()[0].transpose(0, 1).numpy()
+        #valid_originals = self._valid_originals.detach().cpu()[0].transpose(0, 1).numpy()
+        valid_originals = self._valid_originals.detach().cpu()[0].numpy()
 
+        #probs = F.softmax(self._distances, dim=1).detach().cpu().transpose(0, 1).contiguous()
         probs = F.softmax(self._distances, dim=1).detach().cpu().transpose(0, 1).contiguous()
 
-        target = self._target.detach().cpu()[0].transpose(0, 1).numpy()
+        #target = self._target.detach().cpu()[0].transpose(0, 1).numpy()
+        target = self._target.detach().cpu()[0].numpy()
 
-        valid_reconstructions = self._valid_reconstructions.detach().cpu()[0].transpose(0, 1).numpy()
+        #valid_reconstructions = self._valid_reconstructions.detach().cpu()[0].transpose(0, 1).numpy()
+        valid_reconstructions = self._valid_reconstructions.detach().cpu().numpy()
 
         _, axs = plt.subplots(5, 1, figsize=(30, 20))
 

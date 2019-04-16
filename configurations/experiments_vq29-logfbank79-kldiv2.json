@@ -8,6 +8,7 @@
             "num_epochs": 15,
             "use_jitter": true,
             "jitter_probability": 0.12,
+            "batch_size": 1,
             "num_embeddings": 29,
             "use_device": "cuda:1"
         }
