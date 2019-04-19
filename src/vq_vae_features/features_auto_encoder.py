@@ -28,6 +28,7 @@ from vq_vae_speech.speech_encoder import SpeechEncoder
 from vq_vae_features.features_decoder import FeaturesDecoder
 from vq.vector_quantizer import VectorQuantizer
 from vq.vector_quantizer_ema import VectorQuantizerEMA
+from error_handling.console_logger import ConsoleLogger
 
 import torch.nn as nn
 import torch
@@ -41,6 +42,7 @@ class FeaturesAutoEncoder(nn.Module):
 
         self._output_features_filters = configuration['output_features_filters'] * 3 if configuration['augment_output_features'] else configuration['output_features_filters']
         self._output_features_dim = configuration['output_features_dim']
+        self._verbose = configuration['verbose']
 
         self._encoder = SpeechEncoder(
             in_channels=configuration['input_features_dim'],
@@ -51,7 +53,8 @@ class FeaturesAutoEncoder(nn.Module):
             input_features_type=configuration['input_features_type'],
             features_filters=configuration['input_features_filters'] * 3 if configuration['augment_input_features'] else configuration['input_features_filters'],
             sampling_rate=configuration['sampling_rate'],
-            device=device
+            device=device,
+            verbose=self._verbose
         )
 
         self._pre_vq_conv = nn.Conv1d(
@@ -85,7 +88,8 @@ class FeaturesAutoEncoder(nn.Module):
             num_residual_hiddens=configuration['residual_channels'],
             use_kaiming_normal=configuration['use_kaiming_normal'],
             use_jitter=configuration['use_jitter'],
-            jitter_probability=configuration['jitter_probability']
+            jitter_probability=configuration['jitter_probability'],
+            verbose=self._verbose
         )
 
         self._device = device
@@ -114,10 +118,12 @@ class FeaturesAutoEncoder(nn.Module):
         y = y.permute(0, 2, 1).contiguous().float()
 
         z = self._encoder(x)
-        #print('encoder.size(): {}'.format(z.size()))
+        if self._verbose:
+            ConsoleLogger.status('[FEATURES_AE] _encoder output size: {}'.format(z.size()))
 
         z = self._pre_vq_conv(z)
-        #print('_pre_vq_conv.size(): {}'.format(z.size()))
+        if self._verbose:
+            ConsoleLogger.status('[FEATURES_AE] _pre_vq_conv output size: {}'.format(z.size()))
 
         vq_loss, quantized, perplexity, _, _ = self._vq(z)
 

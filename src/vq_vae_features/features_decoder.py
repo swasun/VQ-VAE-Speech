@@ -28,6 +28,7 @@ from vq_vae_speech.residual_stack import ResidualStack
 from vq_vae_speech.jitter import Jitter
 from vq_vae_speech.conv1d_builder import Conv1DBuilder
 from vq_vae_speech.conv_transpose1d_builder import ConvTranspose1DBuilder
+from error_handling.console_logger import ConsoleLogger
 
 import torch.nn as nn
 import torch.nn.functional as F
@@ -35,10 +36,14 @@ import torch.nn.functional as F
 
 class FeaturesDecoder(nn.Module):
     
-    def __init__(self, in_channels, out_channels, num_hiddens, num_residual_layers, num_residual_hiddens, use_kaiming_normal, use_jitter, jitter_probability):
+    def __init__(self, in_channels, out_channels, num_hiddens, num_residual_layers,
+        num_residual_hiddens, use_kaiming_normal, use_jitter, jitter_probability,
+        verbose=False):
+
         super(FeaturesDecoder, self).__init__()
 
         self._use_jitter = use_jitter
+        self._verbose = verbose
 
         if self._use_jitter:
             self._jitter = Jitter(jitter_probability)
@@ -87,27 +92,34 @@ class FeaturesDecoder(nn.Module):
 
     def forward(self, inputs):
         x = inputs
+        if self._verbose:
+            ConsoleLogger.status('[FEATURES_DEC] input size: {}'.format(x.size()))
 
         if self._use_jitter and self.training:
             x = self._jitter(x)
 
-        #print('x: {}'.format(x.size()))
         x = self._conv_1(x)
-        #print('_conv_1: {}'.format(x.size()))
+        if self._verbose:
+            ConsoleLogger.status('[FEATURES_DEC] _conv_1 output size: {}'.format(x.size()))
 
         x = self._upsample(x)
-        #print('_upsample: {}'.format(x.size()))
+        if self._verbose:
+            ConsoleLogger.status('[FEATURES_DEC] _upsample output size: {}'.format(x.size()))
         
         x = self._residual_stack(x)
-        #print('_residual_stack: {}'.format(x.size()))
+        if self._verbose:
+            ConsoleLogger.status('[FEATURES_DEC] _residual_stack output size: {}'.format(x.size()))
         
         x = F.relu(self._conv_trans_1(x))
-        #print('_conv_trans_1: {}'.format(x.size()))
+        if self._verbose:
+            ConsoleLogger.status('[FEATURES_DEC] _conv_trans_1 output size: {}'.format(x.size()))
 
         x = F.relu(self._conv_trans_2(x))
-        #print('_conv_trans_2: {}'.format(x.size()))
+        if self._verbose:
+            ConsoleLogger.status('[FEATURES_DEC] _conv_trans_2 output size: {}'.format(x.size()))
 
         x = self._conv_trans_3(x)
-        #print('_conv_trans_3: {}'.format(x.size()))
+        if self._verbose:
+            ConsoleLogger.status('[FEATURES_DEC] _conv_trans_3 output size: {}'.format(x.size()))
         
         return x

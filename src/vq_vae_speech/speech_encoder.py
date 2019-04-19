@@ -26,6 +26,7 @@
 
 from vq_vae_speech.residual_stack import ResidualStack
 from vq_vae_speech.conv1d_builder import Conv1DBuilder
+from error_handling.console_logger import ConsoleLogger
 
 import torch
 import torch.nn as nn
@@ -36,7 +37,7 @@ class SpeechEncoder(nn.Module):
     
     def __init__(self, in_channels, num_hiddens, num_residual_layers, num_residual_hiddens,
         use_kaiming_normal, input_features_type, features_filters, sampling_rate,
-        device):
+        device, verbose=False):
 
         super(SpeechEncoder, self).__init__()
 
@@ -112,27 +113,34 @@ class SpeechEncoder(nn.Module):
         self._features_filters = features_filters
         self._sampling_rate = sampling_rate
         self._device = device
+        self._verbose = verbose
 
     def forward(self, inputs):
-        #inputs = inputs.permute(0, 2, 1).contiguous().float()
-        #print('inputs: {}'.format(inputs.size()))
+        if self._verbose:
+            ConsoleLogger.status('inputs size: {}'.format(inputs.size()))
 
         x_conv_1 = F.relu(self._conv_1(inputs))
-        #print('x_conv_1: {}'.format(x_conv_1.size()))
+        if self._verbose:
+            ConsoleLogger.status('x_conv_1 output size: {}'.format(x_conv_1.size()))
 
         x = F.relu(self._conv_2(x_conv_1)) + x_conv_1
-        #print('_conv_2: {}'.format(x.size()))
+        if self._verbose:
+            ConsoleLogger.status('_conv_2 output size: {}'.format(x.size()))
         
         x_conv_3 = F.relu(self._conv_3(x))
-        #print('_conv_3: {}'.format(x_conv_3.size()))
+        if self._verbose:
+            ConsoleLogger.status('_conv_3 output size: {}'.format(x_conv_3.size()))
 
         x_conv_4 = F.relu(self._conv_4(x_conv_3)) + x_conv_3
-        #print('_conv_4: {}'.format(x_conv_4.size()))
+        if self._verbose:
+            ConsoleLogger.status('_conv_4 output size: {}'.format(x_conv_4.size()))
 
         x_conv_5 = F.relu(self._conv_5(x_conv_4)) + x_conv_4
-        #print('x_conv_5: {}'.format(x_conv_5.size()))
+        if self._verbose:
+            ConsoleLogger.status('x_conv_5 output size: {}'.format(x_conv_5.size()))
 
         x = self._residual_stack(x_conv_5) + x_conv_5
-        #print('_residual_stack: {}'.format(x.size()))
+        if self._verbose:
+            ConsoleLogger.status('_residual_stack output size: {}'.format(x.size()))
 
         return x

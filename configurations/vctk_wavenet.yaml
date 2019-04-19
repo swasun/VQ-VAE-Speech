@@ -1,4 +1,5 @@
 decoder_type: 'wavenet'
+verbose: False
 
 # Training
 batch_size: 1 # batch_size per a GPU
