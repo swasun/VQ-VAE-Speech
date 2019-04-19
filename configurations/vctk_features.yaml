@@ -8,6 +8,8 @@ num_epochs: 5
 num_workers: 1
 train_val_split: 0.8
 learning_rate: 0.0002
+normalize: False
+normalizer_path: '../data/vctk/vctk-mfcc-stats.pickle'
 
 # Cuda
 use_cuda: True
@@ -54,13 +56,13 @@ num_residual_layers: 2
 
 # Features
 input_features_type: 'mfcc'
-output_features_type: 'logfbank'
+output_features_type: 'mfcc'
 input_features_dim: 47
 input_features_filters: 13
 output_features_dim: 47
-output_features_filters: 79
+output_features_filters: 13
 augment_input_features: True
-augment_output_features: False
+augment_output_features: True
 
 # Conv
 

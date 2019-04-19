@@ -51,7 +51,7 @@ class FeaturesDecoder(nn.Module):
             use_kaiming_normal=use_kaiming_normal
         )
 
-        self._upsample = nn.Upsample(scale_factor=320)
+        self._upsample = nn.Upsample(scale_factor=2)
         
         self._residual_stack = ResidualStack(
             in_channels=num_hiddens,
@@ -73,7 +73,7 @@ class FeaturesDecoder(nn.Module):
             in_channels=num_hiddens, 
             out_channels=num_hiddens,
             kernel_size=3,
-            padding=1,
+            padding=0,
             use_kaiming_normal=use_kaiming_normal
         )
         
@@ -91,16 +91,23 @@ class FeaturesDecoder(nn.Module):
         if self._use_jitter and self.training:
             x = self._jitter(x)
 
+        #print('x: {}'.format(x.size()))
         x = self._conv_1(x)
+        #print('_conv_1: {}'.format(x.size()))
 
         x = self._upsample(x)
+        #print('_upsample: {}'.format(x.size()))
         
         x = self._residual_stack(x)
+        #print('_residual_stack: {}'.format(x.size()))
         
         x = F.relu(self._conv_trans_1(x))
+        #print('_conv_trans_1: {}'.format(x.size()))
 
         x = F.relu(self._conv_trans_2(x))
+        #print('_conv_trans_2: {}'.format(x.size()))
 
         x = self._conv_trans_3(x)
+        #print('_conv_trans_3: {}'.format(x.size()))
         
         return x

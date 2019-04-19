@@ -115,17 +115,24 @@ class SpeechEncoder(nn.Module):
 
     def forward(self, inputs):
         #inputs = inputs.permute(0, 2, 1).contiguous().float()
+        #print('inputs: {}'.format(inputs.size()))
 
         x_conv_1 = F.relu(self._conv_1(inputs))
+        #print('x_conv_1: {}'.format(x_conv_1.size()))
 
         x = F.relu(self._conv_2(x_conv_1)) + x_conv_1
+        #print('_conv_2: {}'.format(x.size()))
         
         x_conv_3 = F.relu(self._conv_3(x))
+        #print('_conv_3: {}'.format(x_conv_3.size()))
 
         x_conv_4 = F.relu(self._conv_4(x_conv_3)) + x_conv_3
+        #print('_conv_4: {}'.format(x_conv_4.size()))
 
         x_conv_5 = F.relu(self._conv_5(x_conv_4)) + x_conv_4
+        #print('x_conv_5: {}'.format(x_conv_5.size()))
 
         x = self._residual_stack(x_conv_5) + x_conv_5
+        #print('_residual_stack: {}'.format(x.size()))
 
         return x

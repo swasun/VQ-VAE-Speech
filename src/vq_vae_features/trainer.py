@@ -58,10 +58,9 @@ class Trainer(object):
             train_res_perplexity = []
 
             for data in train_bar:
-                (data, _, _, quantized, _) = data
+                (data, _, _, target, _) = data
                 data = data.to(self._device)
-
-                quantized = quantized.to(self._device)
+                target = target.to(self._device)
 
                 self._optimizer.zero_grad()
 
@@ -69,7 +68,7 @@ class Trainer(object):
                 The perplexity a useful value to track during training.
                 It indicates how many codes are 'active' on average.
                 """
-                loss, _, perplexity = self._model(data, quantized)
+                loss, _, perplexity = self._model(data, target)
                 loss.backward()
 
                 self._optimizer.step()

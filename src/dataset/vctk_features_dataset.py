@@ -31,19 +31,27 @@ import os
 
 class VCTKFeaturesDataset(Dataset):
 
-    def __init__(self, vctk_path, subdirectory):
+    def __init__(self, vctk_path, subdirectory, normalizer=None):
         self._vctk_path = vctk_path
         self._subdirectory = subdirectory
         features_path = self._vctk_path + os.sep + 'features'
         self._sub_features_path = features_path + os.sep + self._subdirectory
         self._files_number = len(os.listdir(self._sub_features_path))
+        self._normalizer = normalizer
 
     def __getitem__(self, index):
         dic = None
         with open(self._sub_features_path + os.sep + str(index) + '.pickle', 'rb') as file:
             dic = pickle.load(file)
 
-        return dic['input_features'], dic['one_hot'], dic['speaker_id'], dic['output_features'], dic['wav_filename']
+        x = dic['input_features']
+        y = dic['output_features']
+
+        if self._normalizer:
+            x = (x - self._normalizer['train_mean']) / self._normalizer['train_std']
+            y = (y - self._normalizer['train_mean']) / self._normalizer['train_std']
+
+        return x, dic['one_hot'], dic['speaker_id'], y, dic['wav_filename']
 
     def __len__(self):
         return self._files_number

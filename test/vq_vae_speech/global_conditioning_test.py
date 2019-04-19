@@ -46,9 +46,12 @@ class GlobalConditioningTest(unittest.TestCase):
             configuration = yaml.load(configuration_file)
         device_configuration = DeviceConfiguration.load_from_configuration(configuration)
         data_stream = VCTKSpeechStream(configuration, device_configuration.gpu_ids, device_configuration.use_cuda)
-        (_, x_dec_val, speaker_id, _, _) = next(iter(data_stream.training_loader))
+        (x_enc, x_dec, speaker_id, _, _) = next(iter(data_stream.training_loader))
 
-        x = x_dec_val.squeeze(-1)    
+        ConsoleLogger.status('x_enc.size(): {}'.format(x_enc.size()))
+        ConsoleLogger.status('x_dec.size(): {}'.format(x_dec.size()))
+
+        x = x_dec.squeeze(-1)    
         global_conditioning = GlobalConditioning.compute(
             speaker_dic=data_stream.speaker_dic,
             speaker_ids=speaker_id,

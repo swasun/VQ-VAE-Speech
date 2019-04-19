@@ -48,11 +48,11 @@ if __name__ == "__main__":
     parser.add_argument('--experiments_path', nargs='?', default=default_experiments_path, type=str, help='The path of the experiments ouput directory')
     parser.add_argument('--plot_experiments_losses', action='store_true', help='Plot the losses of the experiments based of the specified file in --experiments_configuration_path option')
     parser.add_argument('--evaluate', action='store_true', help='Evaluate the model')
+    parser.add_argument('--compute_dataset_stats', action='store_true', help='Compute the mean and the std of the VCTK dataset')
     args = parser.parse_args()
 
     # If specified, print the summary of the model using the CPU device
     if args.summary:
-        device = 'cpu'
         ConsoleLogger.status('Loading the configuration file {}...'.format(args.summary))
         configuration = None
         with open(args.summary, 'r') as configuration_file:
@@ -82,6 +82,17 @@ if __name__ == "__main__":
     if args.evaluate:
         Experiments.load(args.experiments_configuration_path).evaluate()
         ConsoleLogger.success('All evaluating experiments done')
+        sys.exit(0)
+
+    if args.compute_dataset_stats:
+        ConsoleLogger.status('Loading the configuration file {}...'.format(args.summary))
+        configuration = None
+        with open('../configurations/vctk_features.yaml', 'r') as configuration_file:
+                configuration = yaml.load(configuration_file)
+        ConsoleLogger.status('Printing the summary of the model...')
+        device_configuration = DeviceConfiguration.load_from_configuration(configuration)
+        data_stream = VCTKFeaturesStream('../data/vctk', configuration, device_configuration.gpu_ids, device_configuration.use_cuda)
+        data_stream.compute_dataset_stats()
         sys.exit(0)
 
     Experiments.load(args.experiments_configuration_path).train()

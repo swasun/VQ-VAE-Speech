@@ -45,16 +45,16 @@ class VCTKSpeechStream(object):
         factor = 1 if len(gpu_ids) == 0 else len(gpu_ids)
         self._training_loader = DataLoader(
             self._training_data,
-            #batch_size=configuration['batch_size'] * factor,
-            batch_size=1,
+            batch_size=configuration['batch_size'],
+            #batch_size=1,
             shuffle=True,
             num_workers=configuration['num_workers'],
             pin_memory=use_cuda
         )
         self._validation_loader = DataLoader(
             self._validation_data,
-            #batch_size=configuration['batch_size'] * factor,
-            batch_size=1,
+            batch_size=configuration['batch_size'],
+            #batch_size=1,
             num_workers=configuration['num_workers'],
             pin_memory=use_cuda
         )

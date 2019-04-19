@@ -25,18 +25,27 @@
  #####################################################################################
 
 from dataset.vctk_features_dataset import VCTKFeaturesDataset
+from error_handling.console_logger import ConsoleLogger
 
 from torch.utils.data import DataLoader
 import numpy as np
 import pathlib
 import os
+import pickle
+import matplotlib.pyplot as plt
+from tqdm import tqdm
 
 
 class VCTKFeaturesStream(object):
 
     def __init__(self, vctk_path, configuration, gpu_ids, use_cuda):
-        self._training_data = VCTKFeaturesDataset(vctk_path, 'train')
-        self._validation_data = VCTKFeaturesDataset(vctk_path, 'val')
+        normalizer = None
+        if configuration['normalize']:
+            with open(configuration['normalizer_path'], 'rb') as file:
+                normalizer = pickle.load(file)
+
+        self._training_data = VCTKFeaturesDataset(vctk_path, 'train', normalizer)
+        self._validation_data = VCTKFeaturesDataset(vctk_path, 'val', normalizer)
         factor = 1 if len(gpu_ids) == 0 else len(gpu_ids)
 
         factor = 1
@@ -44,14 +53,14 @@ class VCTKFeaturesStream(object):
 
         self._training_loader = DataLoader(
             self._training_data,
-            batch_size=configuration['batch_size'] * factor,
+            batch_size=configuration['batch_size'],
             shuffle=True,
             num_workers=configuration['num_workers'],
             pin_memory=use_cuda
         )
         self._validation_loader = DataLoader(
             self._validation_data,
-            batch_size=configuration['batch_size'] * factor,
+            batch_size=configuration['batch_size'],
             num_workers=configuration['num_workers'],
             pin_memory=use_cuda
         )
@@ -83,3 +92,35 @@ class VCTKFeaturesStream(object):
         speakers = sorted([speaker for speaker in speakers])
         speaker_dic = {speaker: i for i, speaker in enumerate(speakers)}
         return speaker_dic
+
+    def compute_dataset_stats(self):
+        train_bar = tqdm(self.training_loader)
+        train_mfccs = list()
+        for data in train_bar:
+            (data, _, _, _, _) = data
+            train_mfccs.append(data.detach().view(data.size(1), data.size(2)).numpy())
+
+        ConsoleLogger.status('Compute mean of mfccs training set...')
+        train_mean = np.concatenate(train_mfccs).mean(axis=0)
+
+        ConsoleLogger.status('Compute std of mfccs training set...')
+        train_std = np.concatenate(train_mfccs).std(axis=0)
+
+        stats = {
+            'train_mean': train_mean,
+            'train_std': train_std
+        }
+
+        ConsoleLogger.status('Writing stats in file...')
+        with open('vctk-mfcc-stats.pickle', 'wb') as file: # TODO: do not use hardcoded path
+            pickle.dump(stats, file)
+
+        train_mfccs_norm = (train_mfccs[0] - train_mean) / train_std
+
+        ConsoleLogger.status('Computing example plot...')
+        _, axs = plt.subplots(2, sharex=True)
+        axs[0].imshow(train_mfccs[0].T, aspect='auto', origin='lower')
+        axs[0].set_ylabel('Unnormalized')
+        axs[1].imshow(train_mfccs_norm.T, aspect='auto', origin='lower')
+        axs[1].set_ylabel('Normalized')
+        plt.savefig('mfcc_normalization_comparaison.png') # TODO: do not use hardcoded path

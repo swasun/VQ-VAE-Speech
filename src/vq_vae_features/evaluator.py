@@ -66,39 +66,27 @@ class Evaluator(object):
         z = self._model.encoder(self._valid_originals)
         z = self._model.pre_vq_conv(z)
         _, self._quantized, _, self._encodings, self._distances = self._model.vq(z)
-        reconstructed_x = self._model.decoder(self._quantized)
-        output_features_filters = self._configuration['output_features_filters'] * 3 if self._configuration['augment_output_features'] else self._configuration['output_features_filters']
+        self._valid_reconstructions = self._model.decoder(self._quantized)[0]
 
-        reconstructed_x_features = SpeechFeatures.features_from_name(
-            name='logfbank',
-            signal=reconstructed_x.detach().cpu(),
-            rate=16000,
-            filters_number=output_features_filters,
-            augmented=False
-        )
-        reconstructed_x_features = torch.tensor(reconstructed_x_features, dtype=torch.float).to(self._device)
-
-        #self._valid_reconstructions = reconstructed_x_features.view(1, reconstructed_x_features.size(1), reconstructed_x_features.size(0))
-        self._valid_reconstructions = reconstructed_x_features.permute(1, 0).contiguous().float()
+        #print('self._valid_reconstructions.size(): {}'.format(self._valid_reconstructions.size()))
+        #from torch import nn
+        #print(nn.MSELoss()(self._valid_originals, self._valid_reconstructions) / self._valid_originals.data.nelement())
+        #print(((self._valid_originals - self._valid_reconstructions) ** 2).sum() / self._valid_originals.data.nelement())
 
     def _compute_comparaison_plot(self, results_path, experiment_name):
         spectrogram_parser = SpectrogramParser()
         spectrogram = spectrogram_parser.parse_audio(self._wav_filename).contiguous()
         spectrogram = spectrogram.detach().cpu().numpy()
 
-        #valid_originals = self._valid_originals.detach().cpu()[0].transpose(0, 1).numpy()
         valid_originals = self._valid_originals.detach().cpu()[0].numpy()
 
-        #probs = F.softmax(self._distances, dim=1).detach().cpu().transpose(0, 1).contiguous()
         probs = F.softmax(self._distances, dim=1).detach().cpu().transpose(0, 1).contiguous()
 
-        #target = self._target.detach().cpu()[0].transpose(0, 1).numpy()
         target = self._target.detach().cpu()[0].numpy()
 
-        #valid_reconstructions = self._valid_reconstructions.detach().cpu()[0].transpose(0, 1).numpy()
         valid_reconstructions = self._valid_reconstructions.detach().cpu().numpy()
 
-        _, axs = plt.subplots(5, 1, figsize=(30, 20))
+        _, axs = plt.subplots(4, 1, figsize=(30, 20))
 
         # Spectrogram of the original speech signal
         axs[0].set_title('Spectrogram of the original speech signal')
@@ -109,16 +97,16 @@ class Evaluator(object):
         axs[1].pcolor(valid_originals)
 
         # logfbank of quantized target to reconstruct
-        axs[2].set_title('logfbank of quantized target to reconstruct')
-        axs[2].pcolor(target)
+        #axs[2].set_title('logfbank of quantized target to reconstruct')
+        #axs[2].pcolor(target)
 
         # Softmax of distances computed in VQ
-        axs[3].set_title('Softmax of distances computed in VQ\n($||z_e(x) - e_i||^2_2$ with $z_e(x)$ the output of the encoder prior to quantization)')
-        axs[3].pcolor(probs)
+        axs[2].set_title('Softmax of distances computed in VQ\n($||z_e(x) - e_i||^2_2$ with $z_e(x)$ the output of the encoder prior to quantization)')
+        axs[2].pcolor(probs)
 
         # Actual reconstruction
-        axs[4].set_title('Actual reconstruction')
-        axs[4].pcolor(valid_reconstructions)
+        axs[3].set_title('Actual reconstruction')
+        axs[3].pcolor(valid_reconstructions)
 
         output_path = results_path + os.sep + experiment_name + '_evaluation-comparaison-plot.png'
         plt.savefig(output_path, bbox_inches='tight', pad_inches=0)
