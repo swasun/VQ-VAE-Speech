@@ -38,7 +38,7 @@ class SpectrogramParser(AudioParser):
 
     default_audio_conf = {
         'window_size': 0.02,
-        'window_stride': 0.01,
+        'window_stride': 0.01, # timestep
         'noise_prob': 0.4,
         'sample_rate': 16000,
         'noise_dir': None,
@@ -67,11 +67,14 @@ class SpectrogramParser(AudioParser):
             'noise_dir') is not None else None
         self.noise_prob = audio_conf.get('noise_prob')
 
-    def parse_audio(self, audio_path):
+    def parse_audio_from_file(self, audio_path):
         if self.augment:
             y = self._load_randomly_augmented_audio(audio_path, self.sample_rate)
         else:
             y = AudioLoader.load(audio_path)
+        return self.parse_audio(y)
+
+    def parse_audio(self, y):
         if self.noiseInjector:
             add_noise = np.random.binomial(1, self.noise_prob)
             if add_noise:

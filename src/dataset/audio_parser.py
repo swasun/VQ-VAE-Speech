@@ -31,7 +31,7 @@ class AudioParser(object):
         """
         raise NotImplementedError
 
-    def parse_audio(self, audio_path):
+    def parse_audio_from_file(self, audio_path):
         """
         :param audio_path: Path where audio is stored from the manifest file
         :return: Audio in training/testing format

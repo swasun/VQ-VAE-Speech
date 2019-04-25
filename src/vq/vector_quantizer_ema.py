@@ -99,6 +99,7 @@ class VectorQuantizerEMA(nn.Module):
         # Convert inputs from BCHW -> BHWC
         inputs = inputs.permute(1, 2, 0).contiguous()
         input_shape = inputs.shape
+        _, time, batch_size = input_shape
         
         # Flatten input
         flat_input = inputs.view(-1, self._embedding_dim)
@@ -137,14 +138,18 @@ class VectorQuantizerEMA(nn.Module):
 
         # Loss
         e_latent_loss = torch.mean((quantized.detach() - inputs)**2)
-        loss = self._commitment_cost * e_latent_loss
+        commitment_loss = self._commitment_cost * e_latent_loss
+        vq_loss = commitment_loss
 
         quantized = inputs + (quantized - inputs).detach()
         avg_probs = torch.mean(encodings, dim=0)
         perplexity = torch.exp(-torch.sum(avg_probs * torch.log(avg_probs + 1e-10)))
 
         # Convert quantized from BHWC -> BCHW
-        return loss, quantized.permute(2, 0, 1).contiguous(), perplexity, encodings, distances
+        return vq_loss, quantized.permute(2, 0, 1).contiguous(), \
+            perplexity, encodings.view(batch_size, time, -1), \
+            distances.view(batch_size, time, -1), encoding_indices, \
+            {'vq_loss': vq_loss.item()}
 
     @property
     def embedding(self):

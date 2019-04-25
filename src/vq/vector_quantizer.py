@@ -86,6 +86,7 @@ class VectorQuantizer(nn.Module):
         # Convert inputs from BCHW -> BHWC
         inputs = inputs.permute(1, 2, 0).contiguous()
         input_shape = inputs.shape
+        _, time, batch_size = input_shape
 
         # Flatten input
         flat_input = inputs.view(-1, self._embedding_dim)
@@ -100,7 +101,10 @@ class VectorQuantizer(nn.Module):
         which element of the quantized space each input element was mapped to.
         """
         encoding_indices = torch.argmin(distances, dim=1).unsqueeze(1)
+        #print('encoding_indices.size(): {}'.format(encoding_indices.size()))
+        #print('encoding_indices: {}'.format(encoding_indices))
         encodings = torch.zeros(encoding_indices.shape[0], self._num_embeddings, dtype=torch.float).to(self._device)
+        #print('encodings.size(): {}'.format(encodings.size()))
         encodings.scatter_(1, encoding_indices, 1)
 
         # Quantize and unflatten
@@ -109,14 +113,19 @@ class VectorQuantizer(nn.Module):
         # Loss
         e_latent_loss = torch.mean((quantized.detach() - inputs)**2)
         q_latent_loss = torch.mean((quantized - inputs.detach())**2)
-        loss = q_latent_loss + self._commitment_cost * e_latent_loss
+        commitment_loss = self._commitment_cost * e_latent_loss
+        vq_loss = q_latent_loss + commitment_loss
 
-        quantized = inputs + (quantized - inputs).detach()
+        quantized = inputs + (quantized - inputs).detach() # Trick to prevent backpropagation of qunatized
         avg_probs = torch.mean(encodings, dim=0)
         perplexity = torch.exp(-torch.sum(avg_probs * torch.log(avg_probs + 1e-10)))
 
         # Convert quantized from BHWC -> BCHW
-        return loss, quantized.permute(2, 0, 1).contiguous(), perplexity, encodings, distances
+        return vq_loss, quantized.permute(2, 0, 1).contiguous(), \
+            perplexity, encodings.view(batch_size, time, -1), \
+            distances.view(batch_size, time, -1), encoding_indices, \
+            {'e_latent_loss': e_latent_loss.item(), 'q_latent_loss': q_latent_loss.item(),
+            'commitment_loss': commitment_loss.item(), 'vq_loss': vq_loss.item()}
 
     @property
     def embedding(self):

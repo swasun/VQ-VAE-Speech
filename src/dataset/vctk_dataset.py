@@ -76,6 +76,26 @@ class VCTKDataset(Dataset):
 
         return raw, one_hot[:, :-1], quantized[1:]
 
+    @staticmethod
+    def preprocessing_raw(raw, length, expand_dims=False):
+        print(len(raw))
+        if length is not None:
+            if len(raw) <= length :
+                # padding
+                pad = length - len(raw)
+                raw = np.concatenate(
+                    (raw, np.zeros(pad, dtype=np.float32)))
+            else:
+                # triming
+                start = random.randint(0, len(raw) -length  - 1)
+                raw = raw[start:start + length ]
+
+        if expand_dims:
+            raw = np.expand_dims(raw, 0) # expand channel
+            raw = np.expand_dims(raw, -1) # expand height
+
+        return raw
+
     def __getitem__(self, index):
         wav_filename = self._audios[index]
         raw = self._load_wav(wav_filename, self._sampling_rate, self._res_type, self._top_db)

@@ -95,7 +95,6 @@ class FeaturesAutoEncoder(nn.Module):
         self._device = device
 
         self._criterion = nn.MSELoss()
-        #self._criterion = nn.KLDivLoss()
 
     @property
     def vq(self):
@@ -125,7 +124,7 @@ class FeaturesAutoEncoder(nn.Module):
         if self._verbose:
             ConsoleLogger.status('[FEATURES_AE] _pre_vq_conv output size: {}'.format(z.size()))
 
-        vq_loss, quantized, perplexity, _, _ = self._vq(z)
+        vq_loss, quantized, perplexity, _, _, _, losses = self._vq(z)
 
         reconstructed_x = self._decoder(quantized)
 
@@ -133,8 +132,9 @@ class FeaturesAutoEncoder(nn.Module):
         
         reconstruction_loss = self._criterion(reconstructed_x, y.float()) # MSELoss
 
-        #reconstruction_loss = self._criterion(F.log_softmax(reconstructed_x_features.view(1, self._output_features_filters, self._output_features_dim), dim=1), F.softmax(y.float(), dim=1)) # KLDivLoss
-
         loss = vq_loss + reconstruction_loss
 
-        return loss, reconstructed_x, perplexity
+        losses['reconstruction_loss'] = reconstruction_loss.item()
+        losses['loss'] = loss.item()
+
+        return loss, reconstructed_x, perplexity, losses

@@ -25,6 +25,8 @@
  #####################################################################################
 
 from dataset.spectrogram_parser import SpectrogramParser
+from dataset.vctk_dataset import VCTKDataset
+from dataset.audio_loader import AudioLoader
 from vq_vae_speech.mu_law import MuLaw
 from vq_vae_speech.speech_features import SpeechFeatures
 
@@ -48,16 +50,17 @@ class Evaluator(object):
 
     def evaluate(self, results_path, experiment_name):
         self._reconstruct(results_path, experiment_name)
+        self._plot_quantized_embedding_space(results_path, experiment_name)
         self._compute_comparaison_plot(results_path, experiment_name)
-        #self._compute_embedding_plot(results_path, experiment_name)
         #self._compute_wav(results_path, experiment_name)
-        #self._test(results_path, experiment_name)
+        self._test(results_path, experiment_name)
 
     def _reconstruct(self, results_path, experiment_name):
         self._model.eval()
 
-        (self._valid_originals, _, _, self._target, self._wav_filename) = next(iter(self._data_stream.validation_loader))
+        (self._valid_originals, _, self._speaker_ids, self._target, self._wav_filename) = next(iter(self._data_stream.validation_loader))
         self._valid_originals = self._valid_originals.permute(0, 2, 1).contiguous().float()
+        self._batch_size = self._valid_originals.size(0)
         self._target = self._target.permute(0, 2, 1).contiguous().float()
         self._wav_filename = self._wav_filename[0][0]
         self._valid_originals = self._valid_originals.to(self._device)
@@ -65,36 +68,44 @@ class Evaluator(object):
 
         z = self._model.encoder(self._valid_originals)
         z = self._model.pre_vq_conv(z)
-        _, self._quantized, _, self._encodings, self._distances = self._model.vq(z)
+        _, self._quantized, _, self._encodings, self._distances, self._encoding_indices = self._model.vq(z)
         self._valid_reconstructions = self._model.decoder(self._quantized)[0]
 
-        #print('self._valid_reconstructions.size(): {}'.format(self._valid_reconstructions.size()))
-        #from torch import nn
-        #print(nn.MSELoss()(self._valid_originals, self._valid_reconstructions) / self._valid_originals.data.nelement())
-        #print(((self._valid_originals - self._valid_reconstructions) ** 2).sum() / self._valid_originals.data.nelement())
-
     def _compute_comparaison_plot(self, results_path, experiment_name):
+        def _load_wav(filename, sampling_rate, res_type, top_db):
+            raw, original_rate = librosa.load(filename, sampling_rate, res_type=res_type)
+            raw, original_rate = librosa.effects.trim(raw, top_db=top_db)
+            raw /= np.abs(raw).max()
+            raw = raw.astype(np.float32)
+            return raw, original_rate
+
+        #spectrogram = spectrogram_parser.parse_audio_from_file(self._wav_filename).contiguous()
+        #audio = AudioLoader.load(self._wav_filename)
+
+        audio, original_rate = _load_wav(self._wav_filename, 16000, 'kaiser_fast', 20)
+        preprocessed_audio = VCTKDataset.preprocessing_raw(audio, self._configuration['length'])
+
         spectrogram_parser = SpectrogramParser()
-        spectrogram = spectrogram_parser.parse_audio(self._wav_filename).contiguous()
+        spectrogram = spectrogram_parser.parse_audio(preprocessed_audio).contiguous()
         spectrogram = spectrogram.detach().cpu().numpy()
 
         valid_originals = self._valid_originals.detach().cpu()[0].numpy()
 
-        probs = F.softmax(self._distances, dim=1).detach().cpu().transpose(0, 1).contiguous()
+        probs = F.softmax(-self._distances[0], dim=1).detach().cpu().transpose(0, 1).contiguous()
 
-        target = self._target.detach().cpu()[0].numpy()
+        #target = self._target.detach().cpu()[0].numpy()
 
         valid_reconstructions = self._valid_reconstructions.detach().cpu().numpy()
 
-        _, axs = plt.subplots(4, 1, figsize=(30, 20))
+        fig, axs = plt.subplots(4, 1, figsize=(30, 20), sharex=True)
 
         # Spectrogram of the original speech signal
         axs[0].set_title('Spectrogram of the original speech signal')
-        axs[0].pcolor(spectrogram)
+        self._plot_pcolormesh(spectrogram, fig, x=np.arange(spectrogram.shape[1]) * 0.01, axis=axs[0]) # winstep = 0.01, 2 = strided of downsampling
 
         # MFCC + d + a of the original speech signal
         axs[1].set_title('Augmented MFCC + d + a #filters=13+13+13 of the original speech signal')
-        axs[1].pcolor(valid_originals)
+        self._plot_pcolormesh(valid_originals, fig, x=np.arange(valid_originals.shape[1]) * 0.01, axis=axs[1]) # winstep = 0.01, 2 = strided of downsampling
 
         # logfbank of quantized target to reconstruct
         #axs[2].set_title('logfbank of quantized target to reconstruct')
@@ -102,37 +113,15 @@ class Evaluator(object):
 
         # Softmax of distances computed in VQ
         axs[2].set_title('Softmax of distances computed in VQ\n($||z_e(x) - e_i||^2_2$ with $z_e(x)$ the output of the encoder prior to quantization)')
-        axs[2].pcolor(probs)
+        self._plot_pcolormesh(probs, fig, x=np.arange(probs.shape[1]) * 0.01 * 2, axis=axs[2]) # winstep = 0.01, 2 = strided of downsampling
 
         # Actual reconstruction
         axs[3].set_title('Actual reconstruction')
-        axs[3].pcolor(valid_reconstructions)
+        self._plot_pcolormesh(valid_reconstructions, fig, x=np.arange(valid_reconstructions.shape[1]) * 0.01, axis=axs[3]) # winstep = 0.01, 2 = strided of downsampling
 
         output_path = results_path + os.sep + experiment_name + '_evaluation-comparaison-plot.png'
         plt.savefig(output_path, bbox_inches='tight', pad_inches=0)
         plt.close()
-
-    def _compute_embedding_plot(self, results_path, experiment_name):
-        # Copyright (C) 2018 Zalando Research
-
-        try:
-            import umap
-        except ImportError:
-            raise ValueError('umap-learn not installed')
-
-        map = umap.UMAP(
-            n_neighbors=3,
-            min_dist=0.1,
-            metric='euclidean'
-        )
-
-        projection = map.fit_transform(self._model.vq.embedding.weight.data.cpu().detach().numpy())
-
-        fig = plt.figure()
-        plt.scatter(projection[:,0], projection[:,1], alpha=0.3)
-        output_path = results_path + os.sep + experiment_name + '_evaluation-embedding-plot.png'
-        fig.savefig(output_path)
-        plt.close(fig)
 
     def _compute_wav(self, results_path, experiment_name):
         output_mu = self._valid_reconstructions.argmax(dim=1).detach().cpu().float().numpy().squeeze()
@@ -141,20 +130,72 @@ class Evaluator(object):
         output_path = results_path + os.sep + experiment_name + '_output.wav'
         librosa.output.write_wav(output_path, output_mu, self._configuration['sampling_rate'])
 
-    def _test(self, results_path, experiment_name):
-        avg_probs = torch.mean(self._encodings, dim=0)
-        avg_probs = avg_probs.detach().cpu().numpy()
+    def _plot_pcolormesh(self, data, fig, x=None, y=None, axis=None):
+        axis = plt.gca() if axis is None else axis # default axis if None
+        x = np.arange(data.shape[1]) if x is None else x # default x shape if None
+        y = np.arange(data.shape[0]) if y is None else y # default y shape if None
+        c = axis.pcolormesh(x, y, data)
+        fig.colorbar(c, ax=axis)
 
+    def _test(self, results_path, experiment_name):
         encodings = self._encodings.detach().cpu().numpy()
 
-        _, axs = plt.subplots(2, 1, figsize=(20, 20))
+        fig, axs = plt.subplots(4, 1, figsize=(25, 20), sharex=True)
 
         axs[0].set_title('Encodings')
-        axs[0].pcolor(encodings.transpose())
+        self._plot_pcolormesh(encodings[0].transpose(), fig, x=np.arange(encodings[0].transpose().shape[1]) * 0.01 * 2, axis=axs[0]) # winstep = 0.01, 2 = strided of downsampling
 
-        axs[1].set_title('Average probs')
-        axs[1].plot(avg_probs, np.arange(len(avg_probs)))
+        probs = F.softmax(-self._distances[0], dim=1).detach().cpu().transpose(0, 1).contiguous()
+        axs[1].set_title('Softmax of distances computed in VQ\n($||z_e(x) - e_i||^2_2$ with $z_e(x)$ the output of the encoder prior to quantization)')
+        self._plot_pcolormesh(probs, fig, x=np.arange(probs.shape[1]) * 0.01 * 2, axis=axs[1]) # winstep = 0.01, 2 = strided of downsampling
+
+        axs[2].set_title('Quantized')
+        quantized = self._quantized.detach().cpu()[0]
+        self._plot_pcolormesh(quantized, fig, x=np.arange(quantized.shape[1]) * 0.01 * 2, axis=axs[2]) # winstep = 0.01, 2 = strided of downsampling
+
+        normalized_quantized = (quantized - quantized.mean(dim=0)) / quantized.std(dim=0)
+        axs[3].set_title('Normalized quantized')
+        self._plot_pcolormesh(normalized_quantized, fig, x=np.arange(normalized_quantized.shape[1]) * 0.01 * 2, axis=axs[3]) # winstep = 0.01, 2 = strided of downsampling
 
         output_path = results_path + os.sep + experiment_name + '_evaluation-test.png'
         plt.savefig(output_path, bbox_inches='tight', pad_inches=0)
         plt.close()
+
+    def _plot_quantized_embedding_space(self, results_path, experiment_name):
+        quantized = self._quantized.detach().cpu().numpy()
+        concatenated_quantized = np.concatenate(quantized.transpose((2, 0, 1)))
+        embedding = self._model.vq.embedding.weight.data.cpu().detach().numpy()
+        n_embedding = embedding.shape[0]
+        encoding_indices = self._encoding_indices.detach().cpu().numpy()
+        encoding_indices = np.concatenate(encoding_indices)
+        quantized_embedding_space = np.concatenate(
+            (concatenated_quantized, embedding)
+        )
+        speaker_ids = self._speaker_ids.detach().cpu().numpy()
+        time_speaker_ids = np.repeat(
+            speaker_ids,
+            quantized.shape[2],
+            axis=1
+        )
+        time_speaker_ids = np.concatenate(time_speaker_ids)
+
+        import umap
+        n_neighbors = 100
+        map = umap.UMAP(
+            n_neighbors=n_neighbors,
+            min_dist=0.0,
+            metric='euclidean'
+        )
+
+        projection = map.fit_transform(quantized_embedding_space)
+
+        cmap = 'tab20'
+
+        fig = plt.figure()
+        #plt.scatter(projection[:-n_embedding,0], projection[:-n_embedding, 1], s=10, c=encoding_indices, cmap=cmap) # audio frame
+        plt.scatter(projection[:-n_embedding,0], projection[:-n_embedding, 1], s=10, c=time_speaker_ids, cmap=cmap) # audio frame colored by speaker id
+        plt.scatter(projection[-n_embedding:,0], projection[-n_embedding:, 1], s=50, marker='x', c='k', alpha=0.8) # embedding
+        #plt.scatter(projection[-n_embedding:,0], projection[-n_embedding:, 1], s=50, marker='x', c=np.arange(n_embedding), cmap=cmap) # different color for each embedding
+        output_path = results_path + os.sep + experiment_name + '_quantized_embedding_space-plot-n' + str(n_neighbors) + '.png'
+        fig.savefig(output_path)
+        plt.close(fig)

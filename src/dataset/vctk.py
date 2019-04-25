@@ -87,7 +87,10 @@ class VCTK(Dataset):
             self.root, self.raw_folder, self.dset_path)
 
         self.audios = make_manifest(dset_abs_path)
-        #self.utterences = load_txts(dset_abs_path) # os.path.basename(audios[0])[:-4] (ex: {p310_219: 'Thankfully, we have started to listen to our customers.', ...}
+        self.utterences = load_txts(dset_abs_path) # os.path.basename(utterences[0])[:-4] (ex: {p310_219: 'Thankfully, we have started to listen to our customers.', ...}
+        #print('len(self.utterences): {}'.format(len(self.utterences)))
+        #print(self.utterences.keys())
+        #print(os.path.basename(self.utterences[0])[:-4])
         self.speaker_dic = self.make_speaker_dic(dset_abs_path)
 
         random.shuffle(self.audios)

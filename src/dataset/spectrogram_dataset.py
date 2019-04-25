@@ -54,7 +54,7 @@ class SpectrogramDataset(Dataset, SpectrogramParser):
     def __getitem__(self, index):
         sample = self.ids[index]
         audio_path, transcript_path = sample[0], sample[1]
-        spect = self.parse_audio(audio_path)
+        spect = self.parse_audio_from_file(audio_path)
         transcript = self.parse_transcript(transcript_path)
         return spect, transcript
 

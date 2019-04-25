@@ -28,6 +28,7 @@ from vq_vae_speech.residual_stack import ResidualStack
 from vq_vae_speech.jitter import Jitter
 from vq_vae_speech.conv1d_builder import Conv1DBuilder
 from vq_vae_speech.conv_transpose1d_builder import ConvTranspose1DBuilder
+from vq_vae_speech.global_conditioning import GlobalConditioning
 from error_handling.console_logger import ConsoleLogger
 
 import torch.nn as nn
@@ -57,7 +58,7 @@ class FeaturesDecoder(nn.Module):
         )
 
         self._upsample = nn.Upsample(scale_factor=2)
-        
+
         self._residual_stack = ResidualStack(
             in_channels=num_hiddens,
             num_hiddens=num_hiddens,
@@ -97,6 +98,10 @@ class FeaturesDecoder(nn.Module):
 
         if self._use_jitter and self.training:
             x = self._jitter(x)
+
+        # global conditioning here
+        # speaker_embedding = GlobalConditioning.compute(speaker_dic, speaker_ids, x_one_hot, expand=True)
+        # 22 x 64 + embedding speaker (40 au lieu de 128 par ex)
 
         x = self._conv_1(x)
         if self._verbose:

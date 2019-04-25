@@ -71,7 +71,7 @@ class SpeechEncoder(nn.Module):
             in_channels=num_hiddens,
             out_channels=num_hiddens,
             kernel_size=4,
-            stride=2,
+            stride=2, # timestep * 2
             use_kaiming_normal=use_kaiming_normal,
             padding=2
         )

@@ -182,6 +182,7 @@ class Experiments(object):
                     all_train_res_recon_errors[i],
                     all_train_res_perplexities[i]
                 )
+                print('train_res_recon_error_smooth.shape: {}'.format(train_res_recon_error_smooth.shape))
                 all_train_res_recon_error_smooth.append(train_res_recon_error_smooth)
                 all_train_res_perplexity_smooth.append(train_res_perplexity_smooth)
 
@@ -189,6 +190,10 @@ class Experiments(object):
 
             all_train_res_recon_error_smooth = np.asarray(all_train_res_recon_error_smooth)
             all_train_res_perplexity_smooth = np.asarray(all_train_res_perplexity_smooth)
+
+            print('all_train_res_recon_error_smooth.shape: {}'.format(all_train_res_recon_error_smooth.shape))
+            print('n_colors: {}'.format(n_colors))
+            print('latest_epoch: {}'.format(latest_epoch))
 
             all_train_res_recon_error_smooth = np.reshape(all_train_res_recon_error_smooth, (n_colors, latest_epoch, all_train_res_recon_error_smooth.shape[1] // latest_epoch))
             all_train_res_perplexity_smooth = np.reshape(all_train_res_perplexity_smooth, (n_colors, latest_epoch, all_train_res_perplexity_smooth.shape[1] // latest_epoch))
