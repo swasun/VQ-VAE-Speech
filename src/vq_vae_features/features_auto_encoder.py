@@ -89,6 +89,8 @@ class FeaturesAutoEncoder(nn.Module):
             use_kaiming_normal=configuration['use_kaiming_normal'],
             use_jitter=configuration['use_jitter'],
             jitter_probability=configuration['jitter_probability'],
+            use_speaker_conditioning=configuration['use_speaker_conditioning'],
+            device=device,
             verbose=self._verbose
         )
 
@@ -112,7 +114,7 @@ class FeaturesAutoEncoder(nn.Module):
     def decoder(self):
         return self._decoder
 
-    def forward(self, x, y):
+    def forward(self, x, y, speaker_dic, speaker_id):
         x = x.permute(0, 2, 1).contiguous().float()
         y = y.permute(0, 2, 1).contiguous().float()
 
@@ -126,7 +128,7 @@ class FeaturesAutoEncoder(nn.Module):
 
         vq_loss, quantized, perplexity, _, _, _, losses = self._vq(z)
 
-        reconstructed_x = self._decoder(quantized)
+        reconstructed_x = self._decoder(quantized, speaker_dic, speaker_id)
 
         reconstructed_x = reconstructed_x.view(-1, self._output_features_filters, 47) # FIXME
         

@@ -50,6 +50,7 @@ class VCTKFeaturesStream(object):
 
         factor = 1
         configuration['batch_size'] = 1
+        self._validation_batch_size = 100
 
         self._training_loader = DataLoader(
             self._training_data,
@@ -61,11 +62,11 @@ class VCTKFeaturesStream(object):
         self._validation_loader = DataLoader(
             self._validation_data,
             #batch_size=configuration['batch_size'],
-            batch_size=100,
+            batch_size=self._validation_batch_size,
             num_workers=configuration['num_workers'],
             pin_memory=use_cuda
         )
-        self._speaker_dic = self._make_speaker_dic(vctk_path + os.sep + 'VCTK-Corpus')
+        self._speaker_dic = self._make_speaker_dic(vctk_path + os.sep + 'raw' + os.sep + 'VCTK-Corpus')
 
     @property
     def training_data(self):
@@ -86,6 +87,10 @@ class VCTKFeaturesStream(object):
     @property
     def speaker_dic(self):
         return self._speaker_dic
+
+    @property
+    def validation_batch_size(self):
+        return self._validation_batch_size
 
     def _make_speaker_dic(self, root):
         speakers = [

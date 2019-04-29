@@ -51,7 +51,7 @@ class GlobalConditioningTest(unittest.TestCase):
         ConsoleLogger.status('x_enc.size(): {}'.format(x_enc.size()))
         ConsoleLogger.status('x_dec.size(): {}'.format(x_dec.size()))
 
-        x = x_dec.squeeze(-1)    
+        x = x_dec.squeeze(-1)
         global_conditioning = GlobalConditioning.compute(
             speaker_dic=data_stream.speaker_dic,
             speaker_ids=speaker_id,

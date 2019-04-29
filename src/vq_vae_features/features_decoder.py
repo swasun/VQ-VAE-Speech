@@ -31,6 +31,7 @@ from vq_vae_speech.conv_transpose1d_builder import ConvTranspose1DBuilder
 from vq_vae_speech.global_conditioning import GlobalConditioning
 from error_handling.console_logger import ConsoleLogger
 
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
@@ -39,15 +40,20 @@ class FeaturesDecoder(nn.Module):
     
     def __init__(self, in_channels, out_channels, num_hiddens, num_residual_layers,
         num_residual_hiddens, use_kaiming_normal, use_jitter, jitter_probability,
-        verbose=False):
+        use_speaker_conditioning, device, verbose=False):
 
         super(FeaturesDecoder, self).__init__()
 
         self._use_jitter = use_jitter
+        self._use_speaker_conditioning = use_speaker_conditioning
+        self._device = device
         self._verbose = verbose
 
         if self._use_jitter:
             self._jitter = Jitter(jitter_probability)
+
+        # FIXME hardcoded
+        in_channels = in_channels + 40 if self._use_speaker_conditioning else in_channels
 
         self._conv_1 = Conv1DBuilder.build(
             in_channels=in_channels,
@@ -91,7 +97,7 @@ class FeaturesDecoder(nn.Module):
             use_kaiming_normal=use_kaiming_normal
         )
 
-    def forward(self, inputs):
+    def forward(self, inputs, speaker_dic, speaker_id):
         x = inputs
         if self._verbose:
             ConsoleLogger.status('[FEATURES_DEC] input size: {}'.format(x.size()))
@@ -99,9 +105,10 @@ class FeaturesDecoder(nn.Module):
         if self._use_jitter and self.training:
             x = self._jitter(x)
 
-        # global conditioning here
-        # speaker_embedding = GlobalConditioning.compute(speaker_dic, speaker_ids, x_one_hot, expand=True)
-        # 22 x 64 + embedding speaker (40 au lieu de 128 par ex)
+        if self._use_speaker_conditioning:
+            speaker_embedding = GlobalConditioning.compute(speaker_dic, speaker_id, x,
+                device=self._device, gin_channels=40, expand=True)
+            x = torch.cat([x, speaker_embedding], dim=1).to(self._device)
 
         x = self._conv_1(x)
         if self._verbose:

@@ -11,6 +11,7 @@ train_val_split: 0.8
 learning_rate: 0.0002
 normalize: False
 normalizer_path: '../data/vctk/vctk-mfcc-stats.pickle'
+use_speaker_conditioning: False
 
 # Cuda
 use_cuda: True

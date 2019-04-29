@@ -90,8 +90,9 @@ class Trainer(object):
             #named_parameters = []
 
             for data in train_bar:
-                (data, _, _, target, _) = data
+                (data, _, speaker_id, target, _) = data
                 data = data.to(self._device)
+                speaker_id = speaker_id.to(self._device)
                 target = target.to(self._device)
 
                 self._optimizer.zero_grad()
@@ -100,7 +101,7 @@ class Trainer(object):
                 The perplexity a useful value to track during training.
                 It indicates how many codes are 'active' on average.
                 """
-                loss, _, perplexity, losses = self._model(data, target)
+                loss, _, perplexity, losses = self._model(data, target, self._data_stream.speaker_dic, speaker_id)
                 loss.backward()
 
                 self._optimizer.step()

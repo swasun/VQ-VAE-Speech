@@ -35,6 +35,7 @@ import librosa
 import librosa.output
 import numpy as np
 import umap
+from textwrap import wrap
 
 
 class Evaluator(object):
@@ -48,7 +49,7 @@ class Evaluator(object):
     def evaluate(self, results_path, experiment_name):
         self._reconstruct(results_path, experiment_name)
         self._compute_comparaison_plot(results_path, experiment_name)
-        self._plot_quantized_embedding_space(results_path, experiment_name)
+        self._plot_quantized_embedding_spaces(results_path, experiment_name)
         #self._compute_wav(results_path, experiment_name)
 
     def _reconstruct(self, results_path, experiment_name):
@@ -130,7 +131,7 @@ class Evaluator(object):
         c = axis.pcolormesh(x, y, data)
         fig.colorbar(c, ax=axis)
 
-    def _plot_quantized_embedding_space(self, results_path, experiment_name):
+    def _plot_quantized_embedding_spaces(self, results_path, experiment_name):
         quantized = self._quantized.detach().cpu().numpy()
         concatenated_quantized = np.concatenate(quantized.transpose((2, 0, 1)))
         embedding = self._model.vq.embedding.weight.data.cpu().detach().numpy()
@@ -148,15 +149,6 @@ class Evaluator(object):
         )
         time_speaker_ids = np.concatenate(time_speaker_ids)
 
-        results_path_by_speaker_id = results_path + os.sep + 'speaker_id'
-        results_path_by_encoding_indices = results_path + os.sep + 'encoding_indices'
-
-        if not os.path.isdir(results_path_by_speaker_id):
-            os.mkdir(results_path_by_speaker_id)
-
-        if not os.path.isdir(results_path_by_encoding_indices):
-            os.mkdir(results_path_by_encoding_indices)
-
         for n_neighbors in [3, 10, 50, 100]:
             map = umap.UMAP(
                 n_neighbors=n_neighbors,
@@ -166,29 +158,57 @@ class Evaluator(object):
 
             projection = map.fit_transform(quantized_embedding_space)
 
-            self._plot_quantized_embedding_space_colored_by_speaker_id(projection, n_neighbors, n_embedding, time_speaker_ids,
-                results_path_by_speaker_id, experiment_name)
-
-            self._plot_quantized_embedding_space_colored_by_encoding_indices(projection, n_neighbors, n_embedding, encoding_indices,
-                results_path_by_encoding_indices, experiment_name)
+            self._plot_quantized_embedding_space(projection, n_neighbors, n_embedding,
+                time_speaker_ids, encoding_indices, results_path, experiment_name)
 
     def _compute_unified_time_scale(self, shape, winstep=0.01, downsampling_factor=1):
         return np.arange(shape) * winstep * downsampling_factor
 
-    def _plot_quantized_embedding_space_colored_by_speaker_id(self, projection, n_neighbors, n_embedding, time_speaker_ids,
-        results_path, experiment_name, cmap='tab20'):
-        fig = plt.figure()
-        plt.scatter(projection[:-n_embedding,0], projection[:-n_embedding, 1], s=10, c=time_speaker_ids, cmap=cmap) # audio frame colored by speaker id
-        plt.scatter(projection[-n_embedding:,0], projection[-n_embedding:, 1], s=50, marker='x', c='k', alpha=0.8) # embedding
-        output_path = results_path + os.sep + experiment_name + '_quantized_embedding_space_colored_by_speaker_id-n' + str(n_neighbors) + '.png'
-        fig.savefig(output_path)
-        plt.close(fig)
+    def _plot_quantized_embedding_space(self, projection, n_neighbors, n_embedding,
+        time_speaker_ids, encoding_indices, results_path, experiment_name, cmap='tab20',
+        xlabel_width=60):
 
-    def _plot_quantized_embedding_space_colored_by_encoding_indices(self, projection, n_neighbors, n_embedding, encoding_indices,
-        results_path, experiment_name, cmap='tab20'):
-        fig = plt.figure()
-        plt.scatter(projection[:-n_embedding,0], projection[:-n_embedding, 1], s=10, c=encoding_indices, cmap=cmap) # audio frame colored by encoding indices
-        plt.scatter(projection[-n_embedding:,0], projection[-n_embedding:, 1], s=50, marker='x', c=np.arange(n_embedding), cmap=cmap) # different color for each embedding
-        output_path = results_path + os.sep + experiment_name + '_quantized_embedding_space_colored_by_encoding_indices-n' + str(n_neighbors) + '.png'
-        fig.savefig(output_path)
+        def _configure_ax(ax, title=None, xlabel=None, ylabel=None, legend=False):
+            ax.minorticks_off()
+            if title:
+                ax.set_title(title)
+            if xlabel:
+                ax.set_xlabel(xlabel)
+            if ylabel:
+                ax.set_ylabel(ylabel)
+            if legend:
+                ax.legend()
+            ax.grid(True)
+            ax.margins(x=0)
+            return ax
+
+        fig, axs = plt.subplots(1, 2, figsize=(16, 8), sharey=True)
+
+        # Colored by speaker id
+        axs[0].scatter(projection[:-n_embedding,0], projection[:-n_embedding, 1], s=10, c=time_speaker_ids, cmap=cmap) # audio frame colored by speaker id
+        axs[0].scatter(projection[-n_embedding:,0], projection[-n_embedding:, 1], s=50, marker='x', c='k', alpha=0.8) # embedding
+        xlabel = 'Embedding of ' + str(self._data_stream.validation_batch_size) + ' valuations' \
+            ' with ' + str(n_neighbors) + ' neighbors with the audio frame points colored' \
+            ' by speaker id and the embedding marks colored in black'
+        axs[0] = _configure_ax(
+            axs[0],
+            xlabel='\n'.join(wrap(xlabel, xlabel_width))
+        )
+
+        # Colored by encoding indices
+        axs[1].scatter(projection[:-n_embedding,0], projection[:-n_embedding, 1], s=10, c=encoding_indices, cmap=cmap) # audio frame colored by encoding indices
+        axs[1].scatter(projection[-n_embedding:,0], projection[-n_embedding:, 1], s=50, marker='x', c=np.arange(n_embedding), cmap=cmap) # different color for each embedding
+        xlabel = 'Embedding of ' + str(self._data_stream.validation_batch_size) + ' valuations' \
+            ' with ' + str(n_neighbors) + ' neighbors with the audio frame points colored' \
+            ' by encoding indices and the embedding marks colored by number of embedding' \
+            ' vectors (using the same color map)'
+        axs[1] = _configure_ax(
+            axs[1],
+            xlabel='\n'.join(wrap(xlabel, width=xlabel_width))
+        )
+
+        plt.suptitle('Quantized embedding space of ' + experiment_name, fontsize=16)
+
+        output_path = results_path + os.sep + experiment_name + '_quantized_embedding_space-n' + str(n_neighbors) + '.png'
+        fig.savefig(output_path, bbox_inches='tight', pad_inches=0)
         plt.close(fig)

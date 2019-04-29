@@ -30,8 +30,8 @@ from torch import nn
 class GlobalConditioning(object):
 
     @staticmethod
-    def compute(speaker_dic, speaker_ids, x_one_hot, gin_channels=128, expand=True):
-        speakers_embedding = GlobalConditioning._Embedding(len(speaker_dic), gin_channels, padding_idx=None, std=0.1)    
+    def compute(speaker_dic, speaker_ids, x_one_hot, device, gin_channels=128, expand=True):
+        speakers_embedding = GlobalConditioning._Embedding(len(speaker_dic), gin_channels, padding_idx=None, std=0.1).to(device)
 
         # Extract the batch size and the signal length
         B, _, T = x_one_hot.size()

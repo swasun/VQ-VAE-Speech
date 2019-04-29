@@ -1,0 +1,16 @@
+{
+    "experiments_path": "../experiments-vq29-mfcc39-speaker-conditioning",
+    "results_path": "../results",
+    "configuration_path": "../configurations/vctk_features.yaml",
+    "seed": 1234,
+    "experiments": {
+        "baseline": {
+            "num_epochs": 5,
+            "batch_size": 2,
+            "num_embeddings": 29,
+            "use_device": "cuda:1",
+            "normalize": true,
+            "use_speaker_conditioning": true
+        }
+    }
+}

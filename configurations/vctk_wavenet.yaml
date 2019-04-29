@@ -10,6 +10,8 @@ save_path: './speech_output'
 num_workers: 1
 train_val_split: 0.8
 learning_rate: 0.0002
+normalize: False
+normalizer_path: '../data/vctk/vctk-mfcc-stats.pickle'
 
 # Cuda
 use_cuda: True
