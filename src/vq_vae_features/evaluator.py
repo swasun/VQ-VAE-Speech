@@ -36,6 +36,7 @@ import librosa.output
 import numpy as np
 import umap
 from textwrap import wrap
+import seaborn as sns
 
 
 class Evaluator(object):
@@ -47,10 +48,14 @@ class Evaluator(object):
         self._configuration = configuration
 
     def evaluate(self, results_path, experiment_name):
+        if experiment_name != 'baseline-with-speaker-conditioning':
+            return
         self._reconstruct(results_path, experiment_name)
         self._compute_comparaison_plot(results_path, experiment_name)
         self._plot_quantized_embedding_spaces(results_path, experiment_name)
         #self._compute_wav(results_path, experiment_name)
+        #self._test_denormalization(results_path, experiment_name)
+        #self._test_histogram(results_path, experiment_name)
 
     def _reconstruct(self, results_path, experiment_name):
         self._model.eval()
@@ -61,12 +66,13 @@ class Evaluator(object):
         self._target = self._target.permute(0, 2, 1).contiguous().float()
         self._wav_filename = self._wav_filename[0][0]
         self._valid_originals = self._valid_originals.to(self._device)
+        self._speaker_ids = self._speaker_ids.to(self._device)
         self._target = self._target.to(self._device)
 
         z = self._model.encoder(self._valid_originals)
         z = self._model.pre_vq_conv(z)
         _, self._quantized, _, self._encodings, self._distances, self._encoding_indices, _ = self._model.vq(z)
-        self._valid_reconstructions = self._model.decoder(self._quantized)[0]
+        self._valid_reconstructions = self._model.decoder(self._quantized, self._data_stream.speaker_dic, self._speaker_ids)[0]
 
     def _compute_comparaison_plot(self, results_path, experiment_name):
         def _load_wav(filename, sampling_rate, res_type, top_db):
@@ -136,6 +142,7 @@ class Evaluator(object):
         concatenated_quantized = np.concatenate(quantized.transpose((2, 0, 1)))
         embedding = self._model.vq.embedding.weight.data.cpu().detach().numpy()
         n_embedding = embedding.shape[0]
+        #encoding_indices = self._encoding_indices.detach().cpu().numpy().transpose()
         encoding_indices = self._encoding_indices.detach().cpu().numpy()
         encoding_indices = np.concatenate(encoding_indices)
         quantized_embedding_space = np.concatenate(
@@ -159,7 +166,7 @@ class Evaluator(object):
             projection = map.fit_transform(quantized_embedding_space)
 
             self._plot_quantized_embedding_space(projection, n_neighbors, n_embedding,
-                time_speaker_ids, encoding_indices, results_path, experiment_name)
+                time_speaker_ids, encoding_indices, results_path, experiment_name, cmap='tab20')
 
     def _compute_unified_time_scale(self, shape, winstep=0.01, downsampling_factor=1):
         return np.arange(shape) * winstep * downsampling_factor
@@ -212,3 +219,57 @@ class Evaluator(object):
         output_path = results_path + os.sep + experiment_name + '_quantized_embedding_space-n' + str(n_neighbors) + '.png'
         fig.savefig(output_path, bbox_inches='tight', pad_inches=0)
         plt.close(fig)
+
+    def _test_denormalization(self, results_path, experiment_name):
+        valid_originals = self._valid_originals.detach().cpu()[0].numpy()
+        valid_reconstructions = self._valid_reconstructions.detach().cpu().numpy()
+        normalizer = self._data_stream.normalizer
+
+        denormalized_valid_originals = (normalizer['train_std'] * valid_originals.transpose() + normalizer['train_mean']).transpose()
+        denormalized_valid_reconstructions = (normalizer['train_std'] * valid_reconstructions.transpose() + normalizer['train_mean']).transpose()
+
+        fig, axs = plt.subplots(4, 1, figsize=(30, 20), sharex=True)
+
+        # MFCC + d + a of the original speech signal
+        axs[0].set_title('Augmented MFCC + d + a #filters=13+13+13 of the original speech signal')
+        self._plot_pcolormesh(valid_originals, fig, x=self._compute_unified_time_scale(valid_originals.shape[1]), axis=axs[0])
+
+        # Actual reconstruction
+        axs[1].set_title('Actual reconstruction')
+        self._plot_pcolormesh(valid_reconstructions, fig, x=self._compute_unified_time_scale(valid_reconstructions.shape[1]), axis=axs[1])
+
+        # Denormalization of the original speech signal
+        axs[2].set_title('Denormalized target')
+        self._plot_pcolormesh(denormalized_valid_originals, fig, x=self._compute_unified_time_scale(denormalized_valid_originals.shape[1]), axis=axs[2])
+
+        # Denormalization of the original speech signal
+        axs[3].set_title('Denormalized reconstruction')
+        self._plot_pcolormesh(denormalized_valid_reconstructions, fig, x=self._compute_unified_time_scale(denormalized_valid_reconstructions.shape[1]), axis=axs[3])
+
+        output_path = results_path + os.sep + experiment_name + '_test-denormalization-plot.png'
+        plt.savefig(output_path, bbox_inches='tight', pad_inches=0)
+        plt.close()
+
+    def _test_histogram(self, results_path, experiment_name):
+        #fig, axs = plt.subplots(2, 1, figsize=(20, 20), sharex=True)
+
+        probs = F.softmax(-self._distances[0], dim=1).detach().cpu().transpose(0, 1).contiguous()
+
+        # Softmax of distances computed in VQ
+        """axs[0].set_title(
+            '\n'.join(wrap('Histogram of the softmax of distances computed in'
+            ' VQ\n($||z_e(x) - e_i||^2_2$ with $z_e(x)$ the output of the encoder'
+            ' prior to quantization)', 60))
+        )"""
+        #axs[0].hist(probs)
+        sns.set(color_codes=True)
+        sns.set(style="white", palette="muted")
+        for prob in probs:
+            """sns.distplot(prob, hist=True, kde=True, 
+                bins=int(180/5),
+                kde_kws={'linewidth': 4})"""
+            sns.distplot(prob, hist=True, kde=True, kde_kws={'linewidth': 4})
+
+        output_path = results_path + os.sep + experiment_name + '_test-histogram-plot.png'
+        plt.savefig(output_path, bbox_inches='tight', pad_inches=0)
+        plt.close()

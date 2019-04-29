@@ -12,6 +12,15 @@
             "normalize": true
         },
 
+        "baseline-with-speaker-conditioning": {
+            "num_epochs": 15,
+            "batch_size": 2,
+            "num_embeddings": 29,
+            "use_device": "cuda:1",
+            "normalize": true,
+            "use_speaker_conditioning": true
+        },
+
         "jitter12": {
             "num_epochs": 15,
             "use_jitter": true,

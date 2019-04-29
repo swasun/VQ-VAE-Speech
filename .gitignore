@@ -6,3 +6,4 @@ params/
 samples/
 /experiments/*
 *.pth
+*.ini

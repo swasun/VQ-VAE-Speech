@@ -9,3 +9,4 @@ nnmnkwii
 tensorboardX
 pyyaml
 tqdm
+seaborn

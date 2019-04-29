@@ -39,13 +39,13 @@ from tqdm import tqdm
 class VCTKFeaturesStream(object):
 
     def __init__(self, vctk_path, configuration, gpu_ids, use_cuda):
-        normalizer = None
+        self._normalizer = None
         if configuration['normalize']:
             with open(configuration['normalizer_path'], 'rb') as file:
-                normalizer = pickle.load(file)
+                self._normalizer = pickle.load(file)
 
-        self._training_data = VCTKFeaturesDataset(vctk_path, 'train', normalizer)
-        self._validation_data = VCTKFeaturesDataset(vctk_path, 'val', normalizer)
+        self._training_data = VCTKFeaturesDataset(vctk_path, 'train', self._normalizer)
+        self._validation_data = VCTKFeaturesDataset(vctk_path, 'val', self._normalizer)
         factor = 1 if len(gpu_ids) == 0 else len(gpu_ids)
 
         factor = 1
@@ -91,6 +91,10 @@ class VCTKFeaturesStream(object):
     @property
     def validation_batch_size(self):
         return self._validation_batch_size
+
+    @property
+    def normalizer(self):
+        return self._normalizer
 
     def _make_speaker_dic(self, root):
         speakers = [
