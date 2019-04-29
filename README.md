@@ -134,9 +134,11 @@ With jitter:
 #### Embedding plots
 
 Embedding of 100 valuations with 10 neighbors with the audio frame points colored by speaker id and the embedding marks colored in black:
+
 ![](results/vq29-mfcc39/val/embedding-plots/speaker_id/n10/baseline_quantized_embedding_space_colored_by_speaker_id-n10.png)
 
 Embedding of 100 valuations with 10 neighbors with the audio frame points colored by encoding indices and the embedding marks colored by number of embedding vectors (using the same color map):
+
 ![](results/vq29-mfcc39/val/embedding-plots/encoding_indices/n10/baseline_quantized_embedding_space_colored_by_encoding_indices-n10.png)
 
 # References
