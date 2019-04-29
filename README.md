@@ -115,6 +115,30 @@ This figure describes the layers of the VQ-VAE model we have used. All convoluti
 
 This figure shows the training evolution of the VQ-VAE model using two metrics: the loss values (the lower the better), and the perplexity. The model was trained during 15 epochs using the architecture described in Section `VQ-VAE-Speech encoder + Deconv decoder`. We use 29 vectors of dim 64 as the VQ space. All experiments have been setted with a seed of 1234 for reproducibility. We tried several variants of the training: the kaiming normal (also known as He initialization) [He, K et al., 2015], the VQ-EMA [Roy et al., 2018], the jitter layer proposed in [Chorowski et al., 2019].
 
+![](results/vq29-mfcc39/train/merged-losses-plots/baseline_merged-losses.png)
+
+![](results/vq29-mfcc39/train/merged-losses-plots/jitter12_merged-losses.png)
+
+![](results/vq29-mfcc39/train/merged-losses-types-plots/reconstruction_loss.png)
+
+### Evaluation
+
+#### Comparaison plots
+
+Without jitter:
+![](results/vq29-mfcc39/val/comparaison-plots/baseline_evaluation-comparaison-plot.png)
+
+With jitter:
+![](results/vq29-mfcc39/val/comparaison-plots/jitter12_evaluation-comparaison-plot.png)
+
+#### Embedding plots
+
+Embedding of 100 valuations with 10 neighbors with the audio frame points colored by speaker id and the embedding marks colored in black:
+![](results/vq29-mfcc39/val/embedding-plots/speaker_id/n10/baseline_quantized_embedding_space_colored_by_speaker_id-n10.png)
+
+Embedding of 100 valuations with 10 neighbors with the audio frame points colored by encoding indices and the embedding marks colored by number of embedding vectors (using the same color map):
+![](results/vq29-mfcc39/val/embedding-plots/encoding_indices/n10/baseline_quantized_embedding_space_colored_by_encoding_indices-n10.png)
+
 # References
 
 * [Chorowski et al., 2019] [Jan Chorowski, Ron J. Weiss, Samy Bengio, and Aaron van den Oord. Unsupervised speech representation learning using WaveNet autoencoders. arXiv e-prints, page arXiv:1901.08810, 01 2019](https://arxiv.org/abs/1901.08810).

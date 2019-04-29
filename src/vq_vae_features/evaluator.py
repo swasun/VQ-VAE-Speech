@@ -47,8 +47,7 @@ class Evaluator(object):
 
     def evaluate(self, results_path, experiment_name):
         self._reconstruct(results_path, experiment_name)
-        #self._compute_comparaison_plot(results_path, experiment_name)
-        #self._test(results_path, experiment_name)
+        self._compute_comparaison_plot(results_path, experiment_name)
         self._plot_quantized_embedding_space(results_path, experiment_name)
         #self._compute_wav(results_path, experiment_name)
 
@@ -130,30 +129,6 @@ class Evaluator(object):
         y = np.arange(data.shape[0]) if y is None else y # default y shape if None
         c = axis.pcolormesh(x, y, data)
         fig.colorbar(c, ax=axis)
-
-    def _test(self, results_path, experiment_name):
-        encodings = self._encodings.detach().cpu().numpy()
-
-        fig, axs = plt.subplots(4, 1, figsize=(25, 20), sharex=True)
-
-        axs[0].set_title('Encodings')
-        self._plot_pcolormesh(encodings[0].transpose(), fig, x=np.arange(encodings[0].transpose().shape[1]) * 0.01 * 2, axis=axs[0]) # winstep = 0.01, 2 = strided of downsampling
-
-        probs = F.softmax(-self._distances[0], dim=1).detach().cpu().transpose(0, 1).contiguous()
-        axs[1].set_title('Softmax of distances computed in VQ\n($||z_e(x) - e_i||^2_2$ with $z_e(x)$ the output of the encoder prior to quantization)')
-        self._plot_pcolormesh(probs, fig, x=np.arange(probs.shape[1]) * 0.01 * 2, axis=axs[1]) # winstep = 0.01, 2 = strided of downsampling
-
-        axs[2].set_title('Quantized')
-        quantized = self._quantized.detach().cpu()[0]
-        self._plot_pcolormesh(quantized, fig, x=np.arange(quantized.shape[1]) * 0.01 * 2, axis=axs[2]) # winstep = 0.01, 2 = strided of downsampling
-
-        normalized_quantized = (quantized - quantized.mean(dim=0)) / quantized.std(dim=0)
-        axs[3].set_title('Normalized quantized')
-        self._plot_pcolormesh(normalized_quantized, fig, x=np.arange(normalized_quantized.shape[1]) * 0.01 * 2, axis=axs[3]) # winstep = 0.01, 2 = strided of downsampling
-
-        output_path = results_path + os.sep + experiment_name + '_evaluation-test.png'
-        plt.savefig(output_path, bbox_inches='tight', pad_inches=0)
-        plt.close()
 
     def _plot_quantized_embedding_space(self, results_path, experiment_name):
         quantized = self._quantized.detach().cpu().numpy()

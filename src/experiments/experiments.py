@@ -308,7 +308,7 @@ class Experiments(object):
 
             for j in range(len(all_train_loss_smooth)):
                 ax = self._plot_fill_between(ax, colors[j], all_train_loss_smooth[j], all_experiments_names[j])
-            ax = self._configure_ax(ax, title='Smoothed losses', xlabel='Epochs', ylabel='Loss', legend=True)
+            ax = self._configure_ax(ax, title='Smoothed ' + loss_name.replace('_', ' '), xlabel='Epochs', ylabel='Loss', legend=True)
             output_plot_path = results_path + os.sep + loss_name + '.png'
 
             fig.savefig(output_plot_path)
