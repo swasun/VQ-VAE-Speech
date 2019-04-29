@@ -101,10 +101,7 @@ class VectorQuantizer(nn.Module):
         which element of the quantized space each input element was mapped to.
         """
         encoding_indices = torch.argmin(distances, dim=1).unsqueeze(1)
-        #print('encoding_indices.size(): {}'.format(encoding_indices.size()))
-        #print('encoding_indices: {}'.format(encoding_indices))
         encodings = torch.zeros(encoding_indices.shape[0], self._num_embeddings, dtype=torch.float).to(self._device)
-        #print('encodings.size(): {}'.format(encodings.size()))
         encodings.scatter_(1, encoding_indices, 1)
 
         # Quantize and unflatten

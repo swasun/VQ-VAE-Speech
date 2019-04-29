@@ -78,7 +78,6 @@ class VCTKDataset(Dataset):
 
     @staticmethod
     def preprocessing_raw(raw, length, expand_dims=False):
-        print(len(raw))
         if length is not None:
             if len(raw) <= length :
                 # padding
@@ -144,4 +143,3 @@ if __name__ =='__main__':
     raw, one_hot, speaker_id, quantized = next(iter(train_loader))
     raw_val, one_hot_val, speaker_id_val, quantized_val = next(iter(val_loader))
 
-    print(raw)

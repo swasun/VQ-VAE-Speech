@@ -47,7 +47,7 @@ class SpeechEncoder(nn.Module):
         """
 
         self._conv_1 = Conv1DBuilder.build(
-            in_channels=39,
+            in_channels=39, # FIXME
             out_channels=num_hiddens,
             kernel_size=3,
             use_kaiming_normal=use_kaiming_normal,

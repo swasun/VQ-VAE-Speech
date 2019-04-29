@@ -74,7 +74,7 @@ class CheckpointUtils(object):
 
     @staticmethod
     def merge_experiment_losses(experiment_path, checkpoint_files, device_configuration):
-        train_res_recon_errors = []
+        train_res_losses = {}
         train_res_perplexities = []
 
         sorted_checkpoint_files = sorted(checkpoint_files, key=lambda x: int(x.split('.')[0].split('_')[-2]))
@@ -83,7 +83,11 @@ class CheckpointUtils(object):
             checkpoint_path = experiment_path + os.sep + checkpoint_file
             ConsoleLogger.status("Loading the checkpoint file '{}'".format(checkpoint_path))
             checkpoint = torch.load(checkpoint_path, map_location=device_configuration.device)
-            train_res_recon_errors += checkpoint['train_res_recon_error']
+            for loss_entry in checkpoint['train_res_recon_error']:
+                for key in loss_entry.keys():
+                    if key not in train_res_losses:
+                        train_res_losses[key] = list()
+                    train_res_losses[key].append(loss_entry[key])
             train_res_perplexities += checkpoint['train_res_perplexity']
 
-        return train_res_recon_errors, train_res_perplexities
+        return train_res_losses, train_res_perplexities

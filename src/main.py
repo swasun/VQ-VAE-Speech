@@ -97,8 +97,3 @@ if __name__ == "__main__":
 
     Experiments.load(args.experiments_configuration_path).train()
     ConsoleLogger.success('All training experiments done')
-    """configuration = None
-    with open('../configurations/vctk_features.yaml', 'r') as configuration_file:
-        configuration = yaml.load(configuration_file)
-    device_configuration = DeviceConfiguration.load_from_configuration(configuration)
-    data_stream = VCTKSpeechStream(configuration, device_configuration.gpu_ids, device_configuration.use_cuda)"""

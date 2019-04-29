@@ -112,6 +112,8 @@ class Trainer(object):
                 train_res_recon_error.append(losses)
                 train_res_perplexity.append(perplexity_value)
 
+            # FIXME
+
             #current_named_parameters = self._model.named_parameters()
             #named_parameters += current_named_parameters
             #print('current_named_parameters.shape: {}'.format(current_named_parameters.shape))

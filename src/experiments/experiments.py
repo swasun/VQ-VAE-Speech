@@ -60,40 +60,65 @@ class Experiments(object):
             experiment.evaluate()
             torch.cuda.empty_cache() # Release the GPU memory cache
 
-    def plot_losses(self, experiments_path):
-        all_train_res_recon_errors = list()
-        all_train_res_perplexities = list()
+    def plot_losses(self, experiments_path, colormap_name='nipy_spectral'):
+        all_train_losses = list()
+        all_train_perplexities = list()
         all_results_paths = list()
         all_experiments_names = list()
         all_latest_epochs = list()
 
         for experiment in self._experiments:
             try:
-                train_res_recon_errors, train_res_perplexities, latest_epoch = self._retreive_losses_values(experiments_path, experiment)
-                all_train_res_recon_errors.append(train_res_recon_errors)
-                all_train_res_perplexities.append(train_res_perplexities)
+                train_res_losses, train_res_perplexities, latest_epoch = self._retreive_losses_values(experiments_path, experiment)
+                all_train_losses.append(train_res_losses)
+                all_train_perplexities.append(train_res_perplexities)
                 all_results_paths.append(experiment.results_path)
                 all_experiments_names.append(experiment.name)
                 all_latest_epochs.append(latest_epoch)
             except:
                 ConsoleLogger.error("Failed to retreive losses of experiment '{}'".format(experiment.name))
 
-        self._plot_losses_figure(
+        n_final_losses_colors = len(all_train_losses)
+        final_losses_colors = self._get_colors_from_cmap(colormap_name, n_final_losses_colors)
+
+        # for each experiment: final loss + perplexity
+        self._plot_loss_and_perplexity_figures(
             all_results_paths,
             all_experiments_names,
-            all_train_res_recon_errors,
-            all_train_res_perplexities,
+            all_train_losses,
+            all_train_perplexities,
             all_latest_epochs,
-            merge_figures=False
+            n_final_losses_colors,
+            final_losses_colors
         )
 
-        self._plot_losses_figure(
+        # merged experiment: merged final losses + merged perplexities
+        self._plot_merged_losses_and_perplexities_figure(
             all_results_paths,
             all_experiments_names,
-            all_train_res_recon_errors,
-            all_train_res_perplexities,
+            all_train_losses,
+            all_train_perplexities,
             all_latest_epochs,
-            merge_figures=True
+            n_final_losses_colors,
+            final_losses_colors
+        )
+
+        # for each experiment: all possible losses
+        self._plot_merged_all_losses_figures(
+            all_results_paths,
+            all_experiments_names,
+            all_train_losses,
+            all_train_perplexities,
+            all_latest_epochs
+        )
+
+        # merged losses of a single type in all experiments
+        self._plot_merged_all_losses_type(
+            all_results_paths,
+            all_experiments_names,
+            all_train_losses,
+            all_train_perplexities,
+            all_latest_epochs
         )
 
     def _retreive_losses_values(self, experiment_path, experiment):
@@ -124,182 +149,216 @@ class Experiments(object):
         device_configuration = DeviceConfiguration.load_from_configuration(configuration)
 
         ConsoleLogger.status("Merge {} checkpoint losses of experiment '{}'".format(len(checkpoint_files), experiment_name))
-        train_res_recon_errors, train_res_perplexities = CheckpointUtils.merge_experiment_losses(
+        train_res_losses, train_res_perplexities = CheckpointUtils.merge_experiment_losses(
             experiment_path,
             checkpoint_files,
             device_configuration
         )
 
-        return train_res_recon_errors, train_res_perplexities, len(checkpoint_files)
+        return train_res_losses, train_res_perplexities, len(checkpoint_files)
 
-    def _plot_losses_figure(self, all_results_paths, all_experiments_names, all_train_res_recon_errors,
-        all_train_res_perplexities, all_latest_epochs, merge_figures,
-        colormap_name='nipy_spectral'):
+    def _plot_loss_and_perplexity_figures(self, all_results_paths, all_experiments_names, all_train_losses,
+        all_train_perplexities, all_latest_epochs, n_colors, colors):
+        
+        for i in range(len(all_experiments_names)):
+            results_path = all_results_paths[i]
+            experiment_name = all_experiments_names[i]
+            output_plot_path = results_path + os.sep + experiment_name + '_loss-and-perplexity.png'
 
-        def configure_ax1(ax, epochs, legend=False):
-            ax.minorticks_off()
-            ax.set_xticklabels(epochs)
-            ax.grid(linestyle='--')
-            ax.set_yscale('log')
-            ax.set_title('Smoothed MSE')
-            ax.set_xlabel('Epochs')
-            ax.set_ylabel('Loss')
-            if legend:
-                ax.legend()
-            ax.grid(True)
-            return ax
+            train_loss_smooth = self._smooth_curve(all_train_losses[i]['loss'])
+            train_perplexity_smooth = self._smooth_curve(all_train_perplexities[i])
 
-        def configure_ax2(ax, epochs, legend=False):
-            ax.minorticks_off()
-            ax.set_xticklabels(epochs)
-            ax.grid(linestyle='--')
-            ax.set_title('Smoothed Average codebook usage')
-            ax.set_xlabel('Epochs')
-            ax.set_ylabel('Perplexity')
-            if legend:
-                ax.legend()
-            ax.grid(True)
-            return ax
+            latest_epoch = all_latest_epochs[i]
 
-        linewidth = 2
-        n_colors = len(all_train_res_recon_errors)
-        colors = [plt.get_cmap(colormap_name)(1. * i/n_colors) for i in range(n_colors)]
-
-        if merge_figures:
-            latest_epoch = all_latest_epochs[0]
-            for i in range(1, len(all_latest_epochs)):
-                if all_latest_epochs[i] != latest_epoch:
-                    raise ValueError('All experiments must have the same number of epochs to merge them')
-
-            results_path = all_results_paths[0]
-            experiment_name = 'merged_experiments'
-            output_plot_path = results_path + os.sep + experiment_name + '.png'
-            
-            all_train_res_recon_error_smooth = list()
-            all_train_res_perplexity_smooth = list()
-            for i in range(len(all_train_res_recon_errors)):
-                train_res_recon_error_smooth, train_res_perplexity_smooth = self._smooth_losses(
-                    all_train_res_recon_errors[i],
-                    all_train_res_perplexities[i]
-                )
-                print('train_res_recon_error_smooth.shape: {}'.format(train_res_recon_error_smooth.shape))
-                all_train_res_recon_error_smooth.append(train_res_recon_error_smooth)
-                all_train_res_perplexity_smooth.append(train_res_perplexity_smooth)
-
-            epochs = range(1, latest_epoch + 1, 1)
-
-            all_train_res_recon_error_smooth = np.asarray(all_train_res_recon_error_smooth)
-            all_train_res_perplexity_smooth = np.asarray(all_train_res_perplexity_smooth)
-
-            print('all_train_res_recon_error_smooth.shape: {}'.format(all_train_res_recon_error_smooth.shape))
-            print('n_colors: {}'.format(n_colors))
-            print('latest_epoch: {}'.format(latest_epoch))
-
-            all_train_res_recon_error_smooth = np.reshape(all_train_res_recon_error_smooth, (n_colors, latest_epoch, all_train_res_recon_error_smooth.shape[1] // latest_epoch))
-            all_train_res_perplexity_smooth = np.reshape(all_train_res_perplexity_smooth, (n_colors, latest_epoch, all_train_res_perplexity_smooth.shape[1] // latest_epoch))
+            train_loss_smooth = np.asarray(train_loss_smooth)
+            train_perplexity_smooth = np.asarray(train_perplexity_smooth)
+            train_loss_smooth = np.reshape(train_loss_smooth, (latest_epoch, train_loss_smooth.shape[0] // latest_epoch))
+            train_perplexity_smooth = np.reshape(train_perplexity_smooth, (latest_epoch, train_perplexity_smooth.shape[0] // latest_epoch))
 
             fig = plt.figure(figsize=(16, 8))
 
             ax = fig.add_subplot(1, 2, 1)
-            for i in range(len(all_train_res_recon_error_smooth)):
-                linecolor = colors[i] # TODO: compute a darker linecolor than facecolor
-                facecolor = colors[i]
-                mu = np.mean(all_train_res_recon_error_smooth[i], axis=1)
-                sigma = np.std(all_train_res_recon_error_smooth[i], axis=1)
-                t = np.arange(len(all_train_res_recon_error_smooth[i]))
-                ax.plot(t, mu, linewidth=linewidth, label=all_experiments_names[i], c=linecolor)
-                ax.fill_between(t, mu+sigma, mu-sigma, facecolor=facecolor, alpha=0.5)
-            ax = configure_ax1(ax, epochs, legend=True)
+            ax = self._plot_fill_between(ax, colors[i], train_loss_smooth, all_experiments_names[i])
+            ax = self._configure_ax(ax, title='Smoothed loss', xlabel='Epochs', ylabel='Loss',
+                legend=False)
 
             ax = fig.add_subplot(1, 2, 2)
-            for i in range(len(all_train_res_perplexity_smooth)):
-                linecolor = colors[i] # TODO: compute a darker linecolor than facecolor
-                facecolor = colors[i]
-                mu = np.mean(all_train_res_perplexity_smooth[i], axis=1)
-                sigma = np.std(all_train_res_perplexity_smooth[i], axis=1)
-                t = np.arange(len(all_train_res_perplexity_smooth[i]))
-                ax.plot(t, mu, linewidth=linewidth, label=all_experiments_names[i], c=linecolor)
-                ax.fill_between(t, mu+sigma, mu-sigma, facecolor=facecolor, alpha=0.5)
-            ax = configure_ax2(ax, epochs, legend=True)
+            ax = self._plot_fill_between(ax, colors[i], train_perplexity_smooth, all_experiments_names[i])
+            ax = self._configure_ax(ax, title='Smoothed average codebook usage',
+                xlabel='Epochs', ylabel='Perplexity', legend=False)
 
             fig.savefig(output_plot_path)
             plt.close(fig)
 
             ConsoleLogger.success("Saved figure at path '{}'".format(output_plot_path))
-        else:
-            for i in range(len(all_experiments_names)):
-                results_path = all_results_paths[i]
-                experiment_name = all_experiments_names[i]
-                output_plot_path = results_path + os.sep + experiment_name + '.png'
-                
-                train_res_recon_error_smooth, train_res_perplexity_smooth = self._smooth_losses(
-                    all_train_res_recon_errors[i],
-                    all_train_res_perplexities[i]
-                )
 
-                latest_epoch = all_latest_epochs[i]
-                linecolor = colors[i] # TODO: compute a darker linecolor than facecolor
-                facecolor = colors[i]
+    def _plot_merged_losses_and_perplexities_figure(self, all_results_paths, all_experiments_names, all_train_losses,
+        all_train_perplexities, all_latest_epochs, n_colors, colors):
 
-                train_res_recon_error_smooth = np.asarray(train_res_recon_error_smooth)
-                train_res_perplexity_smooth = np.asarray(train_res_perplexity_smooth)
+        latest_epoch = all_latest_epochs[0]
+        for i in range(1, len(all_latest_epochs)):
+            if all_latest_epochs[i] != latest_epoch:
+                raise ValueError('All experiments must have the same number of epochs to merge them')
 
-                train_res_recon_error_smooth = np.reshape(train_res_recon_error_smooth, (latest_epoch, train_res_recon_error_smooth.shape[0] // latest_epoch))
-                train_res_perplexity_smooth = np.reshape(train_res_perplexity_smooth, (latest_epoch, train_res_perplexity_smooth.shape[0] // latest_epoch))
+        results_path = all_results_paths[0]
+        experiment_name = 'merged-loss-and-perplexity'
+        output_plot_path = results_path + os.sep + experiment_name + '.png'
+        
+        all_train_loss_smooth = list()
+        all_train_perplexity_smooth = list()
+        for i in range(len(all_train_perplexities)):
+            train_loss_smooth = self._smooth_curve(all_train_losses[i]['loss'])
+            train_perplexity_smooth = self._smooth_curve(all_train_perplexities[i])
+            all_train_loss_smooth.append(train_loss_smooth)
+            all_train_perplexity_smooth.append(train_perplexity_smooth)
 
-                epochs = range(1, latest_epoch + 1, 1)
+        all_train_loss_smooth = np.asarray(all_train_loss_smooth)
+        all_train_perplexity_smooth = np.asarray(all_train_perplexity_smooth)
+        all_train_loss_smooth = np.reshape(all_train_loss_smooth, (n_colors, latest_epoch, all_train_loss_smooth.shape[1] // latest_epoch))
+        all_train_perplexity_smooth = np.reshape(all_train_perplexity_smooth, (n_colors, latest_epoch, all_train_perplexity_smooth.shape[1] // latest_epoch))
 
-                fig = plt.figure(figsize=(16, 8))
+        fig = plt.figure(figsize=(16, 8))
 
-                ax = fig.add_subplot(1, 2, 1)
-                mu = np.mean(train_res_recon_error_smooth, axis=1)
-                sigma = np.std(train_res_recon_error_smooth, axis=1)
-                t = np.arange(len(train_res_recon_error_smooth))
-                ax.plot(t, mu, linewidth=linewidth, label=all_experiments_names[i], c=linecolor)
-                ax.fill_between(t, mu+sigma, mu-sigma, facecolor=facecolor, alpha=0.5)
-                ax = configure_ax1(ax, epochs)
+        ax = fig.add_subplot(1, 2, 1)
+        for i in range(len(all_train_loss_smooth)):
+            ax = self._plot_fill_between(ax, colors[i], all_train_loss_smooth[i], all_experiments_names[i])
+        ax = self._configure_ax(ax, title='Smoothed loss', xlabel='Epochs', ylabel='Loss',
+            legend=True)
 
-                ax = fig.add_subplot(1, 2, 2)
-                mu = np.mean(train_res_perplexity_smooth, axis=1)
-                sigma = np.std(train_res_perplexity_smooth, axis=1)
-                t = np.arange(len(train_res_perplexity_smooth))
-                ax.plot(t, mu, linewidth=linewidth, label=all_experiments_names[i], c=linecolor)
-                ax.fill_between(t, mu+sigma, mu-sigma, facecolor=facecolor, alpha=0.5)
-                ax = configure_ax2(ax, epochs)
+        ax = fig.add_subplot(1, 2, 2)
+        for i in range(len(all_train_perplexity_smooth)):
+            ax = self._plot_fill_between(ax, colors[i], all_train_perplexity_smooth[i], all_experiments_names[i])
+        ax = self._configure_ax(ax, title='Smoothed average codebook usage', xlabel='Epochs',
+            ylabel='Perplexity', legend=True)
 
-                fig.savefig(output_plot_path)
-                plt.close(fig)
+        fig.savefig(output_plot_path)
+        plt.close(fig)
 
-                ConsoleLogger.success("Saved figure at path '{}'".format(output_plot_path))
+        ConsoleLogger.success("Saved figure at path '{}'".format(output_plot_path))
 
-    def _moving_average(self, a, n=10):
-        """
-        https://stackoverflow.com/a/14314054
-        """
-        ret = np.cumsum(a, dtype=float)
-        ret[n:] = ret[n:] - ret[:-n]
-        return ret[n - 1:] / n
+    def _plot_merged_all_losses_figures(self, all_results_paths, all_experiments_names, all_train_losses,
+        all_train_perplexities, all_latest_epochs, colormap_name='tab20'):
 
-    def _smooth_losses(self, train_res_recon_errors, train_res_perplexities):
+        latest_epoch = all_latest_epochs[0]
+        for i in range(1, len(all_latest_epochs)):
+            if all_latest_epochs[i] != latest_epoch:
+                raise ValueError('All experiments must have the same number of epochs to merge them')
+
+        results_path = all_results_paths[0]
+
+        all_train_losses_smooth = list()
+        for i in range(len(all_train_losses)):
+            train_losses_smooth = list()
+            train_losses_names = list()
+            for key in all_train_losses[i].keys():
+                train_loss_smooth = self._smooth_curve(all_train_losses[i][key])
+                train_losses_smooth.append(train_loss_smooth)
+                train_losses_names.append(key)
+            all_train_losses_smooth.append((train_losses_smooth, train_losses_names))
+
+        for i in range(len(all_train_losses_smooth)):
+            n_colors = len(all_train_losses[i])
+            colors = self._get_colors_from_cmap(colormap_name, n_colors)
+
+            (train_losses_smooth, train_losses_names) = all_train_losses_smooth[i]
+            all_train_loss_smooth = np.asarray(train_losses_smooth)
+            all_train_loss_smooth = np.reshape(all_train_loss_smooth, (n_colors, latest_epoch, all_train_loss_smooth.shape[1] // latest_epoch))
+
+            fig, ax = plt.subplots(figsize=(8, 8))
+
+            for j in range(len(all_train_loss_smooth)):
+                ax = self._plot_fill_between(ax, colors[j], all_train_loss_smooth[j], train_losses_names[j])
+            experiment_name = all_experiments_names[i]
+            ax = self._configure_ax(ax, title='Smoothed losses of ' + experiment_name, xlabel='Epochs', ylabel='Loss', legend=True)
+            output_plot_path = results_path + os.sep + experiment_name + '_merged-losses.png'
+
+            fig.savefig(output_plot_path)
+            plt.close(fig)
+
+            ConsoleLogger.success("Saved figure at path '{}'".format(output_plot_path))
+
+    def _plot_merged_all_losses_type(self, all_results_paths, all_experiments_names, all_train_losses,
+        all_train_perplexities, all_latest_epochs, colormap_name='tab20'):
+
+        latest_epoch = all_latest_epochs[0]
+        for i in range(1, len(all_latest_epochs)):
+            if all_latest_epochs[i] != latest_epoch:
+                raise ValueError('All experiments must have the same number of epochs to merge them')
+
+        results_path = all_results_paths[0]
+
+        all_train_losses_smooth = dict()
+        for i in range(len(all_train_losses)):
+            for loss_name in all_train_losses[i].keys():
+                if loss_name == 'loss':
+                    continue
+                if loss_name not in all_train_losses_smooth:
+                    all_train_losses_smooth[loss_name] = list()
+                all_train_losses_smooth[loss_name].append(self._smooth_curve(all_train_losses[i][loss_name]))
+
+        for loss_name in all_train_losses_smooth.keys():
+            n_colors = len(all_train_losses_smooth[loss_name])
+            colors = self._get_colors_from_cmap(colormap_name, n_colors)
+
+            train_losses_smooth = all_train_losses_smooth[loss_name]
+            all_train_loss_smooth = np.asarray(train_losses_smooth)
+            all_train_loss_smooth = np.reshape(all_train_loss_smooth, (n_colors, latest_epoch, all_train_loss_smooth.shape[1] // latest_epoch))
+
+            fig, ax = plt.subplots(figsize=(8, 8))
+
+            for j in range(len(all_train_loss_smooth)):
+                ax = self._plot_fill_between(ax, colors[j], all_train_loss_smooth[j], all_experiments_names[j])
+            ax = self._configure_ax(ax, title='Smoothed losses', xlabel='Epochs', ylabel='Loss', legend=True)
+            output_plot_path = results_path + os.sep + loss_name + '.png'
+
+            fig.savefig(output_plot_path)
+            plt.close(fig)
+
+            ConsoleLogger.success("Saved figure at path '{}'".format(output_plot_path))
+
+    def _smooth_curve(self, curve_values):
         maximum_window_length = 201
-        train_res_recon_error_len = len(train_res_recon_errors)
-        train_res_recon_error_len = train_res_recon_error_len if train_res_recon_error_len % 2 == 1 else train_res_recon_error_len - 1
-        train_res_perplexity_len = len(train_res_perplexities)
-        train_res_perplexity_len = train_res_perplexity_len if train_res_perplexity_len % 2 == 1 else train_res_perplexity_len - 1
+        smoothed_curve_len = len(curve_values)
+        smoothed_curve_len = smoothed_curve_len if smoothed_curve_len % 2 == 1 else smoothed_curve_len - 1
         polyorder = 7
 
-        train_res_recon_error_smooth = savgol_filter(
-            train_res_recon_errors,
-            maximum_window_length if train_res_recon_error_len > maximum_window_length else train_res_recon_error_len,
-            polyorder
-        )
-        train_res_perplexity_smooth = savgol_filter(
-            train_res_perplexities,
-            maximum_window_length if train_res_perplexity_len > maximum_window_length else train_res_perplexity_len,
+        smoothed_curve = savgol_filter(
+            curve_values,
+            maximum_window_length if smoothed_curve_len > maximum_window_length else smoothed_curve_len,
             polyorder
         )
 
-        return train_res_recon_error_smooth, train_res_perplexity_smooth
+        return smoothed_curve
+
+    def _configure_ax(self, ax, title=None, xlabel=None, ylabel=None,
+        legend=False):
+        ax.minorticks_off()
+        ax.grid(linestyle='--')
+        ax.set_yscale('log')
+        if title:
+            ax.set_title(title)
+        if xlabel:
+            ax.set_xlabel(xlabel)
+        if ylabel:
+            ax.set_ylabel(ylabel)
+        if legend:
+            ax.legend()
+        ax.grid(True)
+        ax.margins(x=0)
+        return ax
+
+    def _plot_fill_between(self, ax, color, values, label, linewidth=2):
+        linecolor = color # TODO: compute a darker linecolor than facecolor
+        facecolor = color
+        mu = np.mean(values, axis=1)
+        sigma = np.std(values, axis=1)
+        t = np.arange(len(values))
+        ax.plot(t, mu, linewidth=linewidth, label=label, c=linecolor)
+        ax.fill_between(t, mu+sigma, mu-sigma, facecolor=facecolor, alpha=0.5)
+        return ax
+
+    def _get_colors_from_cmap(self, colormap_name, n_colors):
+        return [plt.get_cmap(colormap_name)(1. * i/n_colors) for i in range(n_colors)]
 
     @staticmethod
     def set_deterministic_on(seed):
