@@ -94,6 +94,8 @@ python3 main.py --plot_experiments_losses
 
 ## VQ-VAE-Speech encoder + Deconv decoder
 
+For now only this architecture was used in our experiments to decrease the training time necessary to train a WaveNet.
+
 [vq_vae_speech](src/vq_vae_speech) for the encoder and [vq_vae_features](src/vq_vae_features) for the deconv decoder:
 
 ![](architectures/vq_vae_features.png)
@@ -133,6 +135,8 @@ With jitter:
 
 #### Embedding plots
 
+The embedding are computed using [lmcinnes/umap] that is a dimension reduction technique that searches for a low dimensional projection of the data that has the closest possible equivalent "fuzzy" topological structure.
+
 Embedding of 100 valuations with 10 neighbors with the audio frame points colored by speaker id and the embedding marks colored in black:
 
 ![](results/vq29-mfcc39/val/embedding-plots/speaker_id/n10/baseline_quantized_embedding_space_colored_by_speaker_id-n10.png)
@@ -166,3 +170,5 @@ Embedding of 100 valuations with 10 neighbors with the audio frame points colore
 * [zalandoresearch/pytorch-vq-vae] https://github.com/zalandoresearch/pytorch-vq-vae.
 
 * [deepmind/sonnet] https://github.com/deepmind/sonnet/blob/master/sonnet/examples/vqvae_example.ipynb.
+
+* [lmcinnes/umap] https://github.com/lmcinnes/umap
