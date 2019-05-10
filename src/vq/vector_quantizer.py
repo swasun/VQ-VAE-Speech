@@ -91,8 +91,8 @@ class VectorQuantizer(nn.Module):
         # Flatten input
         flat_input = inputs.view(-1, self._embedding_dim)
 
-        # Calculate distances
-        distances = (torch.sum(flat_input**2, dim=1, keepdim=True) 
+        # Compute distances between encoded audio frames and embedding vectors
+        distances = (torch.sum(flat_input**2, dim=1, keepdim=True)
             + torch.sum(self._embedding.weight**2, dim=1)
             - 2 * torch.matmul(flat_input, self._embedding.weight.t()))
 
@@ -104,25 +104,35 @@ class VectorQuantizer(nn.Module):
         encodings = torch.zeros(encoding_indices.shape[0], self._num_embeddings, dtype=torch.float).to(self._device)
         encodings.scatter_(1, encoding_indices, 1)
 
+        # Compute distances between encoding vectors
+        _encoding_distances = [torch.dist(items[0], items[1], 2).to(self._device) for items in combinations(flat_input, r=2)]
+        encoding_distances = torch.tensor(_encoding_distances).to(self._device).view(batch_size, -1)
+
+        # Compute distances between embedding vectors
+        _embedding_distances = [torch.dist(items[0], items[1], 2).to(self._device) for items in combinations(self._embedding.weight, r=2)]
+        embedding_distances = torch.tensor(_embedding_distances).to(self._device)
+
         # Quantize and unflatten
         quantized = torch.matmul(encodings, self._embedding.weight).view(input_shape)
+        # TODO: Check if torch.index_select(self._embedding.weight, dim=1, encoding_indices) works better
 
-        # Loss
+        # Losses
         e_latent_loss = torch.mean((quantized.detach() - inputs)**2)
         q_latent_loss = torch.mean((quantized - inputs.detach())**2)
         commitment_loss = self._commitment_cost * e_latent_loss
         vq_loss = q_latent_loss + commitment_loss
 
-        quantized = inputs + (quantized - inputs).detach() # Trick to prevent backpropagation of qunatized
+        quantized = inputs + (quantized - inputs).detach() # Trick to prevent backpropagation of quantized
         avg_probs = torch.mean(encodings, dim=0)
-        perplexity = torch.exp(-torch.sum(avg_probs * torch.log(avg_probs + 1e-10)))
+        perplexity = torch.exp(-torch.sum(avg_probs * torch.log(avg_probs + 1e-10))) # Exponential entropy
 
         # Convert quantized from BHWC -> BCHW
         return vq_loss, quantized.permute(2, 0, 1).contiguous(), \
             perplexity, encodings.view(batch_size, time, -1), \
             distances.view(batch_size, time, -1), encoding_indices, \
             {'e_latent_loss': e_latent_loss.item(), 'q_latent_loss': q_latent_loss.item(),
-            'commitment_loss': commitment_loss.item(), 'vq_loss': vq_loss.item()}
+            'commitment_loss': commitment_loss.item(), 'vq_loss': vq_loss.item()}, \
+            encoding_distances, embedding_distances
 
     @property
     def embedding(self):

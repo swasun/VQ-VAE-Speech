@@ -40,8 +40,8 @@ class VCTKSpeechStream(object):
 
     def __init__(self, configuration, gpu_ids, use_cuda):
         vctk = VCTK(configuration['data_root'], ratio=configuration['train_val_split'])
-        self._training_data = VCTKDataset(vctk.audios_train, vctk.speaker_dic, configuration)
-        self._validation_data = VCTKDataset(vctk.audios_val, vctk.speaker_dic, configuration)
+        self._training_data = VCTKDataset(vctk.audios_train, vctk.speaker_dic, vctk.utterences, configuration)
+        self._validation_data = VCTKDataset(vctk.audios_val, vctk.speaker_dic, vctk.utterences, configuration)
         factor = 1 if len(gpu_ids) == 0 else len(gpu_ids)
         self._training_loader = DataLoader(
             self._training_data,

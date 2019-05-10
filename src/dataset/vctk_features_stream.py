@@ -50,7 +50,7 @@ class VCTKFeaturesStream(object):
 
         factor = 1
         configuration['batch_size'] = 1
-        self._validation_batch_size = 100
+        self._validation_batch_size = 10
 
         self._training_loader = DataLoader(
             self._training_data,

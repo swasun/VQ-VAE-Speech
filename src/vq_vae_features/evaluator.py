@@ -26,7 +26,9 @@
 
 from dataset.spectrogram_parser import SpectrogramParser
 from dataset.vctk_dataset import VCTKDataset
+from dataset.vctk_dataset import VCTK
 from vq_vae_speech.mu_law import MuLaw
+from error_handling.console_logger import ConsoleLogger
 
 import matplotlib.pyplot as plt
 import torch.nn.functional as F
@@ -46,16 +48,15 @@ class Evaluator(object):
         self._model = model
         self._data_stream = data_stream
         self._configuration = configuration
+        self._vctk = VCTK(self._configuration['data_root'], ratio=self._configuration['train_val_split'])
 
     def evaluate(self, results_path, experiment_name):
-        if experiment_name != 'baseline-with-speaker-conditioning':
-            return
         self._reconstruct(results_path, experiment_name)
         self._compute_comparaison_plot(results_path, experiment_name)
         self._plot_quantized_embedding_spaces(results_path, experiment_name)
         #self._compute_wav(results_path, experiment_name)
         #self._test_denormalization(results_path, experiment_name)
-        #self._test_histogram(results_path, experiment_name)
+        self._test_histogram(results_path, experiment_name)
 
     def _reconstruct(self, results_path, experiment_name):
         self._model.eval()
@@ -71,7 +72,8 @@ class Evaluator(object):
 
         z = self._model.encoder(self._valid_originals)
         z = self._model.pre_vq_conv(z)
-        _, self._quantized, _, self._encodings, self._distances, self._encoding_indices, _ = self._model.vq(z)
+        _, self._quantized, _, self._encodings, self._distances, self._encoding_indices, _, \
+            self._encoding_distances, self._embedding_distances = self._model.vq(z)
         self._valid_reconstructions = self._model.decoder(self._quantized, self._data_stream.speaker_dic, self._speaker_ids)[0]
 
     def _compute_comparaison_plot(self, results_path, experiment_name):
@@ -83,9 +85,16 @@ class Evaluator(object):
             return raw, original_rate
 
         audio, _ = _load_wav(self._wav_filename, self._configuration['sampling_rate'], self._configuration['res_type'], self._configuration['top_db'])
+        utterence_key = self._wav_filename.split('/')[-1].replace('.wav', '')
+        utterence = self._vctk.utterences[utterence_key].replace('\n', '')
+
+        if self._configuration['verbose']:
+            ConsoleLogger.status('utterence: {}'.format(utterence))
+
         preprocessed_audio = VCTKDataset.preprocessing_raw(audio, self._configuration['length'])
         spectrogram_parser = SpectrogramParser()
         spectrogram = spectrogram_parser.parse_audio(preprocessed_audio).contiguous()
+        
         spectrogram = spectrogram.detach().cpu().numpy()
 
         valid_originals = self._valid_originals.detach().cpu()[0].numpy()
@@ -96,28 +105,34 @@ class Evaluator(object):
 
         valid_reconstructions = self._valid_reconstructions.detach().cpu().numpy()
 
-        fig, axs = plt.subplots(5, 1, figsize=(30, 20), sharex=True)
+        fig, axs = plt.subplots(6, 1, figsize=(35, 30), sharex=True)
+
+        # Waveform of the original speech signal
+        axs[0].set_title('Waveform of the original speech signal')
+        axs[0].plot(np.arange(len(preprocessed_audio)) / float(self._configuration['sampling_rate']), preprocessed_audio)
+
+        # TODO: Add number of encoding indices at the same rate of the tokens with _compute_unified_time_scale()
 
         # Spectrogram of the original speech signal
-        axs[0].set_title('Spectrogram of the original speech signal')
-        self._plot_pcolormesh(spectrogram, fig, x=self._compute_unified_time_scale(spectrogram.shape[1]), axis=axs[0])
+        axs[1].set_title('Spectrogram of the original speech signal')
+        self._plot_pcolormesh(spectrogram, fig, x=self._compute_unified_time_scale(spectrogram.shape[1]), axis=axs[1])
 
         # MFCC + d + a of the original speech signal
-        axs[1].set_title('Augmented MFCC + d + a #filters=13+13+13 of the original speech signal')
-        self._plot_pcolormesh(valid_originals, fig, x=self._compute_unified_time_scale(valid_originals.shape[1]), axis=axs[1])
+        axs[2].set_title('Augmented MFCC + d + a #filters=13+13+13 of the original speech signal')
+        self._plot_pcolormesh(valid_originals, fig, x=self._compute_unified_time_scale(valid_originals.shape[1]), axis=axs[2])
 
         # Softmax of distances computed in VQ
-        axs[2].set_title('Softmax of distances computed in VQ\n($||z_e(x) - e_i||^2_2$ with $z_e(x)$ the output of the encoder prior to quantization)')
-        self._plot_pcolormesh(probs, fig, x=self._compute_unified_time_scale(probs.shape[1], downsampling_factor=2), axis=axs[2])
+        axs[3].set_title('Softmax of distances computed in VQ\n($||z_e(x) - e_i||^2_2$ with $z_e(x)$ the output of the encoder prior to quantization)')
+        self._plot_pcolormesh(probs, fig, x=self._compute_unified_time_scale(probs.shape[1], downsampling_factor=2), axis=axs[3])
 
         encodings = self._encodings.detach().cpu().numpy()
-        axs[3].set_title('Encodings')
+        axs[4].set_title('Encodings')
         self._plot_pcolormesh(encodings[0].transpose(), fig, x=self._compute_unified_time_scale(encodings[0].transpose().shape[1],
-            downsampling_factor=2), axis=axs[3])
+            downsampling_factor=2), axis=axs[4])
 
         # Actual reconstruction
-        axs[4].set_title('Actual reconstruction')
-        self._plot_pcolormesh(valid_reconstructions, fig, x=self._compute_unified_time_scale(valid_reconstructions.shape[1]), axis=axs[4])
+        axs[5].set_title('Actual reconstruction')
+        self._plot_pcolormesh(valid_reconstructions, fig, x=self._compute_unified_time_scale(valid_reconstructions.shape[1]), axis=axs[5])
 
         output_path = results_path + os.sep + experiment_name + '_evaluation-comparaison-plot.png'
         plt.savefig(output_path, bbox_inches='tight', pad_inches=0)
@@ -142,7 +157,6 @@ class Evaluator(object):
         concatenated_quantized = np.concatenate(quantized.transpose((2, 0, 1)))
         embedding = self._model.vq.embedding.weight.data.cpu().detach().numpy()
         n_embedding = embedding.shape[0]
-        #encoding_indices = self._encoding_indices.detach().cpu().numpy().transpose()
         encoding_indices = self._encoding_indices.detach().cpu().numpy()
         encoding_indices = np.concatenate(encoding_indices)
         quantized_embedding_space = np.concatenate(
@@ -166,7 +180,7 @@ class Evaluator(object):
             projection = map.fit_transform(quantized_embedding_space)
 
             self._plot_quantized_embedding_space(projection, n_neighbors, n_embedding,
-                time_speaker_ids, encoding_indices, results_path, experiment_name, cmap='tab20')
+                time_speaker_ids, encoding_indices, results_path, experiment_name, cmap='tab10')
 
     def _compute_unified_time_scale(self, shape, winstep=0.01, downsampling_factor=1):
         return np.arange(shape) * winstep * downsampling_factor
@@ -228,6 +242,9 @@ class Evaluator(object):
         denormalized_valid_originals = (normalizer['train_std'] * valid_originals.transpose() + normalizer['train_mean']).transpose()
         denormalized_valid_reconstructions = (normalizer['train_std'] * valid_reconstructions.transpose() + normalizer['train_mean']).transpose()
 
+        # TODO: Remove the deltas and the accelerations, remove the zeros because it's the
+        # energy, and compute the distance between the two
+
         fig, axs = plt.subplots(4, 1, figsize=(30, 20), sharex=True)
 
         # MFCC + d + a of the original speech signal
@@ -251,25 +268,31 @@ class Evaluator(object):
         plt.close()
 
     def _test_histogram(self, results_path, experiment_name):
-        #fig, axs = plt.subplots(2, 1, figsize=(20, 20), sharex=True)
+        if self._configuration['verbose']:
+            ConsoleLogger.status('self._distances[0].size(): {}'.format(self._distances[0].size()))
+            ConsoleLogger.status('self._encoding_distances[0].size(): {}'.format(self._encoding_distances[0].size()))
+            ConsoleLogger.status('self._embedding_distances.size(): {}'.format(self._embedding_distances.size()))
+        encodings_distances = self._encoding_distances[0].detach().cpu().numpy()
+        embeddings_distances = self._embedding_distances.detach().cpu().numpy()
+        frames_vs_embedding_distances = self._distances[0].detach().cpu().transpose(0, 1).numpy().ravel()
 
-        probs = F.softmax(-self._distances[0], dim=1).detach().cpu().transpose(0, 1).contiguous()
+        fig, axs = plt.subplots(3, 1, figsize=(30, 20))
 
-        # Softmax of distances computed in VQ
-        """axs[0].set_title(
-            '\n'.join(wrap('Histogram of the softmax of distances computed in'
+        axs[0].set_title('\n'.join(wrap('Histogram of the distances between the'
+            ' encodings vectors', 60)))
+        sns.distplot(encodings_distances, hist=True, kde=False, ax=axs[0], norm_hist=True)
+
+        axs[1].set_title('\n'.join(wrap('Histogram of the distances between the'
+            ' embeddings vectors', 60)))
+        sns.distplot(embeddings_distances, hist=True, kde=False, ax=axs[1], norm_hist=True)
+
+        axs[2].set_title(
+            'Histogram of the distances computed in'
             ' VQ\n($||z_e(x) - e_i||^2_2$ with $z_e(x)$ the output of the encoder'
-            ' prior to quantization)', 60))
-        )"""
-        #axs[0].hist(probs)
-        sns.set(color_codes=True)
-        sns.set(style="white", palette="muted")
-        for prob in probs:
-            """sns.distplot(prob, hist=True, kde=True, 
-                bins=int(180/5),
-                kde_kws={'linewidth': 4})"""
-            sns.distplot(prob, hist=True, kde=True, kde_kws={'linewidth': 4})
+            ' prior to quantization)'
+        )
+        sns.distplot(frames_vs_embedding_distances, hist=True, kde=False, ax=axs[2], norm_hist=True)
 
         output_path = results_path + os.sep + experiment_name + '_test-histogram-plot.png'
-        plt.savefig(output_path, bbox_inches='tight', pad_inches=0)
-        plt.close()
+        fig.savefig(output_path, bbox_inches='tight', pad_inches=0)
+        plt.close(fig)

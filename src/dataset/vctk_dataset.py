@@ -36,9 +36,10 @@ import librosa
 
 class VCTKDataset(Dataset):
 
-    def __init__(self, audios, speaker_dic, configuration):
+    def __init__(self, audios, speaker_dic, utterences, configuration):
         self._audios = audios
         self._speaker_dic = speaker_dic
+        self._utterences = utterences
         self._sampling_rate = configuration['sampling_rate']
         self._res_type = configuration['res_type']
         self._top_db = configuration['top_db']
@@ -127,6 +128,10 @@ class VCTKDataset(Dataset):
     @property
     def quantize(self):
         return self._quantize
+
+    @property
+    def utterences(self):
+        return self._utterences
 
 
 if __name__ =='__main__':
