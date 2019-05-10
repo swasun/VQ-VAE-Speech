@@ -27,6 +27,7 @@
 
 import torch
 import torch.nn as nn
+from itertools import combinations
 
 
 class VectorQuantizer(nn.Module):
