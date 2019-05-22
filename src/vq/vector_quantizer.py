@@ -27,7 +27,7 @@
 
 import torch
 import torch.nn as nn
-from itertools import combinations
+from itertools import combinations, product
 
 
 class VectorQuantizer(nn.Module):
@@ -113,6 +113,10 @@ class VectorQuantizer(nn.Module):
         _embedding_distances = [torch.dist(items[0], items[1], 2).to(self._device) for items in combinations(self._embedding.weight, r=2)]
         embedding_distances = torch.tensor(_embedding_distances).to(self._device)
 
+        # Sample nearest embedding
+        _frames_vs_embedding_distances = [torch.dist(items[0], items[1], 2).to(self._device) for items in product(flat_input, self._embedding.weight.detach())]
+        frames_vs_embedding_distances = torch.tensor(_frames_vs_embedding_distances).to(self._device).view(batch_size, time, -1)
+
         # Quantize and unflatten
         quantized = torch.matmul(encodings, self._embedding.weight).view(input_shape)
         # TODO: Check if torch.index_select(self._embedding.weight, dim=1, encoding_indices) works better
@@ -133,7 +137,7 @@ class VectorQuantizer(nn.Module):
             distances.view(batch_size, time, -1), encoding_indices, \
             {'e_latent_loss': e_latent_loss.item(), 'q_latent_loss': q_latent_loss.item(),
             'commitment_loss': commitment_loss.item(), 'vq_loss': vq_loss.item()}, \
-            encoding_distances, embedding_distances
+            encoding_distances, embedding_distances, frames_vs_embedding_distances
 
     @property
     def embedding(self):

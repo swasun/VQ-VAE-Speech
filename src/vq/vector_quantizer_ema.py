@@ -125,6 +125,10 @@ class VectorQuantizerEMA(nn.Module):
         # Compute distances between embedding vectors
         _embedding_distances = [torch.dist(items[0], items[1], 2).to(self._device) for items in combinations(self._embedding.weight, r=2)]
         embedding_distances = torch.tensor(_embedding_distances).to(self._device)
+
+        # Sample nearest embedding
+        _frames_vs_embedding_distances = [torch.dist(items[0], items[1], 2).to(self._device) for items in product(flat_input, self._embedding.weight.detach())]
+        frames_vs_embedding_distances = torch.tensor(_frames_vs_embedding_distances).to(self._device).view(batch_size, time, -1)
         
         # Use EMA to update the embedding vectors
         if self.training:
@@ -158,7 +162,8 @@ class VectorQuantizerEMA(nn.Module):
         return vq_loss, quantized.permute(2, 0, 1).contiguous(), \
             perplexity, encodings.view(batch_size, time, -1), \
             distances.view(batch_size, time, -1), encoding_indices, \
-            {'vq_loss': vq_loss.item()}, encoding_distances, embedding_distances
+            {'vq_loss': vq_loss.item()}, encoding_distances, embedding_distances, \
+            frames_vs_embedding_distances
 
     @property
     def embedding(self):

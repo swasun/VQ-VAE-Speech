@@ -51,12 +51,14 @@ class Evaluator(object):
         self._vctk = VCTK(self._configuration['data_root'], ratio=self._configuration['train_val_split'])
 
     def evaluate(self, results_path, experiment_name):
+        if 'baseline' not in experiment_name:
+            return
         self._reconstruct(results_path, experiment_name)
-        self._compute_comparaison_plot(results_path, experiment_name)
-        self._plot_quantized_embedding_spaces(results_path, experiment_name)
+        #self._compute_comparaison_plot(results_path, experiment_name)
+        #self._plot_quantized_embedding_spaces(results_path, experiment_name)
         #self._compute_wav(results_path, experiment_name)
         #self._test_denormalization(results_path, experiment_name)
-        self._test_histogram(results_path, experiment_name)
+        self._plot_distances_histogram(results_path, experiment_name)
 
     def _reconstruct(self, results_path, experiment_name):
         self._model.eval()
@@ -73,7 +75,7 @@ class Evaluator(object):
         z = self._model.encoder(self._valid_originals)
         z = self._model.pre_vq_conv(z)
         _, self._quantized, _, self._encodings, self._distances, self._encoding_indices, _, \
-            self._encoding_distances, self._embedding_distances = self._model.vq(z)
+            self._encoding_distances, self._embedding_distances, self._frames_vs_embedding_distances = self._model.vq(z)
         self._valid_reconstructions = self._model.decoder(self._quantized, self._data_stream.speaker_dic, self._speaker_ids)[0]
 
     def _compute_comparaison_plot(self, results_path, experiment_name):
@@ -234,6 +236,37 @@ class Evaluator(object):
         fig.savefig(output_path, bbox_inches='tight', pad_inches=0)
         plt.close(fig)
 
+    def _plot_distances_histogram(self, results_path, experiment_name):
+        encodings_distances = self._encoding_distances[0].detach().cpu().numpy()
+        embeddings_distances = self._embedding_distances.detach().cpu().numpy()
+        frames_vs_embedding_distances = self._frames_vs_embedding_distances.detach()[0].cpu().transpose(0, 1).numpy().ravel()
+
+        if self._configuration['verbose']:
+            ConsoleLogger.status('encoding_distances[0].size(): {}'.format(encoding_distances.shape))
+            ConsoleLogger.status('embedding_distances.size(): {}'.format(embedding_distances.shape))
+            ConsoleLogger.status('frames_vs_embedding_distances[0].shape: {}'.format(frames_vs_embedding_distances.shape))
+
+        fig, axs = plt.subplots(3, 1, figsize=(30, 20), sharex=True)
+
+        axs[0].set_title('\n'.join(wrap('Histogram of the distances between the'
+            ' encodings vectors', 60)))
+        sns.distplot(encodings_distances, hist=True, kde=False, ax=axs[0], norm_hist=True)
+
+        axs[1].set_title('\n'.join(wrap('Histogram of the distances between the'
+            ' embeddings vectors', 60)))
+        sns.distplot(embeddings_distances, hist=True, kde=False, ax=axs[1], norm_hist=True)
+
+        axs[2].set_title(
+            'Histogram of the distances computed in'
+            ' VQ\n($||z_e(x) - e_i||^2_2$ with $z_e(x)$ the output of the encoder'
+            ' prior to quantization)'
+        )
+        sns.distplot(frames_vs_embedding_distances, hist=True, kde=False, ax=axs[2], norm_hist=True)
+
+        output_path = results_path + os.sep + experiment_name + '_distances-histogram-plot.png'
+        fig.savefig(output_path, bbox_inches='tight', pad_inches=0)
+        plt.close(fig)
+
     def _test_denormalization(self, results_path, experiment_name):
         valid_originals = self._valid_originals.detach().cpu()[0].numpy()
         valid_reconstructions = self._valid_reconstructions.detach().cpu().numpy()
@@ -266,33 +299,3 @@ class Evaluator(object):
         output_path = results_path + os.sep + experiment_name + '_test-denormalization-plot.png'
         plt.savefig(output_path, bbox_inches='tight', pad_inches=0)
         plt.close()
-
-    def _test_histogram(self, results_path, experiment_name):
-        if self._configuration['verbose']:
-            ConsoleLogger.status('self._distances[0].size(): {}'.format(self._distances[0].size()))
-            ConsoleLogger.status('self._encoding_distances[0].size(): {}'.format(self._encoding_distances[0].size()))
-            ConsoleLogger.status('self._embedding_distances.size(): {}'.format(self._embedding_distances.size()))
-        encodings_distances = self._encoding_distances[0].detach().cpu().numpy()
-        embeddings_distances = self._embedding_distances.detach().cpu().numpy()
-        frames_vs_embedding_distances = self._distances[0].detach().cpu().transpose(0, 1).numpy().ravel()
-
-        fig, axs = plt.subplots(3, 1, figsize=(30, 20))
-
-        axs[0].set_title('\n'.join(wrap('Histogram of the distances between the'
-            ' encodings vectors', 60)))
-        sns.distplot(encodings_distances, hist=True, kde=False, ax=axs[0], norm_hist=True)
-
-        axs[1].set_title('\n'.join(wrap('Histogram of the distances between the'
-            ' embeddings vectors', 60)))
-        sns.distplot(embeddings_distances, hist=True, kde=False, ax=axs[1], norm_hist=True)
-
-        axs[2].set_title(
-            'Histogram of the distances computed in'
-            ' VQ\n($||z_e(x) - e_i||^2_2$ with $z_e(x)$ the output of the encoder'
-            ' prior to quantization)'
-        )
-        sns.distplot(frames_vs_embedding_distances, hist=True, kde=False, ax=axs[2], norm_hist=True)
-
-        output_path = results_path + os.sep + experiment_name + '_test-histogram-plot.png'
-        fig.savefig(output_path, bbox_inches='tight', pad_inches=0)
-        plt.close(fig)

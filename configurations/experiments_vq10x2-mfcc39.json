@@ -1,5 +1,5 @@
 {
-    "experiments_path": "../experiments-vq2x10-mfcc39",
+    "experiments_path": "../experiments-vq10x2-mfcc39",
     "results_path": "../results",
     "configuration_path": "../configurations/vctk_features.yaml",
     "seed": 1234,
@@ -7,8 +7,8 @@
         "baseline": {
             "num_epochs": 15,
             "batch_size": 2,
-            "num_embeddings": 2,
-            "embedding_dim": 10,
+            "num_embeddings": 10,
+            "embedding_dim": 2,
             "use_device": "cuda:1",
             "normalize": true
         }
