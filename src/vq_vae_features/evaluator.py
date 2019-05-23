@@ -51,14 +51,12 @@ class Evaluator(object):
         self._vctk = VCTK(self._configuration['data_root'], ratio=self._configuration['train_val_split'])
 
     def evaluate(self, results_path, experiment_name):
-        if 'baseline' not in experiment_name:
-            return
         self._reconstruct(results_path, experiment_name)
-        #self._compute_comparaison_plot(results_path, experiment_name)
-        #self._plot_quantized_embedding_spaces(results_path, experiment_name)
+        self._compute_comparaison_plot(results_path, experiment_name)
+        self._plot_quantized_embedding_spaces(results_path, experiment_name)
+        self._plot_distances_histogram(results_path, experiment_name)
         #self._compute_wav(results_path, experiment_name)
         #self._test_denormalization(results_path, experiment_name)
-        self._plot_distances_histogram(results_path, experiment_name)
 
     def _reconstruct(self, results_path, experiment_name):
         self._model.eval()
@@ -75,7 +73,8 @@ class Evaluator(object):
         z = self._model.encoder(self._valid_originals)
         z = self._model.pre_vq_conv(z)
         _, self._quantized, _, self._encodings, self._distances, self._encoding_indices, _, \
-            self._encoding_distances, self._embedding_distances, self._frames_vs_embedding_distances = self._model.vq(z)
+            self._encoding_distances, self._embedding_distances, self._frames_vs_embedding_distances, \
+            self._concatenated_quantized = self._model.vq(z)
         self._valid_reconstructions = self._model.decoder(self._quantized, self._data_stream.speaker_dic, self._speaker_ids)[0]
 
     def _compute_comparaison_plot(self, results_path, experiment_name):
@@ -155,8 +154,7 @@ class Evaluator(object):
         fig.colorbar(c, ax=axis)
 
     def _plot_quantized_embedding_spaces(self, results_path, experiment_name):
-        quantized = self._quantized.detach().cpu().numpy()
-        concatenated_quantized = np.concatenate(quantized.transpose((2, 0, 1)))
+        concatenated_quantized = self._concatenated_quantized.detach().cpu().numpy()
         embedding = self._model.vq.embedding.weight.data.cpu().detach().numpy()
         n_embedding = embedding.shape[0]
         encoding_indices = self._encoding_indices.detach().cpu().numpy()
@@ -167,7 +165,7 @@ class Evaluator(object):
         speaker_ids = self._speaker_ids.detach().cpu().numpy()
         time_speaker_ids = np.repeat(
             speaker_ids,
-            quantized.shape[2],
+            concatenated_quantized.shape[0] // n_embedding,
             axis=1
         )
         time_speaker_ids = np.concatenate(time_speaker_ids)
@@ -182,7 +180,7 @@ class Evaluator(object):
             projection = map.fit_transform(quantized_embedding_space)
 
             self._plot_quantized_embedding_space(projection, n_neighbors, n_embedding,
-                time_speaker_ids, encoding_indices, results_path, experiment_name, cmap='tab10')
+                time_speaker_ids, encoding_indices, results_path, experiment_name, cmap='cubehelix')
 
     def _compute_unified_time_scale(self, shape, winstep=0.01, downsampling_factor=1):
         return np.arange(shape) * winstep * downsampling_factor
@@ -208,7 +206,8 @@ class Evaluator(object):
         fig, axs = plt.subplots(1, 2, figsize=(16, 8), sharey=True)
 
         # Colored by speaker id
-        axs[0].scatter(projection[:-n_embedding,0], projection[:-n_embedding, 1], s=10, c=time_speaker_ids, cmap=cmap) # audio frame colored by speaker id
+        #axs[0].scatter(projection[:-n_embedding,0], projection[:-n_embedding, 1], s=10, c=time_speaker_ids, cmap=cmap) # audio frame colored by speaker id
+        axs[0] = self._jittered_scatter(axs[0], projection[:-n_embedding,0], projection[:-n_embedding, 1], s=10, c=time_speaker_ids, cmap=cmap)
         axs[0].scatter(projection[-n_embedding:,0], projection[-n_embedding:, 1], s=50, marker='x', c='k', alpha=0.8) # embedding
         xlabel = 'Embedding of ' + str(self._data_stream.validation_batch_size) + ' valuations' \
             ' with ' + str(n_neighbors) + ' neighbors with the audio frame points colored' \
@@ -219,7 +218,8 @@ class Evaluator(object):
         )
 
         # Colored by encoding indices
-        axs[1].scatter(projection[:-n_embedding,0], projection[:-n_embedding, 1], s=10, c=encoding_indices, cmap=cmap) # audio frame colored by encoding indices
+        #axs[1].scatter(projection[:-n_embedding,0], projection[:-n_embedding, 1], s=10, c=encoding_indices, cmap=cmap) # audio frame colored by encoding indices
+        axs[1] = self._jittered_scatter(axs[1], projection[:-n_embedding,0], projection[:-n_embedding, 1], s=10, c=encoding_indices, cmap=cmap)
         axs[1].scatter(projection[-n_embedding:,0], projection[-n_embedding:, 1], s=50, marker='x', c=np.arange(n_embedding), cmap=cmap) # different color for each embedding
         xlabel = 'Embedding of ' + str(self._data_stream.validation_batch_size) + ' valuations' \
             ' with ' + str(n_neighbors) + ' neighbors with the audio frame points colored' \
@@ -299,3 +299,12 @@ class Evaluator(object):
         output_path = results_path + os.sep + experiment_name + '_test-denormalization-plot.png'
         plt.savefig(output_path, bbox_inches='tight', pad_inches=0)
         plt.close()
+
+    def _jittered_scatter(self, ax, x, y, cmap, c, s, alpha=None, marker=None):
+
+        def rand_jitter(arr):
+            stdev = .01*(max(arr)-min(arr))
+            return arr + np.random.randn(len(arr)) * stdev
+
+        ax.scatter(rand_jitter(x), rand_jitter(y), cmap=cmap, c=c, alpha=alpha, s=s, marker=marker)
+        return ax
