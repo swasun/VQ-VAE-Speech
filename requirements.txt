@@ -10,3 +10,4 @@ tensorboardX
 pyyaml
 tqdm
 seaborn
+textgrid

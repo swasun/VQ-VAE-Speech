@@ -44,14 +44,11 @@ class VCTKFeaturesDataset(Dataset):
         with open(self._sub_features_path + os.sep + str(index) + '.pickle', 'rb') as file:
             dic = pickle.load(file)
 
-        x = dic['input_features']
-        y = dic['output_features']
-
         if self._normalizer:
-            x = (x - self._normalizer['train_mean']) / self._normalizer['train_std']
-            y = (y - self._normalizer['train_mean']) / self._normalizer['train_std']
+            dic['input_features'] = (dic['input_features'] - self._normalizer['train_mean']) / self._normalizer['train_std']
+            dic['output_features'] = (dic['output_features'] - self._normalizer['train_mean']) / self._normalizer['train_std']
 
-        return x, dic['one_hot'], dic['speaker_id'], y, dic['wav_filename']
+        return dic
 
     def __len__(self):
         return self._files_number

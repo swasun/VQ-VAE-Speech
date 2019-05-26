@@ -39,6 +39,7 @@ import numpy as np
 import umap
 from textwrap import wrap
 import seaborn as sns
+import textgrid
 
 
 class Evaluator(object):
@@ -51,17 +52,27 @@ class Evaluator(object):
         self._vctk = VCTK(self._configuration['data_root'], ratio=self._configuration['train_val_split'])
 
     def evaluate(self, results_path, experiment_name):
+        if 'baseline' not in experiment_name:
+            return
         self._reconstruct(results_path, experiment_name)
         self._compute_comparaison_plot(results_path, experiment_name)
-        self._plot_quantized_embedding_spaces(results_path, experiment_name)
-        self._plot_distances_histogram(results_path, experiment_name)
+        #self._plot_quantized_embedding_spaces(results_path, experiment_name)
+        #self._plot_distances_histogram(results_path, experiment_name)
         #self._compute_wav(results_path, experiment_name)
         #self._test_denormalization(results_path, experiment_name)
+
 
     def _reconstruct(self, results_path, experiment_name):
         self._model.eval()
 
-        (self._valid_originals, _, self._speaker_ids, self._target, self._wav_filename) = next(iter(self._data_stream.validation_loader))
+        data = next(iter(self._data_stream.validation_loader))
+
+        self._preprocessed_audio = data['preprocessed_audio'].to(self._device)
+        self._valid_originals = data['input_features'].to(self._device)
+        self._speaker_ids = data['speaker_id'].to(self._device)
+        self._target = data['output_features'].to(self._device)
+        self._wav_filename = data['wav_filename'].to(self._device)
+
         self._valid_originals = self._valid_originals.permute(0, 2, 1).contiguous().float()
         self._batch_size = self._valid_originals.size(0)
         self._target = self._target.permute(0, 2, 1).contiguous().float()
@@ -78,16 +89,23 @@ class Evaluator(object):
         self._valid_reconstructions = self._model.decoder(self._quantized, self._data_stream.speaker_dic, self._speaker_ids)[0]
 
     def _compute_comparaison_plot(self, results_path, experiment_name):
-        def _load_wav(filename, sampling_rate, res_type, top_db):
-            raw, original_rate = librosa.load(filename, sampling_rate, res_type=res_type)
-            raw, original_rate = librosa.effects.trim(raw, top_db=top_db)
-            raw /= np.abs(raw).max()
-            raw = raw.astype(np.float32)
-            return raw, original_rate
-
-        audio, _ = _load_wav(self._wav_filename, self._configuration['sampling_rate'], self._configuration['res_type'], self._configuration['top_db'])
+        """audio, _ = _load_wav(self._wav_filename, self._configuration['sampling_rate'], self._configuration['res_type'], 
+            self._configuration['top_db'])
         utterence_key = self._wav_filename.split('/')[-1].replace('.wav', '')
+        phonemes_alignement_path = os.sep.join(self._wav_filename.split('/')[:-3]) + os.sep + 'phonemes' + os.sep + utterence_key.split('_')[0] + os.sep \
+            + utterence_key + '.TextGrid'
+        print(self._encoding_indices.detach().cpu().size())
+        encoding_indices = self._encoding_indices.detach().cpu().view(self._data_stream.validation_batch_size, -1)[0].numpy()
+        print('encoding_indices: {}'.format(encoding_indices))
+        print('encoding_indices.shape: {}'.format(encoding_indices.shape))
+        #encoding_indices = np.concatenate(encoding_indices)
+        unified_encoding_indices_time_scale = self._compute_unified_time_scale(encoding_indices.shape[0], downsampling_factor=2)
+        print('unified time scale of encoding indices: {}'.format(unified_encoding_indices_time_scale))
+        print('phonemes_alignement_path: {}'.format(phonemes_alignement_path))
+        tg = textgrid.TextGrid()
+        tg.read(phonemes_alignement_path)
         utterence = self._vctk.utterences[utterence_key].replace('\n', '')
+        ConsoleLogger.status('utterence: {}'.format(utterence))"""
 
         if self._configuration['verbose']:
             ConsoleLogger.status('utterence: {}'.format(utterence))
@@ -95,7 +113,7 @@ class Evaluator(object):
         preprocessed_audio = VCTKDataset.preprocessing_raw(audio, self._configuration['length'])
         spectrogram_parser = SpectrogramParser()
         spectrogram = spectrogram_parser.parse_audio(preprocessed_audio).contiguous()
-        
+
         spectrogram = spectrogram.detach().cpu().numpy()
 
         valid_originals = self._valid_originals.detach().cpu()[0].numpy()
@@ -106,13 +124,29 @@ class Evaluator(object):
 
         valid_reconstructions = self._valid_reconstructions.detach().cpu().numpy()
 
-        fig, axs = plt.subplots(6, 1, figsize=(35, 30), sharex=True)
+        fig, axs = plt.subplots(6, 1, figsize=(35, 30), sharex=False)
 
         # Waveform of the original speech signal
         axs[0].set_title('Waveform of the original speech signal')
         axs[0].plot(np.arange(len(preprocessed_audio)) / float(self._configuration['sampling_rate']), preprocessed_audio)
 
+        """labels = "_'ABCDEFGHIJKLMNOPQRSTUVWXYZ#"
+        for i, x in enumerate(unified_encoding_indices_time_scale):
+            axs[0].text(x, -0.5, labels[encoding_indices[i]], fontsize=9)"""
+
+        for interval in tg.tiers[1]:
+            print(interval.minTime, interval.maxTime, interval.mark)
+
         # TODO: Add number of encoding indices at the same rate of the tokens with _compute_unified_time_scale()
+        """
+        # Example of vertical red lines
+        xposition = [0.3, 0.4, 0.45]
+        for xc in xposition:
+            plt.axvline(x=xc, color='r', linestyle='-', linewidth=1)
+        """
+
+        #print('spectrogram.shape: {}'.format(spectrogram.shape))
+        #print('self._compute_unified_time_scale(spectrogram.shape[1]): {}'.format(self._compute_unified_time_scale(spectrogram.shape[1])))
 
         # Spectrogram of the original speech signal
         axs[1].set_title('Spectrogram of the original speech signal')
@@ -165,12 +199,13 @@ class Evaluator(object):
         speaker_ids = self._speaker_ids.detach().cpu().numpy()
         time_speaker_ids = np.repeat(
             speaker_ids,
-            concatenated_quantized.shape[0] // n_embedding,
+            concatenated_quantized.shape[0] // self._data_stream.validation_batch_size,
             axis=1
         )
         time_speaker_ids = np.concatenate(time_speaker_ids)
 
-        for n_neighbors in [3, 10, 50, 100]:
+        #for n_neighbors in [3, 10, 50, 100]:
+        for n_neighbors in [3]:
             map = umap.UMAP(
                 n_neighbors=n_neighbors,
                 min_dist=0.0,

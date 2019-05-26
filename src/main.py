@@ -88,8 +88,7 @@ if __name__ == "__main__":
         ConsoleLogger.status('Loading the configuration file {}...'.format(args.summary))
         configuration = None
         with open('../configurations/vctk_features.yaml', 'r') as configuration_file:
-                configuration = yaml.load(configuration_file)
-        ConsoleLogger.status('Printing the summary of the model...')
+            configuration = yaml.load(configuration_file)
         device_configuration = DeviceConfiguration.load_from_configuration(configuration)
         data_stream = VCTKFeaturesStream('../data/vctk', configuration, device_configuration.gpu_ids, device_configuration.use_cuda)
         data_stream.compute_dataset_stats()

@@ -48,7 +48,7 @@ class VCTKDataset(Dataset):
 
     def _preprocessing(self, raw, quantized):
         if self._length is not None:
-            if len(raw) <=self._length :
+            if len(raw) <= self._length :
                 # padding
                 pad = self._length - len(raw)
                 raw = np.concatenate(
@@ -56,11 +56,12 @@ class VCTKDataset(Dataset):
                 quantized = np.concatenate(
                     (quantized, self._quantize // 2 * np.ones(pad)))
                 quantized = quantized.astype(np.long)
+                start_triming = None
             else:
                 # triming
-                start = random.randint(0, len(raw) -self._length  - 1)
-                raw = raw[start:start + self._length ]
-                quantized = quantized[start:start + self._length ]
+                start_triming = random.randint(0, len(raw) -self._length - 1)
+                raw = raw[start_triming:start_triming + self._length]
+                quantized = quantized[start_triming:start_triming + self._length]
 
         # ont_hot for input
         one_hot = np.identity(
@@ -75,7 +76,7 @@ class VCTKDataset(Dataset):
         # target
         quantized = np.expand_dims(quantized, 1)
 
-        return raw, one_hot[:, :-1], quantized[1:]
+        return raw, one_hot[:, :-1], quantized[1:], start_triming
 
     @staticmethod
     def preprocessing_raw(raw, length, expand_dims=False):
@@ -88,7 +89,7 @@ class VCTKDataset(Dataset):
             else:
                 # triming
                 start = random.randint(0, len(raw) -length  - 1)
-                raw = raw[start:start + length ]
+                raw = raw[start:start + length]
 
         if expand_dims:
             raw = np.expand_dims(raw, 0) # expand channel
@@ -106,9 +107,9 @@ class VCTKDataset(Dataset):
 
         speaker_id = np.array(self._speaker_dic[speaker], dtype=np.long)
 
-        raw, one_hot, quantized = self._preprocessing(raw, quantized)
+        preprocessed_audio, one_hot, quantized, start_triming = self._preprocessing(raw, quantized)
 
-        return raw, one_hot, speaker_id, quantized, wav_filename
+        return preprocessed_audio, one_hot, speaker_id, quantized, wav_filename, start_triming, self._length
 
     def __len__(self):
         return len(self._audios)

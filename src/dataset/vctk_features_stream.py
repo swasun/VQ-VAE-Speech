@@ -50,7 +50,7 @@ class VCTKFeaturesStream(object):
 
         factor = 1
         configuration['batch_size'] = 1
-        self._validation_batch_size = 10
+        self._validation_batch_size = 1
 
         self._training_loader = DataLoader(
             self._training_data,
@@ -67,6 +67,7 @@ class VCTKFeaturesStream(object):
             pin_memory=use_cuda
         )
         self._speaker_dic = self._make_speaker_dic(vctk_path + os.sep + 'raw' + os.sep + 'VCTK-Corpus')
+        self._vctk_path = vctk_path
 
     @property
     def training_data(self):
@@ -107,7 +108,7 @@ class VCTKFeaturesStream(object):
         train_bar = tqdm(self.training_loader)
         train_mfccs = list()
         for data in train_bar:
-            (data, _, _, _, _) = data
+            data = data['input_features']
             train_mfccs.append(data.detach().view(data.size(1), data.size(2)).numpy())
 
         ConsoleLogger.status('Compute mean of mfccs training set...')
@@ -122,7 +123,7 @@ class VCTKFeaturesStream(object):
         }
 
         ConsoleLogger.status('Writing stats in file...')
-        with open('vctk-mfcc-stats.pickle', 'wb') as file: # TODO: do not use hardcoded path
+        with open(self._vctk_path + os.sep + 'vctk-mfcc-stats.pickle', 'wb') as file: # TODO: do not use hardcoded path
             pickle.dump(stats, file)
 
         train_mfccs_norm = (train_mfccs[0] - train_mean) / train_std

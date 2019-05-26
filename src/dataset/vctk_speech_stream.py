@@ -120,11 +120,11 @@ class VCTKSpeechStream(object):
             bar = tqdm(loader)
             i = 0
             for data in bar:
-                (raw, one_hot, speaker_id, _, wav_filename) = data # TODO: add an option in configuration to save quantized or not
+                (preprocessed_audio, one_hot, speaker_id, quantized, wav_filename, start_triming, preprocessed_length) = data
 
                 input_features = SpeechFeatures.features_from_name(
                     name=input_features_name,
-                    signal=raw,
+                    signal=preprocessed_audio,
                     rate=rate,
                     filters_number=input_filters_number
                 )
@@ -136,18 +136,23 @@ class VCTKSpeechStream(object):
 
                 output_features = SpeechFeatures.features_from_name(
                     name=output_features_name,
-                    signal=raw,
+                    signal=preprocessed_audio,
                     rate=rate,
                     filters_number=output_filters_number,
                     augmented=augment_output_features
                 )
 
+                # TODO: add an option in configuration to save quantized/one_hot or not
                 output = {
+                    'preprocessed_audio': preprocessed_audio,
                     'wav_filename': wav_filename,
                     'input_features': input_features,
-                    'one_hot': one_hot,
+                    'one_hot': None,
+                    'quantized': None,
                     'speaker_id': speaker_id,
-                    'output_features': output_features
+                    'output_features': output_features,
+                    'start_triming': start_triming,
+                    'preprocessed_length': preprocessed_length
                 }
 
                 output_path = output_dir + os.sep + str(i) + '.pickle'
