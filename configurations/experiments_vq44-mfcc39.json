@@ -1,5 +1,5 @@
 {
-    "experiments_path": "../experiments-vq41-mfcc39",
+    "experiments_path": "../experiments-vq44-mfcc39",
     "results_path": "../results",
     "configuration_path": "../configurations/vctk_features.yaml",
     "seed": 1234,
@@ -7,7 +7,7 @@
         "baseline": {
             "num_epochs": 15,
             "batch_size": 2,
-            "num_embeddings": 41,
+            "num_embeddings": 44,
             "use_device": "cuda:1",
             "normalize": true
         }

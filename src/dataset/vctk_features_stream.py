@@ -26,6 +26,8 @@
 
 from dataset.vctk_features_dataset import VCTKFeaturesDataset
 from error_handling.console_logger import ConsoleLogger
+from error_handling.logger_factory import LoggerFactory
+from . import LOG_PATH
 
 from torch.utils.data import DataLoader
 import numpy as np
@@ -68,6 +70,7 @@ class VCTKFeaturesStream(object):
         )
         self._speaker_dic = self._make_speaker_dic(vctk_path + os.sep + 'raw' + os.sep + 'VCTK-Corpus')
         self._vctk_path = vctk_path
+        self._logger = LoggerFactory.create(LOG_PATH, __name__)
 
     @property
     def training_data(self):
@@ -105,11 +108,39 @@ class VCTKFeaturesStream(object):
         return speaker_dic
 
     def compute_dataset_stats(self):
-        train_bar = tqdm(self.training_loader)
+        initial_index = 0
+        attempts = 10
+        current_attempt = 0
+        total_length = len(self._training_loader)
         train_mfccs = list()
-        for data in train_bar:
-            data = data['input_features']
-            train_mfccs.append(data.detach().view(data.size(1), data.size(2)).numpy())
+        while current_attempt < attempts:
+            try:
+                i = initial_index
+                train_bar = tqdm(self._training_loader, initial=initial_index)
+                for data in train_bar:
+                    input_features = data['input_features']
+                    train_mfccs.append(input_features.detach().view(input_features.size(1), input_features.size(2)).numpy())
+
+                    i += 1
+
+                    if i == total_length:
+                        train_bar.update(total_length)
+                        break
+
+                break
+
+            except KeyboardInterrupt:
+                train_bar.close()
+                ConsoleLogger.warn('Keyboard interrupt detected. Leaving the function...')
+                return
+            except:
+                error_message = 'An error occured in the data loader at {}. Current attempt: {}/{}'.format(i, current_attempt+1, attempts)
+                self._logger.exception(error_message)
+                ConsoleLogger.error(error_message)
+                initial_index = i
+                current_attempt += 1
+                continue
+
 
         ConsoleLogger.status('Compute mean of mfccs training set...')
         train_mean = np.concatenate(train_mfccs).mean(axis=0)

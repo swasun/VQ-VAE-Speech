@@ -27,6 +27,7 @@
 from torch.utils.data import Dataset
 import pickle
 import os
+import numpy as np
 
 
 class VCTKFeaturesDataset(Dataset):
@@ -47,6 +48,9 @@ class VCTKFeaturesDataset(Dataset):
         if self._normalizer:
             dic['input_features'] = (dic['input_features'] - self._normalizer['train_mean']) / self._normalizer['train_std']
             dic['output_features'] = (dic['output_features'] - self._normalizer['train_mean']) / self._normalizer['train_std']
+
+        dic['quantized'] = np.array([]) if dic['quantized'] is None else dic['quantized']
+        dic['one_hot'] = np.array([]) if dic['one_hot'] is None else dic['one_hot']
 
         return dic
 
