@@ -39,6 +39,7 @@ import seaborn as sns
 import textgrid
 from tqdm import tqdm
 import operator
+import pickle
 
 
 class Evaluator(object):
@@ -61,10 +62,12 @@ class Evaluator(object):
         #self._test_denormalization(results_path, experiment_name)
 
     def many_to_one_mapping(self, results_path, experiment_name):
+        # TODO: fix it for batch size greater than one
+
         self._model.eval()
 
         tokens_selections = list()
-        j = 0 # TODO: remove that when all the groundtruth will be computed
+
         with tqdm(self._data_stream.validation_loader) as bar:
             for data in bar:
                 valid_originals = data['input_features'].to(self._device).permute(0, 2, 1).contiguous().float()
@@ -73,7 +76,10 @@ class Evaluator(object):
                 wav_filenames = data['wav_filename']
 
                 # TODO: remove that when all the groundtruth will be computed
-                if 'p276' not in wav_filenames[0][0]:
+                if 'p225' not in wav_filenames[0][0] and
+                   'p240' not in wav_filenames[0][0] and
+                   'p255' not in wav_filenames[0][0] and
+                   'p276' not in wav_filenames[0][0]:
                     continue
 
                 z = self._model.encoder(valid_originals)
@@ -101,12 +107,7 @@ class Evaluator(object):
                     }
                     tokens_selections.append(entry)
 
-                    # TODO: remove that when all the groundtruth will be computed
-                    j += 1
-                if j == 10:
-                    break
-
-        ConsoleLogger.status('{} tokens selections retreived: {}'.format(len(tokens_selections)))
+        ConsoleLogger.status('{} tokens selections retreived'.format(len(tokens_selections)))
 
         phonemes_mapping = dict()
         # For each tokens selections (i.e. the number of valuations)
@@ -155,7 +156,13 @@ class Evaluator(object):
         for index, distribution in tokens_mapping.items():
             tokens_mapping[index] = list(sorted(distribution, key = lambda x: x[1], reverse=True))
 
-        return tokens_mapping
+        ConsoleLogger.status('tokens_mapping: {}'.format(tokens_mapping))
+
+        with open(results_path + os.sep + experiment_name + '_phonemes_mapping.pickle', 'wb') as f:
+            pickle.dump(phonemes_mapping, f)
+
+        with open(results_path + os.sep + experiment_name + '_tokens_mapping.pickle', 'wb') as f:
+            pickle.dump(tokens_mapping, f)
 
     def _reconstruct(self, results_path, experiment_name):
         self._model.eval()
@@ -214,7 +221,6 @@ class Evaluator(object):
 
         # Waveform of the original speech signal
         axs[0].set_title('Waveform of the original speech signal')
-        print(np.arange(len(preprocessed_audio)) / float(self._configuration['sampling_rate']))
         axs[0].plot(np.arange(len(preprocessed_audio)) / float(self._configuration['sampling_rate']), preprocessed_audio)
 
         # TODO: Add number of encoding indices at the same rate of the tokens with _compute_unified_time_scale()
