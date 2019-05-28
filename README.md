@@ -131,9 +131,11 @@ This figure shows the training evolution of the VQ-VAE model using two metrics: 
 
 The embedding are computed using [lmcinnes/umap] that is a dimension reduction technique that searches for a low dimensional projection of the data that has the closest possible equivalent "fuzzy" topological structure.
 
-Embedding of 100 valuations with 10 neighbors with the audio frame points colored by speaker id and the embedding marks colored in black:
-
-TODO
+![](results/vq29-mfcc39/val/embedding-plots/baseline_quantized_embedding_space-n3-b10.png)
+Left: the audio frames after quantization (points colored by speaker id) and the encoding indices (black marks) chosen by the distances computation.
+Right: the audio frames after quantization (points colored by encoding indices) and the encoding indices (marks using the same coloration).
+The number of point is the time size of the MFCC features (divided by two because of the downsampling in the encoder) times the number of vectors times the batch size. The number of marks is the number of embedding vectors (i.e., the tokens).
+The right embedding plot contains cluster of the same color (the points are normally superposed, here we used a small jitter for visualization purpose), with respective mark on top of them, meaning that the distances between the embedding vectors and the data frames are correctly reduced, as expected.
 
 # References
 

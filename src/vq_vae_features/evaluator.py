@@ -63,13 +63,6 @@ class Evaluator(object):
     def many_to_one_mapping(self, results_path, experiment_name):
         self._model.eval()
 
-        def load_wav(filename, sampling_rate, res_type, top_db):
-            raw, _ = librosa.load(filename, sampling_rate, res_type=res_type)
-            raw, raw_audio_triming_indices = librosa.effects.trim(raw, top_db=top_db)
-            raw /= np.abs(raw).max()
-            raw = raw.astype(np.float32)
-            return raw, raw_audio_triming_indices
-
         tokens_selections = list()
         j = 0 # TODO: remove that when all the groundtruth will be computed
         with tqdm(self._data_stream.validation_loader) as bar:
@@ -100,12 +93,6 @@ class Evaluator(object):
                     tg = textgrid.TextGrid()
                     tg.read(phonemes_alignement_path)
                     start_triming_index = start_triming_indices[i].detach().cpu().item()
-                    _, raw_audio_triming_indices = load_wav(
-                        wav_filename,
-                        sampling_rate=self._configuration['sampling_rate'],
-                        res_type=self._configuration['res_type'],
-                        top_db=self._configuration['top_db']
-                    )
                     shifting_time = start_triming_index / self._configuration['sampling_rate']
                     entry = {
                         'encoding_indices': encoding_indices[i].detach().cpu().numpy(),
