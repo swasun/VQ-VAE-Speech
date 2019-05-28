@@ -3,7 +3,7 @@
 ## Algorithm
 
 - Evaluate the model using the val dataset. Save each resulting
-embedding in a pickle file, with the corresponding speaker;
+embedding, with the corresponding speaker;
 - Group the embeddings by speaker;
 - Compute the distribution of each embedding (seaborn histogram, softmax);
 - Compute all the distances between all possible distribution couples, using
@@ -15,8 +15,8 @@ a distribution distance (e.g. entropy) and plot them (seaborn histogram?).
 and without speaker embedding (do all the previous steps using speaker
 embedding as well);
 -> Because 29 codebook vectors compressed as shit the data, it's likely
-already speaker independent. We can check thazt by increasing the number
-of embedding vectors (e.g. the higher, finess the representation will be).
+already speaker independent. We can check that by increasing the number
+of embedding vectors (e.g. the higher, the finess the representation will be).
 
 # Embedding stats 2
 
@@ -31,5 +31,5 @@ Goal: Check if each vector in the codebook correspond to a specific phoneme.
 ## Algorithm
 
 - Make a 2D projection of the embedding vectors using umap;
-- Plot the projection result as points, and the embedding indices as marks;
+- Plot the projection result as points, and the embedding indices as the most probable phoneme found using many to one mapping strategy;
 - Map each groundtruth phoneme with each mark (how?).

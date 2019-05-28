@@ -54,115 +54,12 @@ class Evaluator(object):
     def evaluate(self, results_path, experiment_name):
         if 'baseline' not in experiment_name:
             return
-        self.many_to_one_mapping(results_path, experiment_name)
         #self._reconstruct(results_path, experiment_name)
         #self._compute_comparaison_plot(results_path, experiment_name)
         #self._plot_quantized_embedding_spaces(results_path, experiment_name)
         #self._plot_distances_histogram(results_path, experiment_name)
         #self._test_denormalization(results_path, experiment_name)
-
-    def many_to_one_mapping(self, results_path, experiment_name):
-        # TODO: fix it for batch size greater than one
-
-        self._model.eval()
-
-        tokens_selections = list()
-
-        with tqdm(self._data_stream.validation_loader) as bar:
-            for data in bar:
-                valid_originals = data['input_features'].to(self._device).permute(0, 2, 1).contiguous().float()
-                speaker_ids = data['speaker_id'].to(self._device)
-                start_triming_indices = data['start_triming'].to(self._device)
-                wav_filenames = data['wav_filename']
-
-                # TODO: remove that when all the groundtruth will be computed
-                if 'p225' not in wav_filenames[0][0] and
-                   'p240' not in wav_filenames[0][0] and
-                   'p255' not in wav_filenames[0][0] and
-                   'p276' not in wav_filenames[0][0]:
-                    continue
-
-                z = self._model.encoder(valid_originals)
-                z = self._model.pre_vq_conv(z)
-                _, quantized, _, encodings, _, encoding_indices, _, \
-                    _, _, _, _ = self._model.vq(z)
-                valid_reconstructions = self._model.decoder(quantized, self._data_stream.speaker_dic, speaker_ids)
-                B = valid_reconstructions.size(0)
-
-                encoding_indices = encoding_indices.view(B, -1, 1)
-
-                for i in range(len(valid_reconstructions)):
-                    wav_filename = wav_filenames[0][i]
-                    utterence_key = wav_filename.split('/')[-1].replace('.wav', '')
-                    phonemes_alignement_path = os.sep.join(wav_filename.split('/')[:-3]) + os.sep + 'phonemes' + os.sep + utterence_key.split('_')[0] + os.sep \
-                        + utterence_key + '.TextGrid'
-                    tg = textgrid.TextGrid()
-                    tg.read(phonemes_alignement_path)
-                    start_triming_index = start_triming_indices[i].detach().cpu().item()
-                    shifting_time = start_triming_index / self._configuration['sampling_rate']
-                    entry = {
-                        'encoding_indices': encoding_indices[i].detach().cpu().numpy(),
-                        'groundtruth': tg.tiers[1],
-                        'shifting_time': shifting_time
-                    }
-                    tokens_selections.append(entry)
-
-        ConsoleLogger.status('{} tokens selections retreived'.format(len(tokens_selections)))
-
-        phonemes_mapping = dict()
-        # For each tokens selections (i.e. the number of valuations)
-        for entry in tokens_selections:
-            encoding_indices = entry['encoding_indices']
-            unified_encoding_indices_time_scale = self._compute_unified_time_scale(
-                encoding_indices.shape[0], downsampling_factor=2) # Compute the time scale array for each token
-            """
-            Search the grountruth phoneme where the selected token index time scale
-            is within the groundtruth interval.
-            Then, it adds the selected token index in the list of indices selected for
-            the a specific token in the tokens mapping dictionnary.
-            """
-            for i in range(len(unified_encoding_indices_time_scale)):
-                index_time_scale = unified_encoding_indices_time_scale[i] + entry['shifting_time']
-                corresponding_phoneme = None
-                for interval in entry['groundtruth']:
-                    # TODO: replace that by nearest interpolation
-                    if index_time_scale >= interval.minTime and index_time_scale <= interval.maxTime:
-                        corresponding_phoneme = interval.mark
-                        break
-                if not corresponding_phoneme:
-                    ConsoleLogger.warn("Corresponding phoneme not found. unified_encoding_indices_time_scale[{}]: {}"
-                        "entry['shifting_time']: {} index_time_scale: {}".format(i, unified_encoding_indices_time_scale[i],
-                        entry['shifting_time'], index_time_scale))
-                if corresponding_phoneme not in phonemes_mapping:
-                    phonemes_mapping[corresponding_phoneme] = list()
-                phonemes_mapping[corresponding_phoneme].append(encoding_indices[i][0])
-
-        ConsoleLogger.status('phonemes_mapping: {}'.format(phonemes_mapping))
-
-        tokens_mapping = dict() # dictionnary that will contain the distribution for each token to fits with a certain phoneme
-
-        """
-        Fill the tokens_mapping such that for each token index (key)
-        it contains the list of tuple of (phoneme, prob) where prob
-        is the probability that the token fits this phoneme.
-        """
-        for phoneme, indices in phonemes_mapping.items():
-            for index in list(set(indices)):
-                if index not in tokens_mapping:
-                    tokens_mapping[index] = list()
-                tokens_mapping[index].append((phoneme, indices.count(index) / len(indices)))
-
-        # Sort the probabilities for each token 
-        for index, distribution in tokens_mapping.items():
-            tokens_mapping[index] = list(sorted(distribution, key = lambda x: x[1], reverse=True))
-
-        ConsoleLogger.status('tokens_mapping: {}'.format(tokens_mapping))
-
-        with open(results_path + os.sep + experiment_name + '_phonemes_mapping.pickle', 'wb') as f:
-            pickle.dump(phonemes_mapping, f)
-
-        with open(results_path + os.sep + experiment_name + '_tokens_mapping.pickle', 'wb') as f:
-            pickle.dump(tokens_mapping, f)
+        self._many_to_one_mapping(results_path, experiment_name)
 
     def _reconstruct(self, results_path, experiment_name):
         self._model.eval()
@@ -414,8 +311,151 @@ class Evaluator(object):
     def _jittered_scatter(self, ax, x, y, cmap, c, s, alpha=None, marker=None):
 
         def rand_jitter(arr):
-            stdev = .01*(max(arr)-min(arr))
+            stdev = .01*(max(arr) - min(arr))
             return arr + np.random.randn(len(arr)) * stdev
 
         ax.scatter(rand_jitter(x), rand_jitter(y), cmap=cmap, c=c, alpha=alpha, s=s, marker=marker)
         return ax
+
+    def _many_to_one_mapping(self, results_path, experiment_name):
+        # TODO: fix it for batch size greater than one
+
+        self._model.eval()
+
+        tokens_selections = list()
+
+        with tqdm(self._data_stream.validation_loader) as bar:
+            for data in bar:
+                valid_originals = data['input_features'].to(self._device).permute(0, 2, 1).contiguous().float()
+                speaker_ids = data['speaker_id'].to(self._device)
+                start_triming_indices = data['start_triming'].to(self._device)
+                wav_filenames = data['wav_filename']
+
+                # TODO: remove that when all the groundtruth will be computed
+                if 'p225' not in wav_filenames[0][0] and
+                   'p240' not in wav_filenames[0][0] and
+                   'p255' not in wav_filenames[0][0] and
+                   'p276' not in wav_filenames[0][0]:
+                    continue
+
+                z = self._model.encoder(valid_originals)
+                z = self._model.pre_vq_conv(z)
+                _, quantized, _, encodings, _, encoding_indices, _, \
+                    _, _, _, _ = self._model.vq(z)
+                valid_reconstructions = self._model.decoder(quantized, self._data_stream.speaker_dic, speaker_ids)
+                B = valid_reconstructions.size(0)
+
+                encoding_indices = encoding_indices.view(B, -1, 1)
+
+                for i in range(len(valid_reconstructions)):
+                    wav_filename = wav_filenames[0][i]
+                    utterence_key = wav_filename.split('/')[-1].replace('.wav', '')
+                    phonemes_alignement_path = os.sep.join(wav_filename.split('/')[:-3]) + os.sep + 'phonemes' + os.sep + utterence_key.split('_')[0] + os.sep \
+                        + utterence_key + '.TextGrid'
+                    tg = textgrid.TextGrid()
+                    tg.read(phonemes_alignement_path)
+                    start_triming_index = start_triming_indices[i].detach().cpu().item()
+                    shifting_time = start_triming_index / self._configuration['sampling_rate']
+                    entry = {
+                        'encoding_indices': encoding_indices[i].detach().cpu().numpy(),
+                        'groundtruth': tg.tiers[1],
+                        'shifting_time': shifting_time
+                    }
+                    tokens_selections.append(entry)
+
+        ConsoleLogger.status('{} tokens selections retreived'.format(len(tokens_selections)))
+
+        phonemes_mapping = dict()
+        # For each tokens selections (i.e. the number of valuations)
+        for entry in tokens_selections:
+            encoding_indices = entry['encoding_indices']
+            unified_encoding_indices_time_scale = self._compute_unified_time_scale(
+                encoding_indices.shape[0], downsampling_factor=2) # Compute the time scale array for each token
+            """
+            Search the grountruth phoneme where the selected token index time scale
+            is within the groundtruth interval.
+            Then, it adds the selected token index in the list of indices selected for
+            the a specific token in the tokens mapping dictionnary.
+            """
+            for i in range(len(unified_encoding_indices_time_scale)):
+                index_time_scale = unified_encoding_indices_time_scale[i] + entry['shifting_time']
+                corresponding_phoneme = None
+                for interval in entry['groundtruth']:
+                    # TODO: replace that by nearest interpolation
+                    if index_time_scale >= interval.minTime and index_time_scale <= interval.maxTime:
+                        corresponding_phoneme = interval.mark
+                        break
+                if not corresponding_phoneme:
+                    ConsoleLogger.warn("Corresponding phoneme not found. unified_encoding_indices_time_scale[{}]: {}"
+                        "entry['shifting_time']: {} index_time_scale: {}".format(i, unified_encoding_indices_time_scale[i],
+                        entry['shifting_time'], index_time_scale))
+                if corresponding_phoneme not in phonemes_mapping:
+                    phonemes_mapping[corresponding_phoneme] = list()
+                phonemes_mapping[corresponding_phoneme].append(encoding_indices[i][0])
+
+        ConsoleLogger.status('phonemes_mapping: {}'.format(phonemes_mapping))
+
+        tokens_mapping = dict() # dictionnary that will contain the distribution for each token to fits with a certain phoneme
+
+        """
+        Fill the tokens_mapping such that for each token index (key)
+        it contains the list of tuple of (phoneme, prob) where prob
+        is the probability that the token fits this phoneme.
+        """
+        for phoneme, indices in phonemes_mapping.items():
+            for index in list(set(indices)):
+                if index not in tokens_mapping:
+                    tokens_mapping[index] = list()
+                tokens_mapping[index].append((phoneme, indices.count(index) / len(indices)))
+
+        # Sort the probabilities for each token 
+        for index, distribution in tokens_mapping.items():
+            tokens_mapping[index] = list(sorted(distribution, key = lambda x: x[1], reverse=True))
+
+        ConsoleLogger.status('tokens_mapping: {}'.format(tokens_mapping))
+
+        with open(results_path + os.sep + experiment_name + '_phonemes_mapping.pickle', 'wb') as f:
+            pickle.dump(phonemes_mapping, f)
+
+        with open(results_path + os.sep + experiment_name + '_tokens_mapping.pickle', 'wb') as f:
+            pickle.dump(tokens_mapping, f)
+
+    def _compute_speaker_dependency_stats(self, results_path, experiment_name):
+        """
+        The goal of this function is to investiguate wether or not the supposed
+        phonemes stored in the embeddings space are speaker independents.
+        The algorithm is as follow:
+            - Evaluate the model using the val dataset. Save each resulting
+              embedding, with the corresponding speaker;
+            - Group the embeddings by speaker;
+            - Compute the distribution of each embedding;
+            - Compute all the distances between all possible distribution couples, using
+              a distribution distance (e.g. entropy) and plot them.
+        """
+        all_speaker_ids = list()
+        all_embeddings = torch.tensor([]).to(self._device)
+
+        with tqdm(self._data_stream.validation_loader) as bar:
+            for data in bar:
+                valid_originals = data['input_features'].to(self._device).permute(0, 2, 1).contiguous().float()
+                speaker_ids = data['speaker_id'].to(self._device)
+                wav_filenames = data['wav_filename']
+
+                z = self._model.encoder(valid_originals)
+                z = self._model.pre_vq_conv(z)
+                _, quantized, _, _, _, _, _, \
+                    _, _, _, _ = self._model.vq(z)
+                valid_reconstructions = self._model.decoder(quantized, self._data_stream.speaker_dic, speaker_ids)
+                B = valid_reconstructions.size(0)
+
+                all_speaker_ids.append(speaker_ids.detach().cpu().numpy().tolist())
+                #torch.cat(all_embeddings, self._model.vq.embedding.weight.data) # FIXME
+
+        # - Group the embeddings by speaker: create a tensor/numpy per speaker id from all_embeddings
+        # - Compute the distribution of each embedding (seaborn histogram, softmax)
+        # - Compute all the distances between all possible distribution couples, using
+        #   a distribution distance (e.g. entropy) and plot them (seaborn histogram?)
+
+        # Snippet
+        #_embedding_distances = [torch.dist(items[0], items[1], 2).to(self._device) for items in combinations(self._embedding.weight, r=2)]
+        #embedding_distances = torch.tensor(_embedding_distances).to(self._device)
