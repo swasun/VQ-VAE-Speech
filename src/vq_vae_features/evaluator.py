@@ -52,14 +52,13 @@ class Evaluator(object):
         self._vctk = VCTK(self._configuration['data_root'], ratio=self._configuration['train_val_split'])
 
     def evaluate(self, results_path, experiment_name):
-        if 'baseline' not in experiment_name:
-            return
-        #self._reconstruct(results_path, experiment_name)
-        #self._compute_comparaison_plot(results_path, experiment_name)
-        #self._plot_quantized_embedding_spaces(results_path, experiment_name)
-        #self._plot_distances_histogram(results_path, experiment_name)
-        #self._test_denormalization(results_path, experiment_name)
-        self._many_to_one_mapping(results_path, experiment_name)
+        self._reconstruct(results_path, experiment_name)
+        self._compute_comparaison_plot(results_path, experiment_name)
+        self._plot_quantized_embedding_spaces(results_path, experiment_name)
+        self._plot_distances_histogram(results_path, experiment_name)
+        #self._test_denormalization(results_path, experiment_name) # TODO: add option to use it from args
+        #self._many_to_one_mapping(results_path, experiment_name) # TODO: add option to use it from args
+        #self._compute_speaker_dependency_stats(results_path, experiment_name) # TODO: add option to use it from args
 
     def _reconstruct(self, results_path, experiment_name):
         self._model.eval()
