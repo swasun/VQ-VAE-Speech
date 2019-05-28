@@ -42,10 +42,10 @@ optional arguments:
                         False)
   --experiments_configuration_path [EXPERIMENTS_CONFIGURATION_PATH]
                         The path of the experiments configuration file
-                        (default: ..\configurations\experiments.json)
+                        (default: ../configurations/experiments.json)
   --experiments_path [EXPERIMENTS_PATH]
                         The path of the experiments ouput directory (default:
-                        ..\experiments)
+                        ../experiments)
   --plot_experiments_losses
                         Plot the losses of the experiments based of the
                         specified file in --experiments_configuration_path
@@ -117,23 +117,15 @@ This figure describes the layers of the VQ-VAE model we have used. All convoluti
 
 ![](results/vq29-mfcc39/train/loss-and-perplexity-plots/merged-loss-and-perplexity.png)
 
-This figure shows the training evolution of the VQ-VAE model using two metrics: the loss values (the lower the better), and the perplexity. The model was trained during 15 epochs using the architecture described in Section `VQ-VAE-Speech encoder + Deconv decoder`. We use 29 vectors of dim 64 as the VQ space. All experiments have been setted with a seed of 1234 for reproducibility. We tried several variants of the training: the kaiming normal (also known as He initialization) [He, K et al., 2015], the VQ-EMA [Roy et al., 2018], the jitter layer proposed in [Chorowski et al., 2019].
+This figure shows the training evolution of the VQ-VAE model using two metrics: the loss values (the lower the better), and the perplexity, which is the average codebook usage. The model was trained during 15 epochs using the architecture described in Section `VQ-VAE-Speech encoder + Deconv decoder`. We used 29 vectors of dim 64 as the VQ space. All experiments have been setted with a seed of 1234 for reproducibility. We tried several variants of the training: the kaiming normal (also known as He initialization) [He, K et al., 2015], the VQ-EMA [Roy et al., 2018], the jitter layer proposed in [Chorowski et al., 2019].
 
 ![](results/vq29-mfcc39/train/merged-losses-plots/baseline_merged-losses.png)
-
-![](results/vq29-mfcc39/train/merged-losses-plots/jitter12_merged-losses.png)
-
-![](results/vq29-mfcc39/train/merged-losses-types-plots/reconstruction_loss.png)
 
 ### Evaluation
 
 #### Comparaison plots
 
-Without jitter:
 ![](results/vq29-mfcc39/val/comparaison-plots/baseline_evaluation-comparaison-plot.png)
-
-With jitter:
-![](results/vq29-mfcc39/val/comparaison-plots/jitter12_evaluation-comparaison-plot.png)
 
 #### Embedding plots
 
@@ -141,9 +133,7 @@ The embedding are computed using [lmcinnes/umap] that is a dimension reduction t
 
 Embedding of 100 valuations with 10 neighbors with the audio frame points colored by speaker id and the embedding marks colored in black:
 
-![](results/vq29-mfcc39/val/embedding-plots/n10/baseline_quantized_embedding_space-n10.png)
-
-![](results/vq29-mfcc39/val/embedding-plots/n10/jitter12_quantized_embedding_space-n10.png)
+TODO
 
 # References
 
