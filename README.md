@@ -1,5 +1,3 @@
-!!! CODE STILL UNDER CONSTRUCTION !!!
-
 # Overview
 
 PyTorch implementation of VQ-VAE + WaveNet by [Chorowski et al., 2019] and VQ-VAE on speech signals by [van den Oord et al., 2017].
