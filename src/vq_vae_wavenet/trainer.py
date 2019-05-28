@@ -48,20 +48,20 @@ class Trainer(object):
 
     def train(self, experiments_path, experiment_name):
         for epoch in range(self._configuration['start_epoch'], self._configuration['num_epochs']):
-            train_bar = tqdm(self._data_stream.training_loader)
-            self._model.train()
-            for data in train_bar:
-                x_enc, x_dec, speaker_id, quantized, _ = data
-                x_enc, x_dec, speaker_id, quantized = x_enc.to(self._device), x_dec.to(self._device), speaker_id.to(self._device), quantized.to(self._device)
+            with tqdm(self._data_stream.training_loader) as train_bar:
+                self._model.train()
+                for data in train_bar:
+                    x_enc, x_dec, speaker_id, quantized, _ = data
+                    x_enc, x_dec, speaker_id, quantized = x_enc.to(self._device), x_dec.to(self._device), speaker_id.to(self._device), quantized.to(self._device)
 
-                self._optimizer.zero_grad()
-                loss, _, _ = self._model(x_enc, x_dec, speaker_id, quantized)
-                loss.mean().backward()
-                self._optimizer.step()
-                #self._train_res_recon_error.append(recon_error.item())
-                #self._train_res_perplexity.append(perplexity.item())
+                    self._optimizer.zero_grad()
+                    loss, _, _ = self._model(x_enc, x_dec, speaker_id, quantized)
+                    loss.mean().backward()
+                    self._optimizer.step()
+                    #self._train_res_recon_error.append(recon_error.item())
+                    #self._train_res_perplexity.append(perplexity.item())
 
-                train_bar.set_description('Epoch {}: loss {:.4f}'.format(epoch + 1, loss.mean().item()))
+                    train_bar.set_description('Epoch {}: loss {:.4f}'.format(epoch + 1, loss.mean().item()))
 
             self._model.eval()
             data_val = next(iter(self._data_stream.validation_loader))

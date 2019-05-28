@@ -84,51 +84,51 @@ class Trainer(object):
         ConsoleLogger.status('num epoch: {}'.format(self._configuration['num_epochs']))
 
         for epoch in range(self._configuration['start_epoch'], self._configuration['num_epochs']):
-            train_bar = tqdm(self._data_stream.training_loader)
-            train_res_recon_error = []
-            train_res_perplexity = []
-            #named_parameters = []
+            with tqdm(self._data_stream.training_loader) as train_bar:
+                train_res_recon_error = []
+                train_res_perplexity = []
+                #named_parameters = []
 
-            for data in train_bar:
-                source = data['input_features'].to(self._device)
-                speaker_id = data['speaker_id'].to(self._device)
-                target = data['output_features'].to(self._device)
+                for data in train_bar:
+                    source = data['input_features'].to(self._device)
+                    speaker_id = data['speaker_id'].to(self._device)
+                    target = data['output_features'].to(self._device)
 
-                self._optimizer.zero_grad()
+                    self._optimizer.zero_grad()
 
-                """
-                The perplexity a useful value to track during training.
-                It indicates how many codes are 'active' on average.
-                """
-                loss, _, perplexity, losses = self._model(source, target, self._data_stream.speaker_dic, speaker_id)
-                loss.backward()
+                    """
+                    The perplexity a useful value to track during training.
+                    It indicates how many codes are 'active' on average.
+                    """
+                    loss, _, perplexity, losses = self._model(source, target, self._data_stream.speaker_dic, speaker_id)
+                    loss.backward()
 
-                self._optimizer.step()
+                    self._optimizer.step()
 
-                perplexity_value = perplexity.item()
-                train_bar.set_description('Epoch {}: loss {:.4f} perplexity {:.3f}'.format(
-                    epoch + 1, losses['loss'], perplexity_value))
-                
-                train_res_recon_error.append(losses)
-                train_res_perplexity.append(perplexity_value)
+                    perplexity_value = perplexity.item()
+                    train_bar.set_description('Epoch {}: loss {:.4f} perplexity {:.3f}'.format(
+                        epoch + 1, losses['loss'], perplexity_value))
+                    
+                    train_res_recon_error.append(losses)
+                    train_res_perplexity.append(perplexity_value)
 
-            # FIXME
+                # FIXME
 
-            #current_named_parameters = self._model.named_parameters()
-            #named_parameters += current_named_parameters
-            #print('current_named_parameters.shape: {}'.format(current_named_parameters.shape))
-            #print('named_parameters.shape: {}'.format(named_parameters.shape))
+                #current_named_parameters = self._model.named_parameters()
+                #named_parameters += current_named_parameters
+                #print('current_named_parameters.shape: {}'.format(current_named_parameters.shape))
+                #print('named_parameters.shape: {}'.format(named_parameters.shape))
 
-            #plot_grad_flow(current_named_parameters)
-            #plt.savefig('{}{}_{}.png'.format(experiments_path + os.sep, experiment_name, epoch + 1))
+                #plot_grad_flow(current_named_parameters)
+                #plt.savefig('{}{}_{}.png'.format(experiments_path + os.sep, experiment_name, epoch + 1))
 
-            torch.save({
-                    'experiment_name': experiment_name,
-                    'epoch': epoch + 1,
-                    'model': self._model.state_dict(),
-                    'optimizer': self._optimizer.state_dict(),
-                    'train_res_recon_error': train_res_recon_error,
-                    'train_res_perplexity': train_res_perplexity
-                },
-                os.path.join(experiments_path, '{}_{}_checkpoint.pth'.format(experiment_name, epoch + 1))
-            )
+                torch.save({
+                        'experiment_name': experiment_name,
+                        'epoch': epoch + 1,
+                        'model': self._model.state_dict(),
+                        'optimizer': self._optimizer.state_dict(),
+                        'train_res_recon_error': train_res_recon_error,
+                        'train_res_perplexity': train_res_perplexity
+                    },
+                    os.path.join(experiments_path, '{}_{}_checkpoint.pth'.format(experiment_name, epoch + 1))
+                )

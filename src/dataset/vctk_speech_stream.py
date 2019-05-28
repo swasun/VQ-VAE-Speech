@@ -182,8 +182,12 @@ class VCTKSpeechStream(object):
                             bar.update(total_length)
                             break
 
+                    bar.close()
                     break
-
+                except KeyboardInterrupt:
+                    bar.close()
+                    ConsoleLogger.warn('Keyboard interrupt detected. Leaving the function...')
+                    return
                 except:
                     error_message = 'An error occured in the data loader at {}/{}. Current attempt: {}/{}'.format(output_dir, i, current_attempt+1, attempts)
                     self._logger.exception(error_message)

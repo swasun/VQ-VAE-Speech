@@ -25,21 +25,20 @@
  #####################################################################################
 
 from dataset.spectrogram_parser import SpectrogramParser
-from dataset.vctk_dataset import VCTKDataset
-from dataset.vctk_dataset import VCTK
-from vq_vae_speech.mu_law import MuLaw
+from dataset.vctk import VCTK
 from error_handling.console_logger import ConsoleLogger
 
 import matplotlib.pyplot as plt
 import torch.nn.functional as F
 import os
-import librosa
 import librosa.output
 import numpy as np
 import umap
 from textwrap import wrap
 import seaborn as sns
 import textgrid
+from tqdm import tqdm
+import operator
 
 
 class Evaluator(object):
@@ -54,13 +53,122 @@ class Evaluator(object):
     def evaluate(self, results_path, experiment_name):
         if 'baseline' not in experiment_name:
             return
-        self._reconstruct(results_path, experiment_name)
-        self._compute_comparaison_plot(results_path, experiment_name)
+        self.many_to_one_mapping(results_path, experiment_name)
+        #self._reconstruct(results_path, experiment_name)
+        #self._compute_comparaison_plot(results_path, experiment_name)
         #self._plot_quantized_embedding_spaces(results_path, experiment_name)
         #self._plot_distances_histogram(results_path, experiment_name)
-        #self._compute_wav(results_path, experiment_name)
         #self._test_denormalization(results_path, experiment_name)
 
+    def many_to_one_mapping(self, results_path, experiment_name):
+        self._model.eval()
+
+        def load_wav(filename, sampling_rate, res_type, top_db):
+            raw, _ = librosa.load(filename, sampling_rate, res_type=res_type)
+            raw, raw_audio_triming_indices = librosa.effects.trim(raw, top_db=top_db)
+            raw /= np.abs(raw).max()
+            raw = raw.astype(np.float32)
+            return raw, raw_audio_triming_indices
+
+        tokens_selections = list()
+        j = 0 # TODO: remove that when all the groundtruth will be computed
+        with tqdm(self._data_stream.validation_loader) as bar:
+            for data in bar:
+                valid_originals = data['input_features'].to(self._device).permute(0, 2, 1).contiguous().float()
+                speaker_ids = data['speaker_id'].to(self._device)
+                start_triming_indices = data['start_triming'].to(self._device)
+                wav_filenames = data['wav_filename']
+
+                # TODO: remove that when all the groundtruth will be computed
+                if 'p276' not in wav_filenames[0][0]:
+                    continue
+
+                z = self._model.encoder(valid_originals)
+                z = self._model.pre_vq_conv(z)
+                _, quantized, _, encodings, _, encoding_indices, _, \
+                    _, _, _, _ = self._model.vq(z)
+                valid_reconstructions = self._model.decoder(quantized, self._data_stream.speaker_dic, speaker_ids)
+                B = valid_reconstructions.size(0)
+
+                encoding_indices = encoding_indices.view(B, -1, 1)
+
+                for i in range(len(valid_reconstructions)):
+                    wav_filename = wav_filenames[0][i]
+                    utterence_key = wav_filename.split('/')[-1].replace('.wav', '')
+                    phonemes_alignement_path = os.sep.join(wav_filename.split('/')[:-3]) + os.sep + 'phonemes' + os.sep + utterence_key.split('_')[0] + os.sep \
+                        + utterence_key + '.TextGrid'
+                    tg = textgrid.TextGrid()
+                    tg.read(phonemes_alignement_path)
+                    start_triming_index = start_triming_indices[i].detach().cpu().item()
+                    _, raw_audio_triming_indices = load_wav(
+                        wav_filename,
+                        sampling_rate=self._configuration['sampling_rate'],
+                        res_type=self._configuration['res_type'],
+                        top_db=self._configuration['top_db']
+                    )
+                    shifting_time = start_triming_index / self._configuration['sampling_rate']
+                    entry = {
+                        'encoding_indices': encoding_indices[i].detach().cpu().numpy(),
+                        'groundtruth': tg.tiers[1],
+                        'shifting_time': shifting_time
+                    }
+                    tokens_selections.append(entry)
+
+                    # TODO: remove that when all the groundtruth will be computed
+                    j += 1
+                if j == 10:
+                    break
+
+        ConsoleLogger.status('{} tokens selections retreived: {}'.format(len(tokens_selections)))
+
+        phonemes_mapping = dict()
+        # For each tokens selections (i.e. the number of valuations)
+        for entry in tokens_selections:
+            encoding_indices = entry['encoding_indices']
+            unified_encoding_indices_time_scale = self._compute_unified_time_scale(
+                encoding_indices.shape[0], downsampling_factor=2) # Compute the time scale array for each token
+            """
+            Search the grountruth phoneme where the selected token index time scale
+            is within the groundtruth interval.
+            Then, it adds the selected token index in the list of indices selected for
+            the a specific token in the tokens mapping dictionnary.
+            """
+            for i in range(len(unified_encoding_indices_time_scale)):
+                index_time_scale = unified_encoding_indices_time_scale[i] + entry['shifting_time']
+                corresponding_phoneme = None
+                for interval in entry['groundtruth']:
+                    # TODO: replace that by nearest interpolation
+                    if index_time_scale >= interval.minTime and index_time_scale <= interval.maxTime:
+                        corresponding_phoneme = interval.mark
+                        break
+                if not corresponding_phoneme:
+                    ConsoleLogger.warn("Corresponding phoneme not found. unified_encoding_indices_time_scale[{}]: {}"
+                        "entry['shifting_time']: {} index_time_scale: {}".format(i, unified_encoding_indices_time_scale[i],
+                        entry['shifting_time'], index_time_scale))
+                if corresponding_phoneme not in phonemes_mapping:
+                    phonemes_mapping[corresponding_phoneme] = list()
+                phonemes_mapping[corresponding_phoneme].append(encoding_indices[i][0])
+
+        ConsoleLogger.status('phonemes_mapping: {}'.format(phonemes_mapping))
+
+        tokens_mapping = dict() # dictionnary that will contain the distribution for each token to fits with a certain phoneme
+
+        """
+        Fill the tokens_mapping such that for each token index (key)
+        it contains the list of tuple of (phoneme, prob) where prob
+        is the probability that the token fits this phoneme.
+        """
+        for phoneme, indices in phonemes_mapping.items():
+            for index in list(set(indices)):
+                if index not in tokens_mapping:
+                    tokens_mapping[index] = list()
+                tokens_mapping[index].append((phoneme, indices.count(index) / len(indices)))
+
+        # Sort the probabilities for each token 
+        for index, distribution in tokens_mapping.items():
+            tokens_mapping[index] = list(sorted(distribution, key = lambda x: x[1], reverse=True))
+
+        return tokens_mapping
 
     def _reconstruct(self, results_path, experiment_name):
         self._model.eval()
@@ -71,15 +179,14 @@ class Evaluator(object):
         self._valid_originals = data['input_features'].to(self._device)
         self._speaker_ids = data['speaker_id'].to(self._device)
         self._target = data['output_features'].to(self._device)
-        self._wav_filename = data['wav_filename'].to(self._device)
+        self._wav_filename = data['wav_filename']
+        self._start_triming = data['start_triming'].to(self._device)
+        self._preprocessed_length = data['preprocessed_length'].to(self._device)
 
         self._valid_originals = self._valid_originals.permute(0, 2, 1).contiguous().float()
         self._batch_size = self._valid_originals.size(0)
         self._target = self._target.permute(0, 2, 1).contiguous().float()
         self._wav_filename = self._wav_filename[0][0]
-        self._valid_originals = self._valid_originals.to(self._device)
-        self._speaker_ids = self._speaker_ids.to(self._device)
-        self._target = self._target.to(self._device)
 
         z = self._model.encoder(self._valid_originals)
         z = self._model.pre_vq_conv(z)
@@ -89,29 +196,21 @@ class Evaluator(object):
         self._valid_reconstructions = self._model.decoder(self._quantized, self._data_stream.speaker_dic, self._speaker_ids)[0]
 
     def _compute_comparaison_plot(self, results_path, experiment_name):
-        """audio, _ = _load_wav(self._wav_filename, self._configuration['sampling_rate'], self._configuration['res_type'], 
-            self._configuration['top_db'])
         utterence_key = self._wav_filename.split('/')[-1].replace('.wav', '')
+        utterence = self._vctk.utterences[utterence_key].replace('\n', '')
         phonemes_alignement_path = os.sep.join(self._wav_filename.split('/')[:-3]) + os.sep + 'phonemes' + os.sep + utterence_key.split('_')[0] + os.sep \
             + utterence_key + '.TextGrid'
-        print(self._encoding_indices.detach().cpu().size())
-        encoding_indices = self._encoding_indices.detach().cpu().view(self._data_stream.validation_batch_size, -1)[0].numpy()
-        print('encoding_indices: {}'.format(encoding_indices))
-        print('encoding_indices.shape: {}'.format(encoding_indices.shape))
-        #encoding_indices = np.concatenate(encoding_indices)
-        unified_encoding_indices_time_scale = self._compute_unified_time_scale(encoding_indices.shape[0], downsampling_factor=2)
-        print('unified time scale of encoding indices: {}'.format(unified_encoding_indices_time_scale))
-        print('phonemes_alignement_path: {}'.format(phonemes_alignement_path))
-        tg = textgrid.TextGrid()
-        tg.read(phonemes_alignement_path)
-        utterence = self._vctk.utterences[utterence_key].replace('\n', '')
-        ConsoleLogger.status('utterence: {}'.format(utterence))"""
+        #tg = textgrid.TextGrid()
+        #tg.read(phonemes_alignement_path)
+        #for interval in tg.tiers[0]:
+    
+        ConsoleLogger.status('Original utterence: {}'.format(utterence))
 
         if self._configuration['verbose']:
             ConsoleLogger.status('utterence: {}'.format(utterence))
 
-        preprocessed_audio = VCTKDataset.preprocessing_raw(audio, self._configuration['length'])
         spectrogram_parser = SpectrogramParser()
+        preprocessed_audio = self._preprocessed_audio.detach().cpu()[0].numpy().squeeze()
         spectrogram = spectrogram_parser.parse_audio(preprocessed_audio).contiguous()
 
         spectrogram = spectrogram.detach().cpu().numpy()
@@ -128,14 +227,8 @@ class Evaluator(object):
 
         # Waveform of the original speech signal
         axs[0].set_title('Waveform of the original speech signal')
+        print(np.arange(len(preprocessed_audio)) / float(self._configuration['sampling_rate']))
         axs[0].plot(np.arange(len(preprocessed_audio)) / float(self._configuration['sampling_rate']), preprocessed_audio)
-
-        """labels = "_'ABCDEFGHIJKLMNOPQRSTUVWXYZ#"
-        for i, x in enumerate(unified_encoding_indices_time_scale):
-            axs[0].text(x, -0.5, labels[encoding_indices[i]], fontsize=9)"""
-
-        for interval in tg.tiers[1]:
-            print(interval.minTime, interval.maxTime, interval.mark)
 
         # TODO: Add number of encoding indices at the same rate of the tokens with _compute_unified_time_scale()
         """
@@ -144,9 +237,6 @@ class Evaluator(object):
         for xc in xposition:
             plt.axvline(x=xc, color='r', linestyle='-', linewidth=1)
         """
-
-        #print('spectrogram.shape: {}'.format(spectrogram.shape))
-        #print('self._compute_unified_time_scale(spectrogram.shape[1]): {}'.format(self._compute_unified_time_scale(spectrogram.shape[1])))
 
         # Spectrogram of the original speech signal
         axs[1].set_title('Spectrogram of the original speech signal')
@@ -172,13 +262,6 @@ class Evaluator(object):
         output_path = results_path + os.sep + experiment_name + '_evaluation-comparaison-plot.png'
         plt.savefig(output_path, bbox_inches='tight', pad_inches=0)
         plt.close()
-
-    def _compute_wav(self, results_path, experiment_name):
-        output_mu = self._valid_reconstructions.argmax(dim=1).detach().cpu().float().numpy().squeeze()
-        #output_mu = MuLaw.decode(output_mu)
-
-        output_path = results_path + os.sep + experiment_name + '_output.wav'
-        librosa.output.write_wav(output_path, output_mu, self._configuration['sampling_rate'])
 
     def _plot_pcolormesh(self, data, fig, x=None, y=None, axis=None):
         axis = plt.gca() if axis is None else axis # default axis if None
@@ -206,13 +289,13 @@ class Evaluator(object):
 
         #for n_neighbors in [3, 10, 50, 100]:
         for n_neighbors in [3]:
-            map = umap.UMAP(
+            mapping = umap.UMAP(
                 n_neighbors=n_neighbors,
                 min_dist=0.0,
                 metric='euclidean'
             )
 
-            projection = map.fit_transform(quantized_embedding_space)
+            projection = mapping.fit_transform(quantized_embedding_space)
 
             self._plot_quantized_embedding_space(projection, n_neighbors, n_embedding,
                 time_speaker_ids, encoding_indices, results_path, experiment_name, cmap='cubehelix')

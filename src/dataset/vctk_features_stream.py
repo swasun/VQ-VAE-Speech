@@ -127,6 +127,7 @@ class VCTKFeaturesStream(object):
                         train_bar.update(total_length)
                         break
 
+                train_bar.close()
                 break
 
             except KeyboardInterrupt:

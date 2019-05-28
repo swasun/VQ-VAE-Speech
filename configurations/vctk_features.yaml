@@ -21,7 +21,7 @@ use_device:
 # Audio
 sampling_rate: 16000 # Sampling rate
 res_type: 'kaiser_fast' # Resampling algorithm
-top_db: 60 # The threshold (in decibels) below reference to consider as silence
+top_db: 20 # The threshold (in decibels) below reference to consider as silence
 length: 7680
 
 # Mu-law
