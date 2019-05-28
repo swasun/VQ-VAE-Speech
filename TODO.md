@@ -1,4 +1,3 @@
-* Compute again the speech features but without the silent thresh, compute the new features dataset stats and train again in vq44
 * Add the groundtruth of vctk computed by montreal alignement in data dir
 * Plot an example of alignement using the groundtruth mapping
 * Make an animation of the second embedding projection
