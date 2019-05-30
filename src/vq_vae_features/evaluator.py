@@ -331,10 +331,11 @@ class Evaluator(object):
                 wav_filenames = data['wav_filename']
 
                 # TODO: remove that when all the groundtruth will be computed
-                if 'p225' not in wav_filenames[0][0] and
-                   'p240' not in wav_filenames[0][0] and
-                   'p255' not in wav_filenames[0][0] and
-                   'p276' not in wav_filenames[0][0]:
+                if 'p225' not in wav_filenames[0][0] and \
+                   'p240' not in wav_filenames[0][0] and \
+                   'p255' not in wav_filenames[0][0] and \
+                   'p276' not in wav_filenames[0][0] and \
+                   'p281' not in wav_filenames[0][0]
                     continue
 
                 z = self._model.encoder(valid_originals)
