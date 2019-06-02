@@ -126,7 +126,7 @@ class FeaturesAutoEncoder(nn.Module):
         if self._verbose:
             ConsoleLogger.status('[FEATURES_AE] _pre_vq_conv output size: {}'.format(z.size()))
 
-        vq_loss, quantized, perplexity, _, _, _, losses, _, _, _ = self._vq(z)
+        vq_loss, quantized, perplexity, _, _, _, losses, _, _, _, _ = self._vq(z)
 
         reconstructed_x = self._decoder(quantized, speaker_dic, speaker_id)
 
