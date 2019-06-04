@@ -29,6 +29,7 @@ from dataset.vctk import VCTK
 from error_handling.console_logger import ConsoleLogger
 
 import matplotlib.pyplot as plt
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 import torch.nn.functional as F
 import os
 import librosa.output
@@ -52,13 +53,14 @@ class Evaluator(object):
         self._vctk = VCTK(self._configuration['data_root'], ratio=self._configuration['train_val_split'])
 
     def evaluate(self, results_path, experiment_name):
-        self._reconstruct(results_path, experiment_name)
-        self._compute_comparaison_plot(results_path, experiment_name)
-        self._plot_quantized_embedding_spaces(results_path, experiment_name)
-        self._plot_distances_histogram(results_path, experiment_name)
+        #self._reconstruct(results_path, experiment_name)
+        #self._compute_comparaison_plot(results_path, experiment_name)
+        #self._plot_quantized_embedding_spaces(results_path, experiment_name)
+        #self._plot_distances_histogram(results_path, experiment_name)
         #self._test_denormalization(results_path, experiment_name) # TODO: add option to use it from args
         #self._many_to_one_mapping(results_path, experiment_name) # TODO: add option to use it from args
         #self._compute_speaker_dependency_stats(results_path, experiment_name) # TODO: add option to use it from args
+        self._compute_bigrams_matrix(results_path, experiment_name) # TODO: add option to use it from args
 
     def _reconstruct(self, results_path, experiment_name):
         self._model.eval()
@@ -113,7 +115,7 @@ class Evaluator(object):
 
         valid_reconstructions = self._valid_reconstructions.detach().cpu().numpy()
 
-        fig, axs = plt.subplots(6, 1, figsize=(35, 30), sharex=False)
+        fig, axs = plt.subplots(6, 1, figsize=(35, 30), sharex=True)
 
         # Waveform of the original speech signal
         axs[0].set_title('Waveform of the original speech signal')
@@ -322,6 +324,7 @@ class Evaluator(object):
         self._model.eval()
 
         tokens_selections = list()
+        val_speaker_ids = set()
 
         with tqdm(self._data_stream.validation_loader) as bar:
             for data in bar:
@@ -330,12 +333,11 @@ class Evaluator(object):
                 start_triming_indices = data['start_triming'].to(self._device)
                 wav_filenames = data['wav_filename']
 
-                # TODO: remove that when all the groundtruth will be computed
-                if 'p225' not in wav_filenames[0][0] and \
-                   'p240' not in wav_filenames[0][0] and \
-                   'p255' not in wav_filenames[0][0] and \
-                   'p276' not in wav_filenames[0][0] and \
-                   'p281' not in wav_filenames[0][0]:
+                speaker_id = wav_filenames[0][0].split(os.sep)[-2]
+                val_speaker_ids.add(speaker_id)
+
+                if speaker_id not in os.listdir(self._vctk.raw_folder + os.sep + 'VCTK-Corpus' + os.sep + 'phonemes'):
+                    # TODO: log the missing folders
                     continue
 
                 z = self._model.encoder(valid_originals)
@@ -362,6 +364,8 @@ class Evaluator(object):
                         'shifting_time': shifting_time
                     }
                     tokens_selections.append(entry)
+
+        print(val_speaker_ids)
 
         ConsoleLogger.status('{} tokens selections retreived'.format(len(tokens_selections)))
 
@@ -435,6 +439,8 @@ class Evaluator(object):
         all_speaker_ids = list()
         all_embeddings = torch.tensor([]).to(self._device)
 
+        self._model.evaluate()
+
         with tqdm(self._data_stream.validation_loader) as bar:
             for data in bar:
                 valid_originals = data['input_features'].to(self._device).permute(0, 2, 1).contiguous().float()
@@ -459,3 +465,84 @@ class Evaluator(object):
         # Snippet
         #_embedding_distances = [torch.dist(items[0], items[1], 2).to(self._device) for items in combinations(self._embedding.weight, r=2)]
         #embedding_distances = torch.tensor(_embedding_distances).to(self._device)
+
+    def _compute_bigrams_matrix(self, results_path, experiment_name):
+        self._model.eval()
+
+        all_alignments = list()
+        desired_time_interval = 0.01
+        data_length = self._configuration['length'] / self._configuration['sampling_rate']
+        desired_time_scale = np.arange(data_length * 100) * desired_time_interval
+
+        with tqdm(self._data_stream.validation_loader) as bar:
+            for data in bar:
+                valid_originals = data['input_features'].to(self._device).permute(0, 2, 1).contiguous().float()
+                speaker_ids = data['speaker_id'].to(self._device)
+                wav_filenames = data['wav_filename']
+
+                speaker_id = wav_filenames[0][0].split('/')[-2]
+
+                if speaker_id not in os.listdir(self._vctk.raw_folder + os.sep + 'VCTK-Corpus' + os.sep + 'phonemes'):
+                    # TODO: log the missing folders
+                    continue
+
+                z = self._model.encoder(valid_originals)
+                z = self._model.pre_vq_conv(z)
+                _, quantized, _, encodings, _, encoding_indices, _, \
+                    _, _, _, _ = self._model.vq(z)
+                valid_reconstructions = self._model.decoder(quantized, self._data_stream.speaker_dic, speaker_ids)
+                B = valid_reconstructions.size(0)
+                T = encoding_indices.size(0)
+
+                encoding_indices = encoding_indices.view(B, -1).detach().cpu().numpy()
+                extended_time_scale = np.arange(T) * (data_length / T)
+                min_time = 0.0
+
+                for i in range(len(valid_reconstructions)):
+                    indices = list()
+                    index = encoding_indices[i][0]
+                    for j in range(1, len(extended_time_scale)):
+                        max_time = extended_time_scale[j]
+                        time_difference = max_time - min_time
+                        quotient, remainder = divmod(float(time_difference), desired_time_interval)
+                        if 1.0 - remainder == 1.0:
+                            remainder = 0.0
+                        elif 1.0 - remainder >= 1.0 - desired_time_interval:
+                            remainder = desired_time_interval
+                        for _ in range(int(quotient)):
+                            indices.append(index)
+                        if remainder != 0.0:
+                            indices.append(index)
+                        min_time = max_time
+                        index = encoding_indices[i][j]
+                    all_alignments.append(indices)
+
+        bigrams = np.zeros((44, 44), dtype=int)
+        previous_phonemes_counter = np.zeros((44), dtype=int)
+
+        for alignment in all_alignments:
+            previous_encoding_index = alignment[0]
+            for i in range(len(alignment)):
+                current_encoding_index = alignment[i]
+                bigrams[current_encoding_index][previous_encoding_index] += 1
+                previous_phonemes_counter[previous_encoding_index] += 1
+                previous_encoding_index = current_encoding_index
+
+        fig, ax = plt.subplots(figsize=(20, 20))
+        previous_phonemes_counter[previous_phonemes_counter == 0] = 1
+        im = ax.matshow(bigrams / previous_phonemes_counter)
+        ax.set_xticks(np.arange(44))
+        ax.set_yticks(np.arange(44))
+        ax.set_xticklabels(np.arange(44))
+        ax.set_yticklabels(np.arange(44))
+        divider = make_axes_locatable(ax)
+        cax = divider.append_axes('right', size='5%', pad=0.05)
+        fig.colorbar(im, cax=cax)
+
+        for i in range(44):
+            for j in range(44):
+                text = ax.text(j, i, bigrams[i, j], ha='center', va='center', color='w')
+
+        fig.tight_layout()
+        fig.savefig('../results/vctk_empirical_bigrams.png')
+        plt.close(fig)
