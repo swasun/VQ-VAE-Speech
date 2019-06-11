@@ -8,6 +8,8 @@ import textgrid
 from tqdm import tqdm
 import pickle
 from sklearn.preprocessing import normalize
+import sklearn
+import librosa
 
 
 class AlignmentStats(object):
@@ -31,20 +33,21 @@ class AlignmentStats(object):
         possible_phonemes = set()
         phonemes_counter = dict()
         total_phonemes_apparations = 0
+        data_length = self._configuration['length'] / self._configuration['sampling_rate']
 
         with tqdm(self._data_stream.validation_loader) as bar:
             for data in bar:
                 speaker_ids = data['speaker_id'].to(self._device)
                 wav_filenames = data['wav_filename']
-                start_triming_indices = data['start_triming'].to(self._device)
+                shifting_times = data['shifting_time'].to(self._device)
+                loader_indices = data['index'].to(self._device)
 
                 speaker_id = wav_filenames[0][0].split('/')[-2]
-
                 if speaker_id not in os.listdir(self._vctk.raw_folder + os.sep + 'VCTK-Corpus' + os.sep + 'phonemes'):
                     # TODO: log the missing folders
                     continue
 
-                for i in range(len(start_triming_indices)):
+                for i in range(len(shifting_times)):
                     wav_filename = wav_filenames[0][i]
                     utterence_key = wav_filename.split('/')[-1].replace('.wav', '')
                     phonemes_alignement_path = os.sep.join(wav_filename.split('/')[:-3]) + os.sep + 'phonemes' + os.sep + utterence_key.split('_')[0] + os.sep \
@@ -53,12 +56,18 @@ class AlignmentStats(object):
                         # TODO: log this warn instead of print it
                         #ConsoleLogger.warn('File {} not found'.format(phonemes_alignement_path))
                         break
+
+                    shifting_time = shifting_times[0].detach().cpu().item()
+                    target_time_scale = np.arange((data_length / desired_time_interval) + 1) * desired_time_interval + shifting_time
                     tg = textgrid.TextGrid()
                     tg.read(phonemes_alignement_path)
-                    start_triming_index = start_triming_indices[i].detach().cpu().item()
-                    shifting_time = start_triming_index / self._configuration['sampling_rate']
+                    if target_time_scale[-1] > tg.tiers[1][-1].maxTime:
+                        ConsoleLogger.error('Shifting time error at {}.pickle'.format(loader_indices[i].detach().cpu().item()))
+                        continue
 
                     phonemes = list()
+                    current_time = 0.0
+                    current_target_time_index = 0
                     for interval in tg.tiers[1]:
                         if interval.mark in ['sil', '', '-', "'"]:
                             continue
@@ -66,27 +75,20 @@ class AlignmentStats(object):
                         interval.maxTime = float(interval.maxTime)
                         if interval.maxTime < shifting_time:
                             continue
-                        mark = interval.mark
-                        mark = mark[:-1] if mark[-1].isdigit() else mark
-                        possible_phonemes.add(mark)
-                        time_difference = interval.maxTime - (shifting_time - interval.minTime)
-                        quotient, remainder = divmod(float(time_difference), desired_time_interval)
-                        if 1.0 - remainder == 1.0:
-                            remainder = 0.0
-                        elif 1.0 - remainder >= 1.0 - desired_time_interval:
-                            remainder = desired_time_interval
-                        for _ in range(int(quotient)):
-                            phonemes.append(mark)
-                        if remainder != 0.0:
-                            phonemes.append(mark)
-                        if mark not in phonemes_counter:
-                            phonemes_counter[mark] = 0
-                        phonemes_counter[mark] += 1
-                        total_phonemes_apparations += 1
+                        while current_target_time_index < (data_length / desired_time_interval) and \
+                            target_time_scale[current_target_time_index] >= interval.minTime and \
+                            target_time_scale[current_target_time_index] <= interval.maxTime:
+                            phonemes.append(interval.mark)
+                            current_target_time_index += 1
+                        if len(phonemes) == (data_length / desired_time_interval):
+                            break
                     if len(phonemes) == 0:
-                        ConsoleLogger.error('Error - min:{} max:{} shifting:{}', interval.minTime, interval.maxTime, shifting_time)
+                        for interval in tg.tiers[1]:
+                            print(interval.minTime, interval.maxTime, interval.mark, shifting_time)
+                        print(target_time_scale)
+                        ConsoleLogger.error('Error - min:{} max:{} shifting:{}'.format(interval.minTime, interval.maxTime, shifting_time))
                     else:
-                        extended_alignment_dataset.append(phonemes)
+                        extended_alignment_dataset.append((utterence_key, phonemes))
 
         with open(self._results_path + os.sep + 'vctk_groundtruth_alignments.pickle', 'wb') as f:
             pickle.dump({
@@ -120,7 +122,7 @@ class AlignmentStats(object):
         bigrams = np.zeros((possibles_phonemes_number, possibles_phonemes_number), dtype=int)
         previous_phonemes_counter = np.zeros((possibles_phonemes_number), dtype=int)
 
-        for alignment in extended_alignment_dataset:
+        for _, alignment in extended_alignment_dataset:
             previous_phoneme = alignment[0]
             for i in range(len(alignment)):
                 current_phoneme = alignment[i]
@@ -131,10 +133,11 @@ class AlignmentStats(object):
         if wo_diag:
             np.fill_diagonal(bigrams, 0) # Zeroes the diagonal values
         previous_phonemes_counter[previous_phonemes_counter == 0] = 1 # Replace the zeros of the previous phonemes number by one to avoid dividing by zeros
-        bigrams = np.around(normalize(bigrams / previous_phonemes_counter, axis=1, norm='l1'), decimals=2)
+        bigrams = normalize(bigrams / previous_phonemes_counter, axis=1, norm='l1')
+        round_bigrams = np.around(bigrams.copy(), decimals=2)
 
         fig, ax = plt.subplots(figsize=(20, 20))
-        im = ax.matshow(bigrams)
+        im = ax.matshow(round_bigrams)
         ax.set_xticks(np.arange(possibles_phonemes_number))
         ax.set_yticks(np.arange(possibles_phonemes_number))
         ax.set_xticklabels(possible_phonemes)
@@ -145,7 +148,7 @@ class AlignmentStats(object):
 
         for i in range(possibles_phonemes_number):
             for j in range(possibles_phonemes_number):
-                text = ax.text(j, i, bigrams[i, j], ha='center', va='center', color='w')
+                text = ax.text(j, i, round_bigrams[i, j], ha='center', va='center', color='w')
 
         output_path = self._results_path + os.sep + 'vctk_groundtruth_bigrams_{}{}ms'.format(
             'wo_diag_' if wo_diag else '', int(desired_time_interval * 1000))
@@ -282,11 +285,12 @@ class AlignmentStats(object):
         if wo_diag:
             np.fill_diagonal(bigrams, 0) # Zeroes the diagonal values
         previous_index_counter[previous_index_counter == 0] = 1 # Replace the zeros of the previous phonemes number by one to avoid dividing by zeros
-        bigrams = np.around(normalize(bigrams / previous_index_counter, axis=1, norm='l1'), decimals=2)
+        bigrams = normalize(bigrams / previous_index_counter, axis=1, norm='l1')
+        round_bigrams = np.around(bigrams.copy(), decimals=2)
 
         fig, ax = plt.subplots(figsize=(20, 20))
 
-        im = ax.matshow(bigrams)
+        im = ax.matshow(round_bigrams)
         ax.set_xticks(np.arange(44))
         ax.set_yticks(np.arange(44))
         ax.set_xticklabels(np.arange(44))
@@ -297,7 +301,7 @@ class AlignmentStats(object):
 
         for i in range(44):
             for j in range(44):
-                text = ax.text(j, i, bigrams[i, j], ha='center', va='center', color='w')
+                text = ax.text(j, i, round_bigrams[i, j], ha='center', va='center', color='w')
 
         output_path = self._results_path + os.sep + self._experiment_name + '_vctk_empirical_bigrams_{}{}ms'.format(
             'wo_diag_' if wo_diag else '', int(desired_time_interval * 1000))
@@ -333,3 +337,27 @@ class AlignmentStats(object):
         fig.savefig(self._results_path + os.sep + self._experiment_name + '_vctk_empirical_frequency_{}ms.png'.format(
             int(desired_time_interval * 1000)), bbox_inches='tight', pad_inches=0)
         plt.close(fig)
+
+    def test_clustering(self):
+        groundtruth_alignments_dic = None
+        with open(self._results_path + os.sep + 'vctk_groundtruth_alignments.pickle', 'rb') as f:
+            groundtruth_alignments_dic = pickle.load(f)
+
+        empirical_alignments_dic = None
+        with open(self._results_path + os.sep + self._experiment_name + '_vctk_empirical_alignments.pickle', 'rb') as f:
+            empirical_alignments_dic = pickle.load(f)
+
+        groundtruth_alignments = np.array(groundtruth_alignments_dic['extended_alignment_dataset'])
+        possible_phonemes = groundtruth_alignments_dic['possible_phonemes']
+        empirical_alignments = np.array(empirical_alignments_dic['all_alignments'])
+        
+        ConsoleLogger.status(groundtruth_alignments.shape)
+        ConsoleLogger.status(empirical_alignments.shape)
+
+        for i in range(30):
+            print(len(groundtruth_alignments[i]))
+
+        print(np.concatenate(empirical_alignments).shape)
+        print(np.concatenate(groundtruth_alignments).shape)
+
+        #print(sklearn.metrics.adjusted_rand_score(np.concatenate(groundtruth_alignments), np.concatenate(empirical_alignments)))

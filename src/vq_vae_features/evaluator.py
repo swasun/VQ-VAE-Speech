@@ -51,6 +51,9 @@ class Evaluator(object):
         self._vctk = VCTK(self._configuration['data_root'], ratio=self._configuration['train_val_split'])
 
     def evaluate(self, results_path, experiment_name):
+        if 'baseline' not in experiment_name:
+            return
+
         #self._reconstruct(results_path, experiment_name)
         #self._compute_comparaison_plot(results_path, experiment_name)
         #self._plot_quantized_embedding_spaces(results_path, experiment_name)
@@ -69,15 +72,17 @@ class Evaluator(object):
             results_path,
             experiment_name
         )
-        #alignment_stats.compute_groundtruth_alignements() # TODO: compute it only if file doesn't exist
+        alignment_stats.compute_groundtruth_alignements() # TODO: compute it only if file doesn't exist
         alignment_stats.compute_groundtruth_bigrams_matrix(wo_diag=True)
         alignment_stats.compute_groundtruth_bigrams_matrix(wo_diag=False)
         alignment_stats.compute_groundtruth_phonemes_frequency()
 
-        #alignment_stats.compute_empirical_alignments() # TODO: compute it only if file doesn't exist
+        """alignment_stats.compute_empirical_alignments() # TODO: compute it only if file doesn't exist
         alignment_stats.compute_empirical_bigrams_matrix(wo_diag=True)
         alignment_stats.compute_empirical_bigrams_matrix(wo_diag=False)
-        alignment_stats.comupte_empirical_encodings_frequency()
+        alignment_stats.comupte_empirical_encodings_frequency()"""
+
+        #alignment_stats.test_clustering()
 
     def _reconstruct(self, results_path, experiment_name):
         self._model.eval()
@@ -89,7 +94,7 @@ class Evaluator(object):
         self._speaker_ids = data['speaker_id'].to(self._device)
         self._target = data['output_features'].to(self._device)
         self._wav_filename = data['wav_filename']
-        self._start_triming = data['start_triming'].to(self._device)
+        self._shifting_time = data['shifting_time'].to(self._device)
         self._preprocessed_length = data['preprocessed_length'].to(self._device)
 
         self._valid_originals = self._valid_originals.permute(0, 2, 1).contiguous().float()
@@ -347,7 +352,7 @@ class Evaluator(object):
             for data in bar:
                 valid_originals = data['input_features'].to(self._device).permute(0, 2, 1).contiguous().float()
                 speaker_ids = data['speaker_id'].to(self._device)
-                start_triming_indices = data['start_triming'].to(self._device)
+                shifting_times = data['shifting_time'].to(self._device)
                 wav_filenames = data['wav_filename']
 
                 speaker_id = wav_filenames[0][0].split(os.sep)[-2]
@@ -373,12 +378,10 @@ class Evaluator(object):
                         + utterence_key + '.TextGrid'
                     tg = textgrid.TextGrid()
                     tg.read(phonemes_alignement_path)
-                    start_triming_index = start_triming_indices[i].detach().cpu().item()
-                    shifting_time = start_triming_index / self._configuration['sampling_rate']
                     entry = {
                         'encoding_indices': encoding_indices[i].detach().cpu().numpy(),
                         'groundtruth': tg.tiers[1],
-                        'shifting_time': shifting_time
+                        'shifting_time': shifting_times[i].detach().cpu().item()
                     }
                     tokens_selections.append(entry)
 
