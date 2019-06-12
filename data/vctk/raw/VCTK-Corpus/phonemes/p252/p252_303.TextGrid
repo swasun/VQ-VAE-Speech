@@ -1,0 +1,128 @@
+File type = "ooTextFile"
+Object class = "TextGrid"
+
+xmin = 0.0
+xmax = 3.7997916666666667
+tiers? <exists>
+size = 2
+item []:
+	item [1]:
+		class = "IntervalTier"
+		name = "words"
+		xmin = 0.0
+		xmax = 3.7997916666666667
+		intervals: size = 7
+			intervals [1]:
+				xmin = 0.0
+				xmax = 2.120
+				text = ""
+			intervals [2]:
+				xmin = 2.120
+				xmax = 2.470
+				text = "tomorrow"
+			intervals [3]:
+				xmin = 2.470
+				xmax = 2.640
+				text = "will"
+			intervals [4]:
+				xmin = 2.640
+				xmax = 2.790
+				text = "be"
+			intervals [5]:
+				xmin = 2.790
+				xmax = 2.970
+				text = "my"
+			intervals [6]:
+				xmin = 2.970
+				xmax = 3.450
+				text = "last"
+			intervals [7]:
+				xmin = 3.450
+				xmax = 3.7997916666666667
+				text = ""
+	item [2]:
+		class = "IntervalTier"
+		name = "phones"
+		xmin = 0.0
+		xmax = 3.7997916666666667
+		intervals: size = 20
+			intervals [1]:
+				xmin = 0.000
+				xmax = 2.120
+				text = "sil"
+			intervals [2]:
+				xmin = 2.120
+				xmax = 2.180
+				text = "T"
+			intervals [3]:
+				xmin = 2.180
+				xmax = 2.220
+				text = "AH0"
+			intervals [4]:
+				xmin = 2.220
+				xmax = 2.300
+				text = "M"
+			intervals [5]:
+				xmin = 2.300
+				xmax = 2.350
+				text = "AA1"
+			intervals [6]:
+				xmin = 2.350
+				xmax = 2.440
+				text = "R"
+			intervals [7]:
+				xmin = 2.440
+				xmax = 2.470
+				text = "OW2"
+			intervals [8]:
+				xmin = 2.470
+				xmax = 2.560
+				text = "W"
+			intervals [9]:
+				xmin = 2.560
+				xmax = 2.590
+				text = "AH0"
+			intervals [10]:
+				xmin = 2.590
+				xmax = 2.640
+				text = "L"
+			intervals [11]:
+				xmin = 2.640
+				xmax = 2.730
+				text = "B"
+			intervals [12]:
+				xmin = 2.730
+				xmax = 2.790
+				text = "IY0"
+			intervals [13]:
+				xmin = 2.790
+				xmax = 2.880
+				text = "M"
+			intervals [14]:
+				xmin = 2.880
+				xmax = 2.970
+				text = "AY1"
+			intervals [15]:
+				xmin = 2.970
+				xmax = 3.060
+				text = "L"
+			intervals [16]:
+				xmin = 3.060
+				xmax = 3.190
+				text = "AE1"
+			intervals [17]:
+				xmin = 3.190
+				xmax = 3.360
+				text = "S"
+			intervals [18]:
+				xmin = 3.360
+				xmax = 3.450
+				text = "T"
+			intervals [19]:
+				xmin = 3.450
+				xmax = 3.780
+				text = "sp"
+			intervals [20]:
+				xmin = 3.780
+				xmax = 3.7997916666666667
+				text = ""
