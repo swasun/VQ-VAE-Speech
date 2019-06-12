@@ -5,7 +5,17 @@
     "seed": 1234,
     "experiments": {
         "baseline": {
-            "num_epochs": 10,
+            "num_epochs": 15,
+            "batch_size": 2,
+            "num_embeddings": 44,
+            "use_device": "cuda:1",
+            "normalize": true
+        },
+
+        "jitter12": {
+            "num_epochs": 15,
+            "use_jitter": true,
+            "jitter_probability": 0.12,
             "batch_size": 2,
             "num_embeddings": 44,
             "use_device": "cuda:1",

@@ -5,7 +5,7 @@
     "seed": 1234,
     "experiments": {
         "baseline-10": {
-            "num_epochs": 10,
+            "num_epochs": 15,
             "batch_size": 2,
             "num_embeddings": 10,
             "use_device": "cuda:1",
@@ -13,7 +13,7 @@
         },
 
         "baseline-100": {
-            "num_epochs": 10,
+            "num_epochs": 15,
             "batch_size": 2,
             "num_embeddings": 100,
             "use_device": "cuda:1",
@@ -21,9 +21,17 @@
         },
 
         "baseline-500": {
-            "num_epochs": 10,
+            "num_epochs": 15,
             "batch_size": 2,
             "num_embeddings": 500,
+            "use_device": "cuda:1",
+            "normalize": true
+        },
+
+        "baseline-1000": {
+            "num_epochs": 15,
+            "batch_size": 2,
+            "num_embeddings": 1000,
             "use_device": "cuda:1",
             "normalize": true
         }
