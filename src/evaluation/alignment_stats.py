@@ -9,6 +9,7 @@ from tqdm import tqdm
 import pickle
 from sklearn.preprocessing import normalize
 import sklearn
+import json
 
 
 class AlignmentStats(object):
@@ -232,41 +233,14 @@ class AlignmentStats(object):
                         if str_index not in encodings_counter:
                             encodings_counter[str_index] = 0
                         encodings_counter[str_index] += 1
-                    """indices = list()
-                    index = encoding_indices[i][0]
-                    total_indices_apparations += 1
-                    for j in range(1, len(extended_time_scale)):
-                        max_time = extended_time_scale[j]
-                        time_difference = max_time - min_time
-                        quotient, remainder = divmod(float(time_difference), desired_time_interval)
-                        if 1.0 - remainder == 1.0:
-                            remainder = 0.0
-                        elif 1.0 - remainder >= 1.0 - desired_time_interval:
-                            remainder = desired_time_interval
-                        for _ in range(int(quotient)):
-                            indices.append(index)
-                        if remainder != 0.0:
-                            indices.append(index)
-                        str_index = str(index)
-                        if str_index not in encodings_counter:
-                            encodings_counter[str_index] = 0
-                        encodings_counter[str_index] += 1
-                        min_time = max_time
-                        index = encoding_indices[i][j]
-                        total_indices_apparations += 1
-                    if len(indices) == 0:
-                        ConsoleLogger.error('Wow')
-                        intput('')
-                        break
-                    else:
-                        all_alignments.append((utterence_key, indices))"""
 
         with open(self._results_path + os.sep + self._experiment_name + '_vctk_empirical_alignments.pickle', 'wb') as f:
             pickle.dump({
                 'all_alignments': all_alignments,
                 'encodings_counter': encodings_counter,
                 'desired_time_interval': desired_time_interval,
-                'total_indices_apparations': total_indices_apparations
+                'total_indices_apparations': total_indices_apparations,
+                'num_embeddings': self._configuration['num_embeddings']
             }, f)
 
     def compute_empirical_bigrams_matrix(self, wo_diag=True):
@@ -282,9 +256,10 @@ class AlignmentStats(object):
         encodings_counter = alignments_dic['encodings_counter']
         desired_time_interval = alignments_dic['desired_time_interval']
         total_indices_apparations = alignments_dic['total_indices_apparations']
+        num_embeddings = alignments_dic['num_embeddings']
 
-        bigrams = np.zeros((44, 44), dtype=int)
-        previous_index_counter = np.zeros((44), dtype=int)
+        bigrams = np.zeros((num_embeddings, num_embeddings), dtype=int)
+        previous_index_counter = np.zeros((num_embeddings), dtype=int)
 
         for _, alignment in all_alignments:
             previous_encoding_index = alignment[0]
@@ -303,16 +278,16 @@ class AlignmentStats(object):
         fig, ax = plt.subplots(figsize=(20, 20))
 
         im = ax.matshow(round_bigrams)
-        ax.set_xticks(np.arange(44))
-        ax.set_yticks(np.arange(44))
-        ax.set_xticklabels(np.arange(44))
-        ax.set_yticklabels(np.arange(44))
+        ax.set_xticks(np.arange(num_embeddings))
+        ax.set_yticks(np.arange(num_embeddings))
+        ax.set_xticklabels(np.arange(num_embeddings))
+        ax.set_yticklabels(np.arange(num_embeddings))
         divider = make_axes_locatable(ax)
         cax = divider.append_axes('right', size='5%', pad=0.05)
         fig.colorbar(im, cax=cax)
 
-        for i in range(44):
-            for j in range(44):
+        for i in range(num_embeddings):
+            for j in range(num_embeddings):
                 text = ax.text(j, i, round_bigrams[i, j], ha='center', va='center', color='w')
 
         output_path = self._results_path + os.sep + self._experiment_name + '_vctk_empirical_bigrams_{}{}ms'.format(
@@ -350,7 +325,7 @@ class AlignmentStats(object):
             int(desired_time_interval * 1000)), bbox_inches='tight', pad_inches=0)
         plt.close(fig)
 
-    def test_clustering(self):
+    def compute_clustering_metrics(self):
         groundtruth_alignments_dic = None
         with open(self._results_path + os.sep + 'vctk_groundtruth_alignments.pickle', 'rb') as f:
             groundtruth_alignments_dic = pickle.load(f)
@@ -395,6 +370,68 @@ class AlignmentStats(object):
         ConsoleLogger.status('Concatenated groundtruth alignments shape: {}'.format(concatenated_groundtruth_alignments.shape))
         ConsoleLogger.status('Concatenated empirical alignments shape: {}'.format(concatenated_empirical_alignments.shape))
 
-        ConsoleLogger.success('Adjusted rand score: {}'.format(sklearn.metrics.adjusted_rand_score(concatenated_groundtruth_alignments, concatenated_empirical_alignments)))
-        ConsoleLogger.success('Adjusted mututal info score: {}'.format(sklearn.metrics.adjusted_mutual_info_score(concatenated_groundtruth_alignments, concatenated_empirical_alignments)))
-        ConsoleLogger.success('Normalized adjusted mututal info score: {}'.format(sklearn.metrics.normalized_mutual_info_score(concatenated_groundtruth_alignments, concatenated_empirical_alignments)))
+        adjusted_rand_score = sklearn.metrics.adjusted_rand_score(concatenated_groundtruth_alignments, concatenated_empirical_alignments)
+        adjusted_mutual_info_score = sklearn.metrics.adjusted_mutual_info_score(concatenated_groundtruth_alignments, concatenated_empirical_alignments)
+        normalized_mutual_info_score = sklearn.metrics.normalized_mutual_info_score(concatenated_groundtruth_alignments, concatenated_empirical_alignments)
+
+        ConsoleLogger.success('Adjusted rand score: {}'.format(adjusted_rand_score))
+        ConsoleLogger.success('Adjusted mututal info score: {}'.format(adjusted_mutual_info_score))
+        ConsoleLogger.success('Normalized adjusted mututal info score: {}'.format(normalized_mutual_info_score))
+
+        with open(self._results_path + os.sep + self._experiment_name + '_adjusted_rand_score.npy', 'wb') as f:
+            np.save(f, adjusted_rand_score)
+
+        with open(self._results_path + os.sep + self._experiment_name + '_adjusted_mutual_info_score.npy', 'wb') as f:
+            np.save(f, adjusted_mutual_info_score)
+
+        with open(self._results_path + os.sep + self._experiment_name + '_normalized_mutual_info_score.npy', 'wb') as f:
+            np.save(f, normalized_mutual_info_score)
+
+        ConsoleLogger.success('All scores from cluestering metrics were successfully saved')
+
+    @staticmethod
+    def compute_clustering_metrics_evolution(all_experiments_names, result_path):
+        possible_metric_names = [
+            'adjusted_rand_score',
+            'adjusted_mutual_info_score',
+            'normalized_mutual_info_score'
+        ]
+
+        scores = dict()
+
+        for file in os.listdir(result_path):
+            # Check if a known experiment name is present in the current file name
+            if sum([1 if experiment_name in file else 0 for experiment_name in all_experiments_names]) == 0:
+                continue
+            
+            # Check if a known clustering metric is present in the current file name
+            possible_metric_found = None
+            for possible_metric in possible_metric_names:
+                if possible_metric in file:
+                    possible_metric_found = possible_metric
+                    break
+            if possible_metric_found is None:
+                continue
+
+            # Classify the experiment results in the correct place within the dict scores
+            current_experiment_name = file.split('_' + possible_metric_found)[0]
+            if current_experiment_name not in scores:
+                scores[current_experiment_name] = dict()
+            if possible_metric_found not in scores[current_experiment_name]:
+                scores[current_experiment_name][possible_metric_found] = list()
+            scores[current_experiment_name][possible_metric_found].append(
+                (int(current_experiment_name.split('-')[1]), np.load(result_path + os.sep + file))
+            )
+
+        print(json.dumps(scores, sort_keys=True, indent=4))
+
+        results = list()
+        for current_experiment_name in scores.keys():
+            for clustering_metric in scores[current_experiment_name].keys():
+                all_num_embeddings = list()
+                all_scores = list()
+                for (num_embeddings, score) in scores[current_experiment_name][clustering_metric]:
+                    all_num_embeddings.append(num_embeddings)
+                    all_scores.append(score)
+                plt.plot(all_num_embeddings, all_scores)
+        plt.savefig(result_path + os.sep + 'clustering_metrics_evolution.png', bbox_inches='tight', pad_inches=0)

@@ -49,7 +49,16 @@ if __name__ == "__main__":
     parser.add_argument('--plot_experiments_losses', action='store_true', help='Plot the losses of the experiments based of the specified file in --experiments_configuration_path option')
     parser.add_argument('--evaluate', action='store_true', help='Evaluate the model')
     parser.add_argument('--compute_dataset_stats', action='store_true', help='Compute the mean and the std of the VCTK dataset')
+    parser.add_argument('--compute_alignments', action='store_true', help='Compute the groundtruth alignments and those of the specified experiments')
+    parser.add_argument('--compute_clustering_metrics', action='store_true', help='Compute the clustering metrics between the groundtruth and the empirical alignments')
+    parser.add_argument('--compute_clustering_metrics_evolution', action='store_true', help='Compute the evolution of the clustering metrics accross different number of embedding vectors')
     args = parser.parse_args()
+    
+    evaluation_options = {
+        'compute_alignments': args.compute_alignments,
+        'compute_clustering_metrics': args.compute_clustering_metrics,
+        'compute_clustering_metrics_evolution': args.compute_clustering_metrics_evolution
+    }
 
     # If specified, print the summary of the model using the CPU device
     if args.summary:
@@ -80,7 +89,7 @@ if __name__ == "__main__":
         sys.exit(0)
 
     if args.evaluate:
-        Experiments.load(args.experiments_configuration_path).evaluate()
+        Experiments.load(args.experiments_configuration_path).evaluate(evaluation_options)
         ConsoleLogger.success('All evaluating experiments done')
         sys.exit(0)
 

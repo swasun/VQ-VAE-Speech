@@ -50,7 +50,7 @@ class Evaluator(object):
         self._configuration = configuration
         self._vctk = VCTK(self._configuration['data_root'], ratio=self._configuration['train_val_split'])
 
-    def evaluate(self, results_path, experiment_name):
+    def evaluate(self, results_path, experiment_name, evaluation_options):
         #if 'baseline' not in experiment_name:
         #    return
         #self._reconstruct(results_path, experiment_name)
@@ -61,33 +61,35 @@ class Evaluator(object):
         #self._many_to_one_mapping(results_path, experiment_name) # TODO: add option to use it from args
         #self._compute_speaker_dependency_stats(results_path, experiment_name) # TODO: add option to use it from args
 
-        # TODO: add option to use it from args
-        alignment_stats = AlignmentStats(
-            self._data_stream,
-            self._vctk,
-            self._configuration,
-            self._device,
-            self._model,
-            results_path,
-            experiment_name
-        )
-        if not os.path.isfile(results_path + os.sep + 'vctk_groundtruth_alignments.pickle'):
-            alignment_stats.compute_groundtruth_alignments() # TODO: compute it only if file doesn't exist
-            alignment_stats.compute_groundtruth_bigrams_matrix(wo_diag=True)
-            alignment_stats.compute_groundtruth_bigrams_matrix(wo_diag=False)
-            alignment_stats.compute_groundtruth_phonemes_frequency()
-        else:
-            ConsoleLogger.status('Groundtruth alignments already exist')
+        if evaluation_options['compute_alignments'] or evaluation_options['compute_clustering_metrics']:
+            alignment_stats = AlignmentStats(
+                self._data_stream,
+                self._vctk,
+                self._configuration,
+                self._device,
+                self._model,
+                results_path,
+                experiment_name
+            )
+        if evaluation_options['compute_alignments']:
+            if not os.path.isfile(results_path + os.sep + 'vctk_groundtruth_alignments.pickle'):
+                alignment_stats.compute_groundtruth_alignments()
+                alignment_stats.compute_groundtruth_bigrams_matrix(wo_diag=True)
+                alignment_stats.compute_groundtruth_bigrams_matrix(wo_diag=False)
+                alignment_stats.compute_groundtruth_phonemes_frequency()
+            else:
+                ConsoleLogger.status('Groundtruth alignments already exist')
 
-        if not os.path.isfile(results_path + os.sep + experiment_name + '_vctk_empirical_alignments.pickle'):
-            alignment_stats.compute_empirical_alignments()
-            alignment_stats.compute_empirical_bigrams_matrix(wo_diag=True)
-            alignment_stats.compute_empirical_bigrams_matrix(wo_diag=False)
-            alignment_stats.comupte_empirical_encodings_frequency()
-        else:
-            ConsoleLogger.status('Empirical alignments already exist')
+            if not os.path.isfile(results_path + os.sep + experiment_name + '_vctk_empirical_alignments.pickle'):
+                alignment_stats.compute_empirical_alignments()
+                alignment_stats.compute_empirical_bigrams_matrix(wo_diag=True)
+                alignment_stats.compute_empirical_bigrams_matrix(wo_diag=False)
+                alignment_stats.comupte_empirical_encodings_frequency()
+            else:
+                ConsoleLogger.status('Empirical alignments already exist')
 
-        alignment_stats.test_clustering()
+        if evaluation_options['compute_clustering_metrics']:
+            alignment_stats.compute_clustering_metrics()
 
     def _reconstruct(self, results_path, experiment_name):
         self._model.eval()

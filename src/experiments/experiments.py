@@ -28,6 +28,7 @@ from experiments.experiment import Experiment
 from experiments.checkpoint_utils import CheckpointUtils
 from experiments.device_configuration import DeviceConfiguration
 from error_handling.console_logger import ConsoleLogger
+from evaluation.alignment_stats import AlignmentStats
 
 import json
 import yaml
@@ -53,12 +54,23 @@ class Experiments(object):
             experiment.train()
             torch.cuda.empty_cache() # Release the GPU memory cache
 
-    def evaluate(self):
+    def evaluate(self, evaluation_options):
+
         Experiments.set_deterministic_on(self._seed)
 
         for experiment in self._experiments:
-            experiment.evaluate()
+            experiment.evaluate(evaluation_options)
             torch.cuda.empty_cache() # Release the GPU memory cache
+        
+        if evaluation_options['compute_clustering_metrics_evolution']:
+            all_results_paths = [experiment.results_path for experiment in self._experiments]
+            if len(set(all_results_paths)) != 1:
+                ConsoleLogger.error('All clustering metric results should be in the same result folder')
+                return
+            AlignmentStats.compute_clustering_metrics_evolution(
+                all_experiments_names=[experiment.name for experiment in self._experiments],
+                result_path=self._experiments[0].results_path
+            )
 
     def plot_losses(self, experiments_path, colormap_name='nipy_spectral'):
         all_train_losses = list()
@@ -384,7 +396,7 @@ class Experiments(object):
                     experiments_path=experiment_configurations['experiments_path'],
                     results_path=experiment_configurations['results_path'],
                     global_configuration=configuration,
-                    experiment_configuration=experiment_configurations['experiments'][experiment_configuration_key]
+                    experiment_configuration=experiment_configurations['experiments'][experiment_configuration_key],
                 )
                 experiments.append(experiment)
         

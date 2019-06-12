@@ -36,7 +36,9 @@ import copy
 
 class Experiment(object):
 
-    def __init__(self, name, experiments_path, results_path, global_configuration, experiment_configuration):
+    def __init__(self, name, experiments_path, results_path, global_configuration,
+        experiment_configuration):
+
         self._name = name
         self._experiments_path = experiments_path
         self._results_path = results_path
@@ -102,13 +104,13 @@ class Experiment(object):
 
         ConsoleLogger.success("Succeed to runned the experiment called '{}'".format(self._name))
 
-    def evaluate(self):
+    def evaluate(self, evaluation_options):
         ConsoleLogger.status("Running the experiment called '{}'".format(self._name))
 
         self._init()
 
         ConsoleLogger.status('Begins to evaluate the model')
-        self._evaluator.evaluate(self._results_path, self._name)
+        self._evaluator.evaluate(self._results_path, self._name, evaluation_options)
 
         ConsoleLogger.success("Succeed to runned the experiment called '{}'".format(self._name))
 
