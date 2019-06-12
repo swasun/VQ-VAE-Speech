@@ -67,7 +67,7 @@ class VectorQuantizer(nn.Module):
         self._commitment_cost = commitment_cost
         self._device = device
 
-    def forward(self, inputs):
+    def forward(self, inputs, compute_distances_if_possible=True):
         """
         Connects the module to some inputs.
 
@@ -106,21 +106,21 @@ class VectorQuantizer(nn.Module):
         encodings.scatter_(1, encoding_indices, 1)
 
         # Compute distances between encoding vectors
-        if not self.training:
+        if not self.training and compute_distances_if_possible:
             _encoding_distances = [torch.dist(items[0], items[1], 2).to(self._device) for items in combinations(flat_input, r=2)]
             encoding_distances = torch.tensor(_encoding_distances).to(self._device).view(batch_size, -1)
         else:
             encoding_distances = None
 
         # Compute distances between embedding vectors
-        if not self.training:
+        if not self.training and compute_distances_if_possible:
             _embedding_distances = [torch.dist(items[0], items[1], 2).to(self._device) for items in combinations(self._embedding.weight, r=2)]
             embedding_distances = torch.tensor(_embedding_distances).to(self._device)
         else:
             embedding_distances = None
 
         # Sample nearest embedding
-        if not self.training:
+        if not self.training and compute_distances_if_possible:
             _frames_vs_embedding_distances = [torch.dist(items[0], items[1], 2).to(self._device) for items in product(flat_input, self._embedding.weight.detach())]
             frames_vs_embedding_distances = torch.tensor(_frames_vs_embedding_distances).to(self._device).view(batch_size, time, -1)
         else:
@@ -129,7 +129,7 @@ class VectorQuantizer(nn.Module):
         # Quantize and unflatten
         quantized = torch.matmul(encodings, self._embedding.weight).view(input_shape)
         # TODO: Check if the more readable self._embedding.weight.index_select(dim=1, index=encoding_indices) works better
-        
+
         concatenated_quantized = self._embedding.weight[torch.argmin(distances, dim=1).detach().cpu()] if not self.training else None
 
         # Losses

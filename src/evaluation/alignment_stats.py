@@ -9,7 +9,6 @@ from tqdm import tqdm
 import pickle
 from sklearn.preprocessing import normalize
 import sklearn
-import librosa
 
 
 class AlignmentStats(object):
@@ -25,7 +24,7 @@ class AlignmentStats(object):
 
         self._model.eval()
         
-    def compute_groundtruth_alignements(self):
+    def compute_groundtruth_alignments(self):
         ConsoleLogger.status('Computing groundtruth alignments of VCTK val dataset...')
 
         desired_time_interval = 0.02
@@ -50,31 +49,36 @@ class AlignmentStats(object):
                 for i in range(len(shifting_times)):
                     wav_filename = wav_filenames[0][i]
                     utterence_key = wav_filename.split('/')[-1].replace('.wav', '')
-                    phonemes_alignement_path = os.sep.join(wav_filename.split('/')[:-3]) + os.sep + 'phonemes' + os.sep + utterence_key.split('_')[0] + os.sep \
+                    phonemes_alignment_path = os.sep.join(wav_filename.split('/')[:-3]) + os.sep + 'phonemes' + os.sep + utterence_key.split('_')[0] + os.sep \
                         + utterence_key + '.TextGrid'
-                    if not os.path.isfile(phonemes_alignement_path):
+                    if not os.path.isfile(phonemes_alignment_path):
                         # TODO: log this warn instead of print it
-                        #ConsoleLogger.warn('File {} not found'.format(phonemes_alignement_path))
+                        #ConsoleLogger.warn('File {} not found'.format(phonemes_alignment_path))
                         break
 
                     shifting_time = shifting_times[0].detach().cpu().item()
                     target_time_scale = np.arange((data_length / desired_time_interval) + 1) * desired_time_interval + shifting_time
                     tg = textgrid.TextGrid()
-                    tg.read(phonemes_alignement_path)
+                    tg.read(phonemes_alignment_path)
                     if target_time_scale[-1] > tg.tiers[1][-1].maxTime:
                         ConsoleLogger.error('Shifting time error at {}.pickle'.format(loader_indices[i].detach().cpu().item()))
                         continue
 
                     phonemes = list()
-                    current_time = 0.0
                     current_target_time_index = 0
                     for interval in tg.tiers[1]:
-                        if interval.mark in ['sil', '', '-', "'"]:
+                        if interval.mark in ['', '-', "'"]:
                             continue
+                        interval.mark = interval.mark[:-1] if interval.mark[-1].isdigit() else interval.mark
                         interval.minTime = float(interval.minTime)
                         interval.maxTime = float(interval.maxTime)
                         if interval.maxTime < shifting_time:
                             continue
+                        possible_phonemes.add(interval.mark)
+                        if interval.mark not in phonemes_counter:
+                            phonemes_counter[interval.mark] = 0
+                        phonemes_counter[interval.mark] += 1
+                        total_phonemes_apparations += 1
                         while current_target_time_index < (data_length / desired_time_interval) and \
                             target_time_scale[current_target_time_index] >= interval.minTime and \
                             target_time_scale[current_target_time_index] <= interval.maxTime:
@@ -83,10 +87,9 @@ class AlignmentStats(object):
                         if len(phonemes) == (data_length / desired_time_interval):
                             break
                     if len(phonemes) == 0:
-                        for interval in tg.tiers[1]:
-                            print(interval.minTime, interval.maxTime, interval.mark, shifting_time)
-                        print(target_time_scale)
-                        ConsoleLogger.error('Error - min:{} max:{} shifting:{}'.format(interval.minTime, interval.maxTime, shifting_time))
+                        intervals = ['min:{} max:{} mark:{}'.format(interval.minTime, interval.maxTime, interval.mark) for interval in tg.tiers[1]]
+                        ConsoleLogger.error('Error - min:{} max:{} shifting:{} target_time_scale: {} intervals: {}'.format(
+                            interval.minTime, interval.maxTime, shifting_time, target_time_scale, intervals))
                     else:
                         extended_alignment_dataset.append((utterence_key, phonemes))
 
@@ -118,7 +121,7 @@ class AlignmentStats(object):
         possibles_phonemes_number = len(possible_phonemes)
         #ConsoleLogger.status('List of phonemes: {}'.format(possible_phonemes)) # TODO: log it instead of print it
         #ConsoleLogger.status('Number of phonemes: {}'.format(possibles_phonemes_number)) # TODO: log it instead of print it
-        phonemes_indices = {possible_phonemes[i]:i for i in range(len(possible_phonemes))}
+        phonemes_indices = {possible_phonemes[i]:i for i in range(possibles_phonemes_number)}
         bigrams = np.zeros((possibles_phonemes_number, possibles_phonemes_number), dtype=int)
         previous_phonemes_counter = np.zeros((possibles_phonemes_number), dtype=int)
 
@@ -210,7 +213,7 @@ class AlignmentStats(object):
                 z = self._model.encoder(valid_originals)
                 z = self._model.pre_vq_conv(z)
                 _, quantized, _, encodings, _, encoding_indices, _, \
-                    _, _, _, _ = self._model.vq(z)
+                    _, _, _, _ = self._model.vq(z, compute_distances_if_possible=False)
                 valid_reconstructions = self._model.decoder(quantized, self._data_stream.speaker_dic, speaker_ids)
                 B = valid_reconstructions.size(0)
                 T = encoding_indices.size(0)
@@ -220,7 +223,16 @@ class AlignmentStats(object):
                 min_time = 0.0
 
                 for i in range(len(valid_reconstructions)):
-                    indices = list()
+                    wav_filename = wav_filenames[0][i]
+                    utterence_key = wav_filename.split('/')[-1].replace('.wav', '')
+                    all_alignments.append((utterence_key, encoding_indices[i]))
+                    total_indices_apparations += len(encoding_indices[i])
+                    for index in encoding_indices[i]:
+                        str_index = str(index)
+                        if str_index not in encodings_counter:
+                            encodings_counter[str_index] = 0
+                        encodings_counter[str_index] += 1
+                    """indices = list()
                     index = encoding_indices[i][0]
                     total_indices_apparations += 1
                     for j in range(1, len(extended_time_scale)):
@@ -247,7 +259,7 @@ class AlignmentStats(object):
                         intput('')
                         break
                     else:
-                        all_alignments.append(indices)
+                        all_alignments.append((utterence_key, indices))"""
 
         with open(self._results_path + os.sep + self._experiment_name + '_vctk_empirical_alignments.pickle', 'wb') as f:
             pickle.dump({
@@ -274,7 +286,7 @@ class AlignmentStats(object):
         bigrams = np.zeros((44, 44), dtype=int)
         previous_index_counter = np.zeros((44), dtype=int)
 
-        for alignment in all_alignments:
+        for _, alignment in all_alignments:
             previous_encoding_index = alignment[0]
             for i in range(len(alignment)):
                 current_encoding_index = alignment[i]
@@ -348,16 +360,41 @@ class AlignmentStats(object):
             empirical_alignments_dic = pickle.load(f)
 
         groundtruth_alignments = np.array(groundtruth_alignments_dic['extended_alignment_dataset'])
-        possible_phonemes = groundtruth_alignments_dic['possible_phonemes']
+        possible_phonemes = list(groundtruth_alignments_dic['possible_phonemes'])
         empirical_alignments = np.array(empirical_alignments_dic['all_alignments'])
-        
-        ConsoleLogger.status(groundtruth_alignments.shape)
-        ConsoleLogger.status(empirical_alignments.shape)
+        phonemes_indices = {possible_phonemes[i]:i for i in range(len(possible_phonemes))}
 
-        for i in range(30):
-            print(len(groundtruth_alignments[i]))
+        ConsoleLogger.status('#{} possible phonemes: {}'.format(len(possible_phonemes), possible_phonemes))
+        ConsoleLogger.status('# of raw groundtruth alignments: {}'.format(len(groundtruth_alignments)))
+        ConsoleLogger.status('# of raw empirical alignments: {}'.format(len(empirical_alignments)))
 
-        print(np.concatenate(empirical_alignments).shape)
-        print(np.concatenate(groundtruth_alignments).shape)
+        groundtruth_utterance_keys = set()
+        final_groundtruth_alignments = list()
+        final_empirical_alignments = list()
 
-        #print(sklearn.metrics.adjusted_rand_score(np.concatenate(groundtruth_alignments), np.concatenate(empirical_alignments)))
+        for (utterence_key, alignment) in groundtruth_alignments:
+            groundtruth_utterance_keys.add(utterence_key)
+            final_groundtruth_alignments.append([phonemes_indices[alignment[i]] for i in range(len(alignment))])
+
+        for (utterence_key, alignment) in empirical_alignments:
+            if utterence_key in groundtruth_utterance_keys:
+                final_empirical_alignments.append(alignment)
+
+        final_groundtruth_alignments = np.asarray(final_groundtruth_alignments)
+        final_empirical_alignments = np.asarray(final_empirical_alignments)
+
+        ConsoleLogger.status('Groundtruth alignments shape: {}'.format(final_groundtruth_alignments.shape))
+        ConsoleLogger.status('Empirical alignments shape: {}'.format(final_empirical_alignments.shape))
+
+        ConsoleLogger.status('Groundtruth alignments samples: {}'.format([final_groundtruth_alignments[i] for i in range(2)]))
+        ConsoleLogger.status('Empirical alignments samples: {}'.format([final_empirical_alignments[i] for i in range(2)]))
+
+        concatenated_groundtruth_alignments = np.concatenate(final_groundtruth_alignments)
+        concatenated_empirical_alignments = np.concatenate(final_empirical_alignments)
+
+        ConsoleLogger.status('Concatenated groundtruth alignments shape: {}'.format(concatenated_groundtruth_alignments.shape))
+        ConsoleLogger.status('Concatenated empirical alignments shape: {}'.format(concatenated_empirical_alignments.shape))
+
+        ConsoleLogger.success('Adjusted rand score: {}'.format(sklearn.metrics.adjusted_rand_score(concatenated_groundtruth_alignments, concatenated_empirical_alignments)))
+        ConsoleLogger.success('Adjusted mututal info score: {}'.format(sklearn.metrics.adjusted_mutual_info_score(concatenated_groundtruth_alignments, concatenated_empirical_alignments)))
+        ConsoleLogger.success('Normalized adjusted mututal info score: {}'.format(sklearn.metrics.normalized_mutual_info_score(concatenated_groundtruth_alignments, concatenated_empirical_alignments)))

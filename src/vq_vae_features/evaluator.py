@@ -51,9 +51,8 @@ class Evaluator(object):
         self._vctk = VCTK(self._configuration['data_root'], ratio=self._configuration['train_val_split'])
 
     def evaluate(self, results_path, experiment_name):
-        if 'baseline' not in experiment_name:
-            return
-
+        #if 'baseline' not in experiment_name:
+        #    return
         #self._reconstruct(results_path, experiment_name)
         #self._compute_comparaison_plot(results_path, experiment_name)
         #self._plot_quantized_embedding_spaces(results_path, experiment_name)
@@ -72,17 +71,23 @@ class Evaluator(object):
             results_path,
             experiment_name
         )
-        alignment_stats.compute_groundtruth_alignements() # TODO: compute it only if file doesn't exist
-        alignment_stats.compute_groundtruth_bigrams_matrix(wo_diag=True)
-        alignment_stats.compute_groundtruth_bigrams_matrix(wo_diag=False)
-        alignment_stats.compute_groundtruth_phonemes_frequency()
+        if not os.path.isfile(results_path + os.sep + 'vctk_groundtruth_alignments.pickle'):
+            alignment_stats.compute_groundtruth_alignments() # TODO: compute it only if file doesn't exist
+            alignment_stats.compute_groundtruth_bigrams_matrix(wo_diag=True)
+            alignment_stats.compute_groundtruth_bigrams_matrix(wo_diag=False)
+            alignment_stats.compute_groundtruth_phonemes_frequency()
+        else:
+            ConsoleLogger.status('Groundtruth alignments already exist')
 
-        """alignment_stats.compute_empirical_alignments() # TODO: compute it only if file doesn't exist
-        alignment_stats.compute_empirical_bigrams_matrix(wo_diag=True)
-        alignment_stats.compute_empirical_bigrams_matrix(wo_diag=False)
-        alignment_stats.comupte_empirical_encodings_frequency()"""
+        if not os.path.isfile(results_path + os.sep + experiment_name + '_vctk_empirical_alignments.pickle'):
+            alignment_stats.compute_empirical_alignments()
+            alignment_stats.compute_empirical_bigrams_matrix(wo_diag=True)
+            alignment_stats.compute_empirical_bigrams_matrix(wo_diag=False)
+            alignment_stats.comupte_empirical_encodings_frequency()
+        else:
+            ConsoleLogger.status('Empirical alignments already exist')
 
-        #alignment_stats.test_clustering()
+        alignment_stats.test_clustering()
 
     def _reconstruct(self, results_path, experiment_name):
         self._model.eval()
@@ -112,10 +117,10 @@ class Evaluator(object):
     def _compute_comparaison_plot(self, results_path, experiment_name):
         utterence_key = self._wav_filename.split('/')[-1].replace('.wav', '')
         utterence = self._vctk.utterences[utterence_key].replace('\n', '')
-        phonemes_alignement_path = os.sep.join(self._wav_filename.split('/')[:-3]) + os.sep + 'phonemes' + os.sep + utterence_key.split('_')[0] + os.sep \
+        phonemes_alignment_path = os.sep.join(self._wav_filename.split('/')[:-3]) + os.sep + 'phonemes' + os.sep + utterence_key.split('_')[0] + os.sep \
             + utterence_key + '.TextGrid'
         #tg = textgrid.TextGrid()
-        #tg.read(phonemes_alignement_path)
+        #tg.read(phonemes_alignment_path)
         #for interval in tg.tiers[0]:
     
         ConsoleLogger.status('Original utterence: {}'.format(utterence))
@@ -374,10 +379,10 @@ class Evaluator(object):
                 for i in range(len(valid_reconstructions)):
                     wav_filename = wav_filenames[0][i]
                     utterence_key = wav_filename.split('/')[-1].replace('.wav', '')
-                    phonemes_alignement_path = os.sep.join(wav_filename.split('/')[:-3]) + os.sep + 'phonemes' + os.sep + utterence_key.split('_')[0] + os.sep \
+                    phonemes_alignment_path = os.sep.join(wav_filename.split('/')[:-3]) + os.sep + 'phonemes' + os.sep + utterence_key.split('_')[0] + os.sep \
                         + utterence_key + '.TextGrid'
                     tg = textgrid.TextGrid()
-                    tg.read(phonemes_alignement_path)
+                    tg.read(phonemes_alignment_path)
                     entry = {
                         'encoding_indices': encoding_indices[i].detach().cpu().numpy(),
                         'groundtruth': tg.tiers[1],
