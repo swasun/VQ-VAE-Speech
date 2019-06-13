@@ -66,7 +66,7 @@ class Evaluator(object):
 
         if evaluation_options['plot_comparaison_plot'] or \
             evaluation_options['plot_quantized_embedding_spaces'] or \
-            evaluation_options['plot_distances_histogram']
+            evaluation_options['plot_distances_histogram']:
             evaluation_entry = self._evaluate_once(results_path, experiment_name)
 
         if evaluation_options['plot_comparaison_plot']:
