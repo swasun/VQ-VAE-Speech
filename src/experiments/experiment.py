@@ -75,7 +75,7 @@ class Experiment(object):
                 yaml.dump(self._configuration, file)
         else:
             with open(experiments_configuration_path, 'r') as file:
-                self._configuration = yaml.load(file)
+                self._configuration = yaml.load(file, Loader=yaml.FullLoader)
                 self._device_configuration = DeviceConfiguration.load_from_configuration(self._configuration)
 
     @property
@@ -137,7 +137,7 @@ class Experiment(object):
                     ConsoleLogger.status('Loading the configuration file')
                     configuration = None
                     with open(self._experiments_path + os.sep + configuration_file, 'r') as file:
-                        configuration = yaml.load(file)
+                        configuration = yaml.load(file, Loader=yaml.FullLoader)
                     self._model, self._trainer, self._evaluator, self._data_stream, self._configuration = create_from_scratch(
                         configuration,
                         self._device_configuration

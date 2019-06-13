@@ -32,6 +32,8 @@ import numpy as np
 import random
 import pathlib
 import librosa
+import os
+import textgrid
 
 
 class VCTKDataset(Dataset):
@@ -46,22 +48,22 @@ class VCTKDataset(Dataset):
         self._length = None if configuration['length'] is None else configuration['length'] + 1
         self._quantize = configuration['quantize']
 
-    def _preprocessing(self, raw, quantized):
+    def _preprocessing(self, audio, quantized):
         if self._length is not None:
-            if len(raw) <= self._length :
+            if len(audio) <= self._length :
                 # padding
-                pad = self._length - len(raw)
-                raw = np.concatenate(
-                    (raw, np.zeros(pad, dtype=np.float32)))
+                pad = self._length - len(audio)
+                audio = np.concatenate(
+                    (audio, np.zeros(pad, dtype=np.float32)))
                 quantized = np.concatenate(
                     (quantized, self._quantize // 2 * np.ones(pad)))
                 quantized = quantized.astype(np.long)
-                start_triming = None
+                start_trimming = None
             else:
-                # triming
-                start_triming = random.randint(0, len(raw) -self._length - 1)
-                raw = raw[start_triming:start_triming + self._length]
-                quantized = quantized[start_triming:start_triming + self._length]
+                # trimming
+                start_trimming = random.randint(0, len(audio) - self._length - 1)
+                audio = audio[start_trimming:start_trimming + self._length]
+                quantized = quantized[start_trimming:start_trimming + self._length]
 
         # ont_hot for input
         one_hot = np.identity(
@@ -70,57 +72,84 @@ class VCTKDataset(Dataset):
         )[quantized]
         one_hot = np.expand_dims(one_hot.T, 2)
 
-        raw = np.expand_dims(raw, 0) # expand channel
-        raw = np.expand_dims(raw, -1) # expand height
+        audio = np.expand_dims(audio, 0) # expand channel
+        audio = np.expand_dims(audio, -1) # expand height
 
         # target
         quantized = np.expand_dims(quantized, 1)
 
-        return raw, one_hot[:, :-1], quantized[1:], start_triming
+        return audio, one_hot[:, :-1], quantized[1:], start_trimming
 
     @staticmethod
-    def preprocessing_raw(raw, length, expand_dims=False):
+    def preprocess_audio(audio, length, expand_dims=False):
         if length is not None:
-            if len(raw) <= length :
+            if len(audio) <= length :
                 # padding
-                pad = length - len(raw)
-                raw = np.concatenate(
-                    (raw, np.zeros(pad, dtype=np.float32)))
+                pad = length - len(audio)
+                audio = np.concatenate(
+                    (audio, np.zeros(pad, dtype=np.float32)))
             else:
                 # triming
-                start = random.randint(0, len(raw) -length  - 1)
-                raw = raw[start:start + length]
+                start = random.randint(0, len(audio) -length  - 1)
+                audio = audio[start:start + length]
 
         if expand_dims:
-            raw = np.expand_dims(raw, 0) # expand channel
-            raw = np.expand_dims(raw, -1) # expand height
+            audio = np.expand_dims(audio, 0) # expand channel
+            audio = np.expand_dims(audio, -1) # expand height
 
-        return raw
+        return audio
 
     def __getitem__(self, index):
         wav_filename = self._audios[index]
-        raw = self._load_wav(wav_filename, self._sampling_rate, self._res_type, self._top_db)
 
-        quantized = MuLaw.encode(raw)
+        # Check if a groundtruth is available
+        split_path = wav_filename.split(os.sep)
+        groundtruth_alignment_path = os.sep.join(split_path[:-3]) + os.sep + 'phonemes' + split_path[-2] + split_path[-1].replace('.wav', '.TextGrid')
+        detected_sil_duration = 0.0
+        if os.path.isfile(groundtruth_alignment_path):
+            tg = textgrid.TextGrid()
+            tg.read(groundtruth_alignment_path)
+            for interval in tg.tiers[1]:
+                if interval.mark != 'sil':
+                    break
+                detected_sil_duration += float(interval.maxTime) - float(interval.minTime)
+ 
+        audio, trimming_time = self._load_wav(
+            wav_filename,
+            self._sampling_rate,
+            self._res_type,
+            self._top_db,
+            trimming_duration=detected_sil_duration if detected_sil_duration != 0.0 else None
+        )
+
+        quantized = MuLaw.encode(audio)
 
         speaker = pathlib.Path(wav_filename).parent.name
 
         speaker_id = np.array(self._speaker_dic[speaker], dtype=np.long)
 
-        preprocessed_audio, one_hot, quantized, start_triming = self._preprocessing(raw, quantized)
+        preprocessed_audio, one_hot, quantized, start_trimming = self._preprocessing(audio, quantized)
 
-        return preprocessed_audio, one_hot, speaker_id, quantized, wav_filename, start_triming, self._length
+        shifting_time = trimming_time + (0 if start_trimming is None else start_trimming / self._sampling_rate)
+
+        return preprocessed_audio, one_hot, speaker_id, quantized, wav_filename, self._sampling_rate, \
+            shifting_time, self._length - 1, self._top_db
 
     def __len__(self):
         return len(self._audios)
 
-    def _load_wav(self, filename, sampling_rate, res_type, top_db):
+    def _load_wav(self, filename, sampling_rate, res_type, top_db, trimming_duration=None):
         raw, _ = librosa.load(filename, sampling_rate, res_type=res_type)
-        raw, _ = librosa.effects.trim(raw, top_db=top_db)
-        raw /= np.abs(raw).max()
-        raw = raw.astype(np.float32)
+        if not trimming_duration:
+            trimmed_audio, _ = librosa.effects.trim(raw, top_db=top_db)
+        else:
+            trimmed_audio = raw[trimming_duration * sampling_rate:]
+        trimmed_audio /= np.abs(trimmed_audio).max()
+        trimmed_audio = trimmed_audio.astype(np.float32)
 
-        return raw
+        trimming_time = librosa.get_duration(raw) - librosa.get_duration(trimmed_audio)
+
+        return trimmed_audio, trimming_time
 
     @property
     def speaker_dic(self):

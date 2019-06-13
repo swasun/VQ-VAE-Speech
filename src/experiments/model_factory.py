@@ -99,7 +99,7 @@ class ModelFactory(object):
         ConsoleLogger.status('Loading the configuration file')
         configuration = None
         with open(experiment_path + os.sep + configuration_file, 'r') as file:
-            configuration = yaml.load(file)
+            configuration = yaml.load(file, Loader=yaml.FullLoader)
 
         # Update the epoch number to begin with for the future training
         configuration['start_epoch'] = latest_epoch

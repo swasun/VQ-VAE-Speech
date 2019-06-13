@@ -63,7 +63,7 @@ class Experiments(object):
             experiment.evaluate(evaluation_options)
             torch.cuda.empty_cache() # Release the GPU memory cache
         
-        if evaluation_options['compute_clustering_metrics_evolution']:
+        if evaluation_options['plot_clustering_metrics_evolution']:
             all_results_paths = [experiment.results_path for experiment in self._experiments]
             if len(set(all_results_paths)) != 1:
                 ConsoleLogger.error('All clustering metric results should be in the same result folder')
@@ -156,7 +156,7 @@ class Experiments(object):
         ConsoleLogger.status("Loading the configuration file '{}'".format(configuration_path))
         configuration = None
         with open(configuration_path, 'r') as file:
-            configuration = yaml.load(file)
+            configuration = yaml.load(file, Loader=yaml.FullLoader)
         
         # Load the device configuration from the configuration state
         device_configuration = DeviceConfiguration.load_from_configuration(configuration)
@@ -389,7 +389,7 @@ class Experiments(object):
 
             configuration = None
             with open(experiment_configurations['configuration_path'], 'r') as configuration_file:
-                configuration = yaml.load(configuration_file)
+                configuration = yaml.load(configuration_file, Loader=yaml.FullLoader)
 
             for experiment_configuration_key in experiment_configurations['experiments'].keys():
                 experiment = Experiment(

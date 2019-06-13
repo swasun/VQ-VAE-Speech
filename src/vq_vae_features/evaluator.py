@@ -51,15 +51,40 @@ class Evaluator(object):
         self._vctk = VCTK(self._configuration['data_root'], ratio=self._configuration['train_val_split'])
 
     def evaluate(self, results_path, experiment_name, evaluation_options):
-        #if 'baseline' not in experiment_name:
-        #    return
-        #self._reconstruct(results_path, experiment_name)
-        #self._compute_comparaison_plot(results_path, experiment_name)
-        #self._plot_quantized_embedding_spaces(results_path, experiment_name)
-        #self._plot_distances_histogram(results_path, experiment_name)
-        #self._test_denormalization(results_path, experiment_name) # TODO: add option to use it from args
-        #self._many_to_one_mapping(results_path, experiment_name) # TODO: add option to use it from args
-        #self._compute_speaker_dependency_stats(results_path, experiment_name) # TODO: add option to use it from args
+        self._model.evaluate()
+
+        evaluation_options = {
+        'plot_comparaison_plot': args.plot_comparaison_plot,
+        'plot_quantized_embedding_spaces': args.plot_quantized_embedding_spaces,
+        'plot_distances_histogram': args.plot_distances_histogram,
+        'compute_many_to_one_mapping': args.compute_many_to_one_mapping,
+        'compute_speaker_dependency_stats': args.compute_speaker_dependency_stats,
+        'compute_alignments': args.compute_alignments,
+        'compute_clustering_metrics': args.compute_clustering_metrics,
+        'plot_clustering_metrics_evolution': args.plot_clustering_metrics_evolution
+    }
+
+        if evaluation_options['plot_comparaison_plot'] or \
+            evaluation_options['plot_quantized_embedding_spaces'] or \
+            evaluation_options['plot_distances_histogram']
+            evaluation_entry = self._evaluate_once(results_path, experiment_name)
+
+        if evaluation_options['plot_comparaison_plot']:
+            self._compute_comparaison_plot(evaluation_entry, results_path, experiment_name)
+
+        if evaluation_options['plot_quantized_embedding_spaces']:
+            self._plot_quantized_embedding_spaces(evaluation_entry, results_path, experiment_name)
+
+        if evaluation_options['plot_distances_histogram']:
+            self._plot_distances_histogram(evaluation_entry, results_path, experiment_name)
+
+        #self._test_denormalization(evaluation_entry, results_path, experiment_name)
+
+        if evaluation_options['compute_many_to_one_mapping']:
+            self._many_to_one_mapping(results_path, experiment_name)
+
+        if evaluation_options['compute_speaker_dependency_stats']:
+            self._compute_speaker_dependency_stats(results_path, experiment_name)
 
         if evaluation_options['compute_alignments'] or evaluation_options['compute_clustering_metrics']:
             alignment_stats = AlignmentStats(
@@ -91,35 +116,56 @@ class Evaluator(object):
         if evaluation_options['compute_clustering_metrics']:
             alignment_stats.compute_clustering_metrics()
 
-    def _reconstruct(self, results_path, experiment_name):
+    def _evaluate_once(self, results_path, experiment_name):
         self._model.eval()
 
         data = next(iter(self._data_stream.validation_loader))
 
-        self._preprocessed_audio = data['preprocessed_audio'].to(self._device)
-        self._valid_originals = data['input_features'].to(self._device)
-        self._speaker_ids = data['speaker_id'].to(self._device)
-        self._target = data['output_features'].to(self._device)
-        self._wav_filename = data['wav_filename']
-        self._shifting_time = data['shifting_time'].to(self._device)
-        self._preprocessed_length = data['preprocessed_length'].to(self._device)
+        preprocessed_audio = data['preprocessed_audio'].to(self._device)
+        valid_originals = data['input_features'].to(self._device)
+        speaker_ids = data['speaker_id'].to(self._device)
+        target = data['output_features'].to(self._device)
+        wav_filename = data['wav_filename']
+        shifting_time = data['shifting_time'].to(self._device)
+        preprocessed_length = data['preprocessed_length'].to(self._device)
 
-        self._valid_originals = self._valid_originals.permute(0, 2, 1).contiguous().float()
-        self._batch_size = self._valid_originals.size(0)
-        self._target = self._target.permute(0, 2, 1).contiguous().float()
-        self._wav_filename = self._wav_filename[0][0]
+        valid_originals = valid_originals.permute(0, 2, 1).contiguous().float()
+        batch_size = valid_originals.size(0)
+        target = _target.permute(0, 2, 1).contiguous().float()
+        wav_filename = wav_filename[0][0]
 
-        z = self._model.encoder(self._valid_originals)
+        z = self._model.encoder(valid_originals)
         z = self._model.pre_vq_conv(z)
-        _, self._quantized, _, self._encodings, self._distances, self._encoding_indices, _, \
-            self._encoding_distances, self._embedding_distances, self._frames_vs_embedding_distances, \
-            self._concatenated_quantized = self._model.vq(z)
-        self._valid_reconstructions = self._model.decoder(self._quantized, self._data_stream.speaker_dic, self._speaker_ids)[0]
+        _, quantized, _, encodings, distances, encoding_indices, _, \
+            encoding_distances, embedding_distances, frames_vs_embedding_distances, \
+            concatenated_quantized = self._model.vq(z)
+        valid_reconstructions = self._model.decoder(quantized, data_stream.speaker_dic, speaker_ids)[0]
 
-    def _compute_comparaison_plot(self, results_path, experiment_name):
-        utterence_key = self._wav_filename.split('/')[-1].replace('.wav', '')
+        return {
+            'preprocessed_audio': preprocessed_audio,
+            'valid_originals': valid_originals,
+            'speaker_ids': speaker_ids,
+            'target': target,
+            'wav_filename': wav_filename,
+            'shifting_time': shifting_time,
+            'preprocessed_length': preprocessed_length,
+            'batch_size': batch_size,
+            'quantized': quantized,
+            'encodings': encodings,
+            'distances': distances,
+            'encoding_indices': encoding_indices,
+            'encoding_distances': encoding_distances,
+            'embedding_distances': embedding_distances,
+            'frames_vs_embedding_distances': frames_vs_embedding_distances,
+            'concatenated_quantized': concatenated_quantized,
+            'valid_reconstructions': valid_reconstructions
+        }
+
+    def _compute_comparaison_plot(self, evaluation_entry, results_path, experiment_name):
+        utterence_key = evaluation_entry['wav_filename'].split('/')[-1].replace('.wav', '')
         utterence = self._vctk.utterences[utterence_key].replace('\n', '')
-        phonemes_alignment_path = os.sep.join(self._wav_filename.split('/')[:-3]) + os.sep + 'phonemes' + os.sep + utterence_key.split('_')[0] + os.sep \
+        phonemes_alignment_path = os.sep.join(evaluation_entry['wav_filename'].split('/')[:-3]) \
+            + os.sep + 'phonemes' + os.sep + utterence_key.split('_')[0] + os.sep \
             + utterence_key + '.TextGrid'
         #tg = textgrid.TextGrid()
         #tg.read(phonemes_alignment_path)
@@ -131,18 +177,18 @@ class Evaluator(object):
             ConsoleLogger.status('utterence: {}'.format(utterence))
 
         spectrogram_parser = SpectrogramParser()
-        preprocessed_audio = self._preprocessed_audio.detach().cpu()[0].numpy().squeeze()
+        preprocessed_audio = evaluation_entry['preprocessed_audio'].detach().cpu()[0].numpy().squeeze()
         spectrogram = spectrogram_parser.parse_audio(preprocessed_audio).contiguous()
 
         spectrogram = spectrogram.detach().cpu().numpy()
 
-        valid_originals = self._valid_originals.detach().cpu()[0].numpy()
+        valid_originals = evaluation_entry['valid_originals'].detach().cpu()[0].numpy()
 
-        probs = F.softmax(-self._distances[0], dim=1).detach().cpu().transpose(0, 1).contiguous()
+        probs = F.softmax(-evaluation_entry['distances'][0], dim=1).detach().cpu().transpose(0, 1).contiguous()
 
         #target = self._target.detach().cpu()[0].numpy()
 
-        valid_reconstructions = self._valid_reconstructions.detach().cpu().numpy()
+        valid_reconstructions = evaluation_entry['valid_reconstructions'].detach().cpu().numpy()
 
         fig, axs = plt.subplots(6, 1, figsize=(35, 30), sharex=True)
 
@@ -190,16 +236,18 @@ class Evaluator(object):
         c = axis.pcolormesh(x, y, data)
         fig.colorbar(c, ax=axis)
 
-    def _plot_quantized_embedding_spaces(self, results_path, experiment_name):
-        concatenated_quantized = self._concatenated_quantized.detach().cpu().numpy()
+    def _plot_quantized_embedding_spaces(self, evaluation_entry, results_path, experiment_name):
+        # TODO: do it for more that one sample
+
+        concatenated_quantized = evaluation_entry['concatenated_quantized'].detach().cpu().numpy()
         embedding = self._model.vq.embedding.weight.data.cpu().detach().numpy()
         n_embedding = embedding.shape[0]
-        encoding_indices = self._encoding_indices.detach().cpu().numpy()
+        encoding_indices = evaluation_entry['encoding_indices'].detach().cpu().numpy()
         encoding_indices = np.concatenate(encoding_indices)
         quantized_embedding_space = np.concatenate(
             (concatenated_quantized, embedding)
         )
-        speaker_ids = self._speaker_ids.detach().cpu().numpy()
+        speaker_ids = evaluation_entry['speaker_ids'].detach().cpu().numpy()
         time_speaker_ids = np.repeat(
             speaker_ids,
             concatenated_quantized.shape[0] // self._data_stream.validation_batch_size,
@@ -207,8 +255,7 @@ class Evaluator(object):
         )
         time_speaker_ids = np.concatenate(time_speaker_ids)
 
-        #for n_neighbors in [3, 10, 50, 100]:
-        for n_neighbors in [3]:
+        for n_neighbors in [3, 10]:
             mapping = umap.UMAP(
                 n_neighbors=n_neighbors,
                 min_dist=0.0,
@@ -274,10 +321,10 @@ class Evaluator(object):
         fig.savefig(output_path, bbox_inches='tight', pad_inches=0)
         plt.close(fig)
 
-    def _plot_distances_histogram(self, results_path, experiment_name):
-        encodings_distances = self._encoding_distances[0].detach().cpu().numpy()
-        embeddings_distances = self._embedding_distances.detach().cpu().numpy()
-        frames_vs_embedding_distances = self._frames_vs_embedding_distances.detach()[0].cpu().transpose(0, 1).numpy().ravel()
+    def _plot_distances_histogram(self, evaluation_entry, results_path, experiment_name):
+        encodings_distances = evaluation_entry['encoding_distances'][0].detach().cpu().numpy()
+        embeddings_distances = evaluation_entry['embedding_distances'].detach().cpu().numpy()
+        frames_vs_embedding_distances = evaluation_entry['frames_vs_embedding_distances'].detach()[0].cpu().transpose(0, 1).numpy().ravel()
 
         if self._configuration['verbose']:
             ConsoleLogger.status('encoding_distances[0].size(): {}'.format(encoding_distances.shape))
@@ -305,9 +352,9 @@ class Evaluator(object):
         fig.savefig(output_path, bbox_inches='tight', pad_inches=0)
         plt.close(fig)
 
-    def _test_denormalization(self, results_path, experiment_name):
-        valid_originals = self._valid_originals.detach().cpu()[0].numpy()
-        valid_reconstructions = self._valid_reconstructions.detach().cpu().numpy()
+    def _test_denormalization(self, evaluation_entry, results_path, experiment_name):
+        valid_originals = evaluation_entry['valid_originals'].detach().cpu()[0].numpy()
+        valid_reconstructions = evaluation_entry['valid_reconstructions'].detach().cpu().numpy()
         normalizer = self._data_stream.normalizer
 
         denormalized_valid_originals = (normalizer['train_std'] * valid_originals.transpose() + normalizer['train_mean']).transpose()
@@ -349,8 +396,6 @@ class Evaluator(object):
 
     def _many_to_one_mapping(self, results_path, experiment_name):
         # TODO: fix it for batch size greater than one
-
-        self._model.eval()
 
         tokens_selections = list()
         val_speaker_ids = set()
@@ -465,8 +510,6 @@ class Evaluator(object):
         """
         all_speaker_ids = list()
         all_embeddings = torch.tensor([]).to(self._device)
-
-        self._model.evaluate()
 
         with tqdm(self._data_stream.validation_loader) as bar:
             for data in bar:

@@ -51,6 +51,7 @@ class VCTKFeaturesDataset(Dataset):
 
         dic['quantized'] = np.array([]) if dic['quantized'] is None else dic['quantized']
         dic['one_hot'] = np.array([]) if dic['one_hot'] is None else dic['one_hot']
+        dic['index'] = index
 
         return dic
 
