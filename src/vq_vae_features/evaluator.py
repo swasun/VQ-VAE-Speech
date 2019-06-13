@@ -53,17 +53,6 @@ class Evaluator(object):
     def evaluate(self, results_path, experiment_name, evaluation_options):
         self._model.evaluate()
 
-        evaluation_options = {
-        'plot_comparaison_plot': args.plot_comparaison_plot,
-        'plot_quantized_embedding_spaces': args.plot_quantized_embedding_spaces,
-        'plot_distances_histogram': args.plot_distances_histogram,
-        'compute_many_to_one_mapping': args.compute_many_to_one_mapping,
-        'compute_speaker_dependency_stats': args.compute_speaker_dependency_stats,
-        'compute_alignments': args.compute_alignments,
-        'compute_clustering_metrics': args.compute_clustering_metrics,
-        'plot_clustering_metrics_evolution': args.plot_clustering_metrics_evolution
-    }
-
         if evaluation_options['plot_comparaison_plot'] or \
             evaluation_options['plot_quantized_embedding_spaces'] or \
             evaluation_options['plot_distances_histogram']:
