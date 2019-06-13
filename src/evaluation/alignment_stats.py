@@ -10,6 +10,7 @@ import pickle
 from sklearn.preprocessing import normalize
 import sklearn
 import json
+from itertools import cycle
 
 
 class AlignmentStats(object):
@@ -24,7 +25,7 @@ class AlignmentStats(object):
         self._experiment_name = experiment_name
 
         self._model.eval()
-        
+
     def compute_groundtruth_alignments(self):
         ConsoleLogger.status('Computing groundtruth alignments of VCTK val dataset...')
 
@@ -258,6 +259,10 @@ class AlignmentStats(object):
         total_indices_apparations = alignments_dic['total_indices_apparations']
         num_embeddings = alignments_dic['num_embeddings']
 
+        if num_embeddings > 100:
+            ConsoleLogger.warn('Stopping the computation of empirical bigrams matrix because the embedding number ({}) is to huge'.format(num_embeddings))
+            return
+
         bigrams = np.zeros((num_embeddings, num_embeddings), dtype=int)
         previous_index_counter = np.zeros((num_embeddings), dtype=int)
 
@@ -399,11 +404,12 @@ class AlignmentStats(object):
 
         scores = dict()
 
+        correct_file_paths = list()
         for file in os.listdir(result_path):
             # Check if a known experiment name is present in the current file name
             if sum([1 if experiment_name in file else 0 for experiment_name in all_experiments_names]) == 0:
                 continue
-            
+
             # Check if a known clustering metric is present in the current file name
             possible_metric_found = None
             for possible_metric in possible_metric_names:
@@ -412,26 +418,48 @@ class AlignmentStats(object):
                     break
             if possible_metric_found is None:
                 continue
+            correct_file_paths.append((file, possible_metric_found))
 
+        # Sort the selected file paths by the number of embedding vectors indicated in the file name
+        correct_file_paths = sorted(correct_file_paths, key=lambda x: int(x[0].split('_')[0].split('-')[1]))
+
+        for (file, possible_metric_found) in correct_file_paths:
             # Classify the experiment results in the correct place within the dict scores
-            current_experiment_name = file.split('_' + possible_metric_found)[0]
+            current_experiment_name = file.split('_' + possible_metric_found)[0].split('-')[0]
             if current_experiment_name not in scores:
                 scores[current_experiment_name] = dict()
             if possible_metric_found not in scores[current_experiment_name]:
-                scores[current_experiment_name][possible_metric_found] = list()
-            scores[current_experiment_name][possible_metric_found].append(
-                (int(current_experiment_name.split('-')[1]), np.load(result_path + os.sep + file))
-            )
+                scores[current_experiment_name][possible_metric_found] = (list(), list())
+            scores[current_experiment_name][possible_metric_found][0].append(int(file.split('_' + possible_metric_found)[0].split('-')[1]))
+            scores[current_experiment_name][possible_metric_found][1].append(float(np.load(result_path + os.sep + file)))
 
-        print(json.dumps(scores, sort_keys=True, indent=4))
+        #print(json.dumps(scores, sort_keys=True, indent=2)) # TODO: log this line instead of printting it
 
-        results = list()
+        fig, axs = plt.subplots(
+            len(possible_metric_names),
+            1,
+            figsize=(5 * len(possible_metric_names), 15),
+            sharex=True
+        )
+
+        cycol = cycle('bgr') # TODO: replace by random color selection with the number of possible metrics
+
+        def underscored_text_to_uppercased(text):
+            return ' '.join([word[0].upper() + word[1:] for word in text.replace('_', ' ').split(' ')])
+
         for current_experiment_name in scores.keys():
+            all_num_embeddings = list()
+            all_scores = list()
+            i = 0
             for clustering_metric in scores[current_experiment_name].keys():
-                all_num_embeddings = list()
-                all_scores = list()
-                for (num_embeddings, score) in scores[current_experiment_name][clustering_metric]:
-                    all_num_embeddings.append(num_embeddings)
-                    all_scores.append(score)
-                plt.plot(all_num_embeddings, all_scores)
-        plt.savefig(result_path + os.sep + 'clustering_metrics_evolution.png', bbox_inches='tight', pad_inches=0)
+                axs[i].plot(scores[current_experiment_name][clustering_metric][0],
+                    scores[current_experiment_name][clustering_metric][1], color=next(cycol))
+                axs[i].set_ylabel(underscored_text_to_uppercased(clustering_metric), fontsize=15)
+                i += 1
+        fig.suptitle(
+            'Evolution of the clustering metric scores accross different number of embedding vectors',
+            fontsize=20
+        )
+        axs[-1].set_xlabel('Number of embedding vectors', fontsize=15)
+        fig.savefig(result_path + os.sep + 'clustering_metrics_evolution.png', bbox_inches='tight', pad_inches=0)
+        plt.close(fig)

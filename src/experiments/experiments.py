@@ -58,6 +58,7 @@ class Experiments(object):
 
         Experiments.set_deterministic_on(self._seed)
 
+        # TODO: put all types of evaluation in evaluation_options, and skip this loop if none of them are set to true
         for experiment in self._experiments:
             experiment.evaluate(evaluation_options)
             torch.cuda.empty_cache() # Release the GPU memory cache
