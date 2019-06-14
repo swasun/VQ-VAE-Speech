@@ -28,15 +28,12 @@ from error_handling.console_logger import ConsoleLogger
 
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.signal import savgol_filter
+from matplotlib.lines import Line2D
 from tqdm import tqdm
 import torch
 import os
+import pickle
 
-from vq_vae_speech.speech_features import SpeechFeatures
-
-import matplotlib.pyplot as plt
-from matplotlib.lines import Line2D
 
 def plot_grad_flow(named_parameters):
     '''Plots the gradients flowing through different layers in the net during training.
@@ -84,10 +81,17 @@ class Trainer(object):
         ConsoleLogger.status('num epoch: {}'.format(self._configuration['num_epochs']))
 
         for epoch in range(self._configuration['start_epoch'], self._configuration['num_epochs']):
+
             with tqdm(self._data_stream.training_loader) as train_bar:
                 train_res_recon_error = []
                 train_res_perplexity = []
                 #named_parameters = []
+
+                iteration = 0
+                if self._configuration['record_codebook_stats']:
+                    max_iterations_number = len(train_bar)
+                    iterations_to_record = 10
+                    iterations = list(np.arange(max_iterations_number, step=(max_iterations_number / iterations_to_record) - 1, dtype=int))
 
                 for data in train_bar:
                     source = data['input_features'].to(self._device)
@@ -100,7 +104,23 @@ class Trainer(object):
                     The perplexity a useful value to track during training.
                     It indicates how many codes are 'active' on average.
                     """
-                    loss, _, perplexity, losses = self._model(source, target, self._data_stream.speaker_dic, speaker_id)
+                    loss, _, perplexity, losses, encoding_indices, concatenated_quantized = \
+                        self._model(source, target, self._data_stream.speaker_dic, speaker_id)
+
+                    if self._configuration['record_codebook_stats'] and iteration in iterations:
+                        embedding = self._model.vq.embedding.weight.data.cpu().detach().numpy()
+                        codebook_stats_entry = {
+                            'concatenated_quantized': concatenated_quantized.detach().cpu().numpy(),
+                            'embedding': embedding,
+                            'n_embedding': embedding.shape[0],
+                            'encoding_indices': encoding_indices.detach().cpu().numpy(),
+                            'speaker_ids': data['speaker_id'].to(self._device).detach().cpu().numpy(),
+                            'batch_size': self._data_stream.training_batch_size
+                        }
+                        codebook_stats_entry_path = experiments_path + os.sep + experiment_name + '_' + str(epoch + 1) + '_' + str(iteration) + '_codebook-stats.pickle'
+                        with open(codebook_stats_entry_path, 'wb') as file:
+                            pickle.dump(codebook_stats_entry, file)
+
                     loss.backward()
 
                     self._optimizer.step()
@@ -111,6 +131,8 @@ class Trainer(object):
                     
                     train_res_recon_error.append(losses)
                     train_res_perplexity.append(perplexity_value)
+
+                    iteration += 1
 
                 # FIXME
 

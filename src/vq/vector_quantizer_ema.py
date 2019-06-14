@@ -80,7 +80,7 @@ class VectorQuantizerEMA(nn.Module):
         self._device = device
         self._epsilon = epsilon
 
-    def forward(self, inputs, compute_distances_if_possible=True):
+    def forward(self, inputs, compute_distances_if_possible=True, record_codebook_stats=False):
         """
         Connects the module to some inputs.
 
@@ -159,7 +159,7 @@ class VectorQuantizerEMA(nn.Module):
         quantized = torch.matmul(encodings, self._embedding.weight).view(input_shape)
         # TODO: Check if the more readable self._embedding.weight.index_select(dim=1, index=encoding_indices) works better
 
-        concatenated_quantized = self._embedding.weight[torch.argmin(distances, dim=1).detach().cpu()] if not self.training else None
+        concatenated_quantized = self._embedding.weight[torch.argmin(distances, dim=1).detach().cpu()] if not self.training or record_codebook_stats else None
 
         # Loss
         e_latent_loss = torch.mean((quantized.detach() - inputs)**2)

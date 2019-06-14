@@ -61,7 +61,7 @@ class FeaturesAutoEncoder(nn.Module):
             in_channels=configuration['num_hiddens'],
             out_channels=configuration['embedding_dim'],
             kernel_size=3,
-            stride=1
+            padding=1
         )
 
         if configuration['decay'] > 0.0:
@@ -98,6 +98,8 @@ class FeaturesAutoEncoder(nn.Module):
 
         self._criterion = nn.MSELoss()
 
+        self._record_codebook_stats = configuration['record_codebook_stats']
+
     @property
     def vq(self):
         return self._vq
@@ -126,17 +128,18 @@ class FeaturesAutoEncoder(nn.Module):
         if self._verbose:
             ConsoleLogger.status('[FEATURES_AE] _pre_vq_conv output size: {}'.format(z.size()))
 
-        vq_loss, quantized, perplexity, _, _, _, losses, _, _, _, _ = self._vq(z)
+        vq_loss, quantized, perplexity, _, _, encoding_indices, \
+            losses, _, _, _, concatenated_quantized = self._vq(z, record_codebook_stats=self._record_codebook_stats)
 
         reconstructed_x = self._decoder(quantized, speaker_dic, speaker_id)
 
-        reconstructed_x = reconstructed_x.view(-1, self._output_features_filters, 47) # FIXME
+        reconstructed_x = reconstructed_x.view(-1, self._output_features_filters, 51) # FIXME
         
-        reconstruction_loss = self._criterion(reconstructed_x, y.float()) # MSELoss
+        reconstruction_loss = self._criterion(reconstructed_x[:, :, :-4], y.float()) # MSELoss
 
         loss = vq_loss + reconstruction_loss
 
         losses['reconstruction_loss'] = reconstruction_loss.item()
         losses['loss'] = loss.item()
 
-        return loss, reconstructed_x, perplexity, losses
+        return loss, reconstructed_x, perplexity, losses, encoding_indices, concatenated_quantized

@@ -51,7 +51,7 @@ class Evaluator(object):
         self._vctk = VCTK(self._configuration['data_root'], ratio=self._configuration['train_val_split'])
 
     def evaluate(self, results_path, experiment_name, evaluation_options):
-        self._model.evaluate()
+        self._model.eval()
 
         if evaluation_options['plot_comparaison_plot'] or \
             evaluation_options['plot_quantized_embedding_spaces'] or \

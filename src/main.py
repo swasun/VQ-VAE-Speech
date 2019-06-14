@@ -51,6 +51,7 @@ if __name__ == "__main__":
     parser.add_argument('--evaluate', action='store_true', help='Evaluate the model')
     parser.add_argument('--plot_comparaison_plot', action='store_true', help='Compute a comparaison plot for a single sample')
     parser.add_argument('--plot_quantized_embedding_spaces', action='store_true', help='Compute a 2D projection of the VQ codebook for a single sample')
+    parser.add_argument('--compute_quantized_embedding_spaces_animation', action='store_true', help='Compute a 2D projection of the VQ codebook over training iterations')
     parser.add_argument('--plot_distances_histogram', action='store_true', help='Compute histograms of several distances to investiguate how close are the samples with the codebook')
     parser.add_argument('--compute_many_to_one_mapping', action='store_true', help='Compute the many to one mapping for all the samples')
     parser.add_argument('--compute_speaker_dependency_stats', action='store_true', help='Compute if the VQ codebook is speaker independent for all the samples')
@@ -62,6 +63,7 @@ if __name__ == "__main__":
     evaluation_options = {
         'plot_comparaison_plot': args.plot_comparaison_plot,
         'plot_quantized_embedding_spaces': args.plot_quantized_embedding_spaces,
+        'compute_quantized_embedding_spaces_animation': args.compute_quantized_embedding_spaces_animation,
         'plot_distances_histogram': args.plot_distances_histogram,
         'compute_many_to_one_mapping': args.compute_many_to_one_mapping,
         'compute_speaker_dependency_stats': args.compute_speaker_dependency_stats,

@@ -37,8 +37,13 @@ import numpy as np
 import random
 import os
 import matplotlib.pyplot as plt
+from matplotlib import animation
 from scipy.signal import savgol_filter
 from itertools import cycle
+import pickle
+from tqdm import tqdm
+import warnings
+import umap
 
 
 class Experiments(object):
@@ -62,7 +67,104 @@ class Experiments(object):
         for experiment in self._experiments:
             experiment.evaluate(evaluation_options)
             torch.cuda.empty_cache() # Release the GPU memory cache
-        
+
+        if evaluation_options['compute_quantized_embedding_spaces_animation']:
+            for experiment in self._experiments:
+                # List all file names related to the codebook stats for the current observed experiment
+                file_names = [file_name for file_name in os.listdir(experiment.experiment_path) if 'codebook-stats' in file_name and experiment.name in file_name]
+
+                # Sort file names by epoch number and iteration number as well
+                file_names = sorted(file_names, key=lambda x: 
+                    (int(x.replace(experiment.name + '_', '').replace('_codebook-stats.pickle', '').split('_')[0]),
+                    int(x.replace(experiment.name + '_', '').replace('_codebook-stats.pickle', '').split('_')[1]))
+                )
+
+                projections = list()
+
+                with tqdm(file_names) as bar:
+                    bar.set_description('Processing projections')
+                    for file_name in bar:
+                        codebook_stats_entry = None
+                        with open(experiment.experiment_path + os.sep + file_name, 'rb') as file:
+                            codebook_stats_entry = pickle.load(file)
+                        concatenated_quantized = codebook_stats_entry['concatenated_quantized']
+                        embedding = codebook_stats_entry['embedding']
+                        n_embedding = codebook_stats_entry['n_embedding']
+                        encoding_indices = np.concatenate(codebook_stats_entry['encoding_indices'])
+                        quantized_embedding_space = np.concatenate(
+                            (concatenated_quantized, embedding)
+                        )
+                        speaker_ids = codebook_stats_entry['speaker_ids']
+                        time_speaker_ids = np.repeat(
+                            speaker_ids,
+                            concatenated_quantized.shape[0] // 2,
+                            #concatenated_quantized.shape[0] // codebook_stats_entry['batch_size'],
+                            axis=1
+                        )
+                        time_speaker_ids = np.concatenate(time_speaker_ids)
+                        n_neighbors = 3
+                        with warnings.catch_warnings():
+                            warnings.simplefilter('ignore')
+                            mapping = umap.UMAP(
+                                n_neighbors=n_neighbors,
+                                min_dist=0.0,
+                                metric='euclidean'
+                            )
+                        projection = mapping.fit_transform(quantized_embedding_space)
+                        projections.append({
+                            'projection': projection,
+                            'n_neighbors': n_neighbors,
+                            'n_embedding': n_embedding,
+                            'time_speaker_ids': time_speaker_ids,
+                            'encoding_indices': encoding_indices
+                        })
+                        bar.update(1)
+
+                cmap = 'cubehelix'
+                plt.rcParams['animation.ffmpeg_path'] = ''
+
+                fig, ax = plt.subplots()
+                projection = projections[0]['projection']
+                n_embedding = projections[0]['n_embedding']
+                time_speaker_ids = projections[0]['time_speaker_ids']
+                scatter1 = ax.scatter(projection[:-n_embedding, 0], projection[:-n_embedding, 1], s=10, c=time_speaker_ids, cmap=cmap) # audio frame colored by speaker id
+                scatter2 = ax.scatter(projection[-n_embedding:, 0], projection[-n_embedding:, 1], s=50, marker='x', c='k', alpha=0.8) # embedding
+
+                #scatter1 = ax.scatter(projection[:-n_embedding,0], projection[:-n_embedding, 1], s=10, c=time_speaker_ids, cmap=cmap) # audio frame colored by speaker id
+                #scatter2 = ax.scatter(projection[-n_embedding:,0], projection[-n_embedding:, 1], s=50, marker='x', c='k', alpha=0.8) # embedding
+
+                def update_plot(i, projections, scatter1, scatter2):
+                    projection = projections[i]['projection']
+                    n_embedding = projections[i]['n_embedding']
+
+                    x_i = projection[:-n_embedding, 0]
+                    y_i = projection[:-n_embedding, 1]
+                    """data = np.hstack((x[:i, np.newaxis], y[:i, np.newaxis]))
+                    scatter1.set_offsets(data)"""
+                    scatter1.set_array(projections[i]['time_speaker_ids'])
+                    scatter1.set_offsets(np.c_[x_i, y_i])
+
+                    x_i = projection[-n_embedding:, 0]
+                    y_i = projection[-n_embedding:, 1]
+                    """data = np.hstack((x[:i, np.newaxis], y[:i, np.newaxis]))
+                    scatter2.set_offsets(data)"""
+                    scatter2.set_offsets(np.c_[x_i, y_i])
+
+                    return scatter1, scatter2,
+
+                animated_plot = animation.FuncAnimation(
+                    fig,
+                    update_plot,
+                    frames=np.arange(len(projections)),
+                    fargs=(projections, scatter1, scatter2),
+                    blit=True,
+                    interval=2.5,
+                    repeat=False
+                )
+
+                FFwriter = animation.FFMpegWriter(fps=60)
+                animated_plot.save(experiment.results_path + os.sep + experiment.name + '_quantized_embedding_spaces_animation.mp4', writer=FFwriter, dpi=200)
+
         if evaluation_options['plot_clustering_metrics_evolution']:
             all_results_paths = [experiment.results_path for experiment in self._experiments]
             if len(set(all_results_paths)) != 1:

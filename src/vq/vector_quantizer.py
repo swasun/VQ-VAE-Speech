@@ -67,7 +67,7 @@ class VectorQuantizer(nn.Module):
         self._commitment_cost = commitment_cost
         self._device = device
 
-    def forward(self, inputs, compute_distances_if_possible=True):
+    def forward(self, inputs, compute_distances_if_possible=True, record_codebook_stats=False):
         """
         Connects the module to some inputs.
 
@@ -130,7 +130,7 @@ class VectorQuantizer(nn.Module):
         quantized = torch.matmul(encodings, self._embedding.weight).view(input_shape)
         # TODO: Check if the more readable self._embedding.weight.index_select(dim=1, index=encoding_indices) works better
 
-        concatenated_quantized = self._embedding.weight[torch.argmin(distances, dim=1).detach().cpu()] if not self.training else None
+        concatenated_quantized = self._embedding.weight[torch.argmin(distances, dim=1).detach().cpu()] if not self.training or record_codebook_stats else None
 
         # Losses
         e_latent_loss = torch.mean((quantized.detach() - inputs)**2)

@@ -50,6 +50,9 @@ class CheckpointUtils(object):
         checkpoint_files = list()
         configuration_file = None
         for file in files:
+            # Check if the file is a checkpoint or config file by looking at the extension
+            if not '.pth' in file and '.yaml' not in file:
+                continue
             split_file = file.split('_')
             if len(split_file) > 1 and split_file[0] == experiment_name and split_file[1] == 'configuration.yaml':
                 configuration_file = file
