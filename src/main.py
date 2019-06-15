@@ -30,6 +30,7 @@ from dataset.vctk_features_stream import VCTKFeaturesStream
 from experiments.model_factory import ModelFactory
 from experiments.device_configuration import DeviceConfiguration
 from experiments.experiments import Experiments
+from evaluation.losses_plotter import LossesPlotter
 
 import os
 import argparse
@@ -87,7 +88,7 @@ if __name__ == "__main__":
 
     if args.plot_experiments_losses:
         experiments = Experiments.load(args.experiments_configuration_path)
-        experiments.plot_losses(args.experiments_path)
+        LossesPlotter.plot_training_losses(experiments, args.experiments_path)
         sys.exit(0)
 
     if args.export_to_features:

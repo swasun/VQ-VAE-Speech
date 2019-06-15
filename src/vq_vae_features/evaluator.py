@@ -28,12 +28,12 @@ from dataset.spectrogram_parser import SpectrogramParser
 from dataset.vctk import VCTK
 from error_handling.console_logger import ConsoleLogger
 from evaluation.alignment_stats import AlignmentStats
+from evaluation.embedding_space_stats import EmbeddingSpaceStats
 
 import matplotlib.pyplot as plt
 import torch.nn.functional as F
 import os
 import numpy as np
-import umap
 from textwrap import wrap
 import seaborn as sns
 import textgrid
@@ -62,7 +62,9 @@ class Evaluator(object):
             self._compute_comparaison_plot(evaluation_entry, results_path, experiment_name)
 
         if evaluation_options['plot_quantized_embedding_spaces']:
-            self._plot_quantized_embedding_spaces(evaluation_entry, results_path, experiment_name)
+            EmbeddingSpaceStats.compute_and_plot_quantized_embedding_space_projections(results_path, experiment_name,
+                evaluation_entry, self._model.vq.embedding, self._data_stream.validation_batch_size
+            )
 
         if evaluation_options['plot_distances_histogram']:
             self._plot_distances_histogram(evaluation_entry, results_path, experiment_name)
@@ -120,7 +122,7 @@ class Evaluator(object):
 
         valid_originals = valid_originals.permute(0, 2, 1).contiguous().float()
         batch_size = valid_originals.size(0)
-        target = _target.permute(0, 2, 1).contiguous().float()
+        target = target.permute(0, 2, 1).contiguous().float()
         wav_filename = wav_filename[0][0]
 
         z = self._model.encoder(valid_originals)
@@ -128,7 +130,7 @@ class Evaluator(object):
         _, quantized, _, encodings, distances, encoding_indices, _, \
             encoding_distances, embedding_distances, frames_vs_embedding_distances, \
             concatenated_quantized = self._model.vq(z)
-        valid_reconstructions = self._model.decoder(quantized, data_stream.speaker_dic, speaker_ids)[0]
+        valid_reconstructions = self._model.decoder(quantized, self._data_stream.speaker_dic, speaker_ids)[0]
 
         return {
             'preprocessed_audio': preprocessed_audio,
@@ -225,94 +227,12 @@ class Evaluator(object):
         c = axis.pcolormesh(x, y, data)
         fig.colorbar(c, ax=axis)
 
-    def _plot_quantized_embedding_spaces(self, evaluation_entry, results_path, experiment_name):
-        # TODO: do it for more that one sample
-
-        concatenated_quantized = evaluation_entry['concatenated_quantized'].detach().cpu().numpy()
-        embedding = self._model.vq.embedding.weight.data.cpu().detach().numpy()
-        n_embedding = embedding.shape[0]
-        encoding_indices = evaluation_entry['encoding_indices'].detach().cpu().numpy()
-        encoding_indices = np.concatenate(encoding_indices)
-        quantized_embedding_space = np.concatenate(
-            (concatenated_quantized, embedding)
-        )
-        speaker_ids = evaluation_entry['speaker_ids'].detach().cpu().numpy()
-        time_speaker_ids = np.repeat(
-            speaker_ids,
-            concatenated_quantized.shape[0] // self._data_stream.validation_batch_size,
-            axis=1
-        )
-        time_speaker_ids = np.concatenate(time_speaker_ids)
-
-        for n_neighbors in [3, 10]:
-            mapping = umap.UMAP(
-                n_neighbors=n_neighbors,
-                min_dist=0.0,
-                metric='euclidean'
-            )
-
-            projection = mapping.fit_transform(quantized_embedding_space)
-
-            self._plot_quantized_embedding_space(projection, n_neighbors, n_embedding,
-                time_speaker_ids, encoding_indices, results_path, experiment_name, cmap='cubehelix')
-
     def _compute_unified_time_scale(self, shape, winstep=0.01, downsampling_factor=1):
         return np.arange(shape) * winstep * downsampling_factor
 
-    def _plot_quantized_embedding_space(self, projection, n_neighbors, n_embedding,
-        time_speaker_ids, encoding_indices, results_path, experiment_name, cmap='tab20',
-        xlabel_width=60):
-
-        def _configure_ax(ax, title=None, xlabel=None, ylabel=None, legend=False):
-            ax.minorticks_off()
-            if title:
-                ax.set_title(title)
-            if xlabel:
-                ax.set_xlabel(xlabel)
-            if ylabel:
-                ax.set_ylabel(ylabel)
-            if legend:
-                ax.legend()
-            ax.grid(True)
-            ax.margins(x=0)
-            return ax
-
-        fig, axs = plt.subplots(1, 2, figsize=(16, 8), sharey=True)
-
-        # Colored by speaker id
-        #axs[0].scatter(projection[:-n_embedding,0], projection[:-n_embedding, 1], s=10, c=time_speaker_ids, cmap=cmap) # audio frame colored by speaker id
-        axs[0] = self._jittered_scatter(axs[0], projection[:-n_embedding,0], projection[:-n_embedding, 1], s=10, c=time_speaker_ids, cmap=cmap)
-        axs[0].scatter(projection[-n_embedding:,0], projection[-n_embedding:, 1], s=50, marker='x', c='k', alpha=0.8) # embedding
-        xlabel = 'Embedding of ' + str(self._data_stream.validation_batch_size) + ' valuations' \
-            ' with ' + str(n_neighbors) + ' neighbors with the audio frame points colored' \
-            ' by speaker id and the embedding marks colored in black'
-        axs[0] = _configure_ax(
-            axs[0],
-            xlabel='\n'.join(wrap(xlabel, xlabel_width))
-        )
-
-        # Colored by encoding indices
-        #axs[1].scatter(projection[:-n_embedding,0], projection[:-n_embedding, 1], s=10, c=encoding_indices, cmap=cmap) # audio frame colored by encoding indices
-        axs[1] = self._jittered_scatter(axs[1], projection[:-n_embedding,0], projection[:-n_embedding, 1], s=10, c=encoding_indices, cmap=cmap)
-        axs[1].scatter(projection[-n_embedding:,0], projection[-n_embedding:, 1], s=50, marker='x', c=np.arange(n_embedding), cmap=cmap) # different color for each embedding
-        xlabel = 'Embedding of ' + str(self._data_stream.validation_batch_size) + ' valuations' \
-            ' with ' + str(n_neighbors) + ' neighbors with the audio frame points colored' \
-            ' by encoding indices and the embedding marks colored by number of embedding' \
-            ' vectors (using the same color map)'
-        axs[1] = _configure_ax(
-            axs[1],
-            xlabel='\n'.join(wrap(xlabel, width=xlabel_width))
-        )
-
-        plt.suptitle('Quantized embedding space of ' + experiment_name, fontsize=16)
-
-        output_path = results_path + os.sep + experiment_name + '_quantized_embedding_space-n' + str(n_neighbors) + '.png'
-        fig.savefig(output_path, bbox_inches='tight', pad_inches=0)
-        plt.close(fig)
-
     def _plot_distances_histogram(self, evaluation_entry, results_path, experiment_name):
-        encodings_distances = evaluation_entry['encoding_distances'][0].detach().cpu().numpy()
-        embeddings_distances = evaluation_entry['embedding_distances'].detach().cpu().numpy()
+        encoding_distances = evaluation_entry['encoding_distances'][0].detach().cpu().numpy()
+        embedding_distances = evaluation_entry['embedding_distances'].detach().cpu().numpy()
         frames_vs_embedding_distances = evaluation_entry['frames_vs_embedding_distances'].detach()[0].cpu().transpose(0, 1).numpy().ravel()
 
         if self._configuration['verbose']:
@@ -324,11 +244,11 @@ class Evaluator(object):
 
         axs[0].set_title('\n'.join(wrap('Histogram of the distances between the'
             ' encodings vectors', 60)))
-        sns.distplot(encodings_distances, hist=True, kde=False, ax=axs[0], norm_hist=True)
+        sns.distplot(encoding_distances, hist=True, kde=False, ax=axs[0], norm_hist=True)
 
         axs[1].set_title('\n'.join(wrap('Histogram of the distances between the'
             ' embeddings vectors', 60)))
-        sns.distplot(embeddings_distances, hist=True, kde=False, ax=axs[1], norm_hist=True)
+        sns.distplot(embedding_distances, hist=True, kde=False, ax=axs[1], norm_hist=True)
 
         axs[2].set_title(
             'Histogram of the distances computed in'
@@ -373,15 +293,6 @@ class Evaluator(object):
         output_path = results_path + os.sep + experiment_name + '_test-denormalization-plot.png'
         plt.savefig(output_path, bbox_inches='tight', pad_inches=0)
         plt.close()
-
-    def _jittered_scatter(self, ax, x, y, cmap, c, s, alpha=None, marker=None):
-
-        def rand_jitter(arr):
-            stdev = .01*(max(arr) - min(arr))
-            return arr + np.random.randn(len(arr)) * stdev
-
-        ax.scatter(rand_jitter(x), rand_jitter(y), cmap=cmap, c=c, alpha=alpha, s=s, marker=marker)
-        return ax
 
     def _many_to_one_mapping(self, results_path, experiment_name):
         # TODO: fix it for batch size greater than one

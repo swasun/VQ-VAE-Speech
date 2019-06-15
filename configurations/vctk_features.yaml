@@ -12,6 +12,8 @@ learning_rate: 0.0002
 normalize: False
 normalizer_path: '../data/vctk/vctk-mfcc-stats.pickle'
 use_speaker_conditioning: False
+record_codebook_stats: False
+record_gradient_stats: False
 
 # Cuda
 use_cuda: True

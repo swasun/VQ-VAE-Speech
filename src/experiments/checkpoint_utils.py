@@ -25,9 +25,11 @@
  #####################################################################################
 
 from error_handling.console_logger import ConsoleLogger
+from experiments.device_configuration import DeviceConfiguration
 
 import os
 import torch
+import yaml
 
 
 class CheckpointUtils(object):
@@ -94,3 +96,40 @@ class CheckpointUtils(object):
             train_res_perplexities += checkpoint['train_res_perplexity']
 
         return train_res_losses, train_res_perplexities
+
+    @staticmethod
+    def retreive_losses_values(experiment_path, experiment):
+        experiment_name = experiment.name
+
+        ConsoleLogger.status("Searching configuration and checkpoints of experiment '{}' at path '{}'".format(experiment_name, experiment_path))
+        configuration_file, checkpoint_files = CheckpointUtils.search_configuration_and_checkpoints_files(
+            experiment_path,
+            experiment_name
+        )
+
+        # Check if a configuration file was found
+        if not configuration_file:
+            raise ValueError('No configuration file found with name: {}'.format(experiment_name))
+
+        # Check if at least one checkpoint file was found
+        if len(checkpoint_files) == 0:
+            raise ValueError('No checkpoint files found with name: {}'.format(experiment_name))
+
+        # Load the configuration file
+        configuration_path = experiment_path + os.sep + configuration_file
+        ConsoleLogger.status("Loading the configuration file '{}'".format(configuration_path))
+        configuration = None
+        with open(configuration_path, 'r') as file:
+            configuration = yaml.load(file, Loader=yaml.FullLoader)
+        
+        # Load the device configuration from the configuration state
+        device_configuration = DeviceConfiguration.load_from_configuration(configuration)
+
+        ConsoleLogger.status("Merge {} checkpoint losses of experiment '{}'".format(len(checkpoint_files), experiment_name))
+        train_res_losses, train_res_perplexities = CheckpointUtils.merge_experiment_losses(
+            experiment_path,
+            checkpoint_files,
+            device_configuration
+        )
+
+        return train_res_losses, train_res_perplexities, len(checkpoint_files)

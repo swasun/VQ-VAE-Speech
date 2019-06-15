@@ -27,41 +27,10 @@
 from error_handling.console_logger import ConsoleLogger
 
 import numpy as np
-import matplotlib.pyplot as plt
-from matplotlib.lines import Line2D
 from tqdm import tqdm
 import torch
 import os
 import pickle
-
-
-def plot_grad_flow(named_parameters):
-    '''Plots the gradients flowing through different layers in the net during training.
-    Can be used for checking for possible gradient vanishing / exploding problems.
-    
-    Usage: Plug this function in Trainer class after loss.backwards() as 
-    "plot_grad_flow(self.model.named_parameters())" to visualize the gradient flow'''
-    ave_grads = []
-    max_grads= []
-    layers = []
-    for n, p in named_parameters:
-        if (p.requires_grad) and ("bias" not in n):
-            layers.append(n)
-            ave_grads.append(p.grad.abs().mean())
-            max_grads.append(p.grad.abs().max())
-    plt.bar(np.arange(len(max_grads)), max_grads, alpha=0.1, lw=1, color="c")
-    plt.bar(np.arange(len(max_grads)), ave_grads, alpha=0.1, lw=1, color="b")
-    plt.hlines(0, 0, len(ave_grads)+1, lw=2, color="k" )
-    plt.xticks(range(0,len(ave_grads), 1), layers, rotation="vertical")
-    plt.xlim(left=0, right=len(ave_grads))
-    plt.ylim(bottom = -0.001, top=0.02) # zoom in on the lower gradient regions
-    plt.xlabel("Layers")
-    plt.ylabel("average gradient")
-    plt.title("Gradient flow")
-    plt.grid(True)
-    plt.legend([Line2D([0], [0], color="c", lw=4),
-                Line2D([0], [0], color="b", lw=4),
-                Line2D([0], [0], color="k", lw=4)], ['max-gradient', 'mean-gradient', 'zero-gradient'])
 
 
 class Trainer(object):
@@ -85,7 +54,6 @@ class Trainer(object):
             with tqdm(self._data_stream.training_loader) as train_bar:
                 train_res_recon_error = []
                 train_res_perplexity = []
-                #named_parameters = []
 
                 iteration = 0
                 if self._configuration['record_codebook_stats']:
@@ -121,6 +89,17 @@ class Trainer(object):
                         with open(codebook_stats_entry_path, 'wb') as file:
                             pickle.dump(codebook_stats_entry, file)
 
+                    if self._configuration['record_gradient_stats'] and iteration in iterations:
+                        gradient_stats_entry = {
+                            'model': self._model.named_parameters(),
+                            'encoder': self._model.encoder.named_parameters(),
+                            'vq': self._model.vq.named_parameters(),
+                            'decoder': self._model.decoder.named_parameters()
+                        }
+                        gradient_stats_entry_path = experiments_path + os.sep + experiment_name + '_' + str(epoch + 1) + '_' + str(iteration) + '_gradient-stats.pickle'
+                        with open(gradient_stats_entry_path, 'wb') as file:
+                            pickle.dump(gradient_stats_entry, file)
+
                     loss.backward()
 
                     self._optimizer.step()
@@ -133,16 +112,6 @@ class Trainer(object):
                     train_res_perplexity.append(perplexity_value)
 
                     iteration += 1
-
-                # FIXME
-
-                #current_named_parameters = self._model.named_parameters()
-                #named_parameters += current_named_parameters
-                #print('current_named_parameters.shape: {}'.format(current_named_parameters.shape))
-                #print('named_parameters.shape: {}'.format(named_parameters.shape))
-
-                #plot_grad_flow(current_named_parameters)
-                #plt.savefig('{}{}_{}.png'.format(experiments_path + os.sep, experiment_name, epoch + 1))
 
                 torch.save({
                         'experiment_name': experiment_name,

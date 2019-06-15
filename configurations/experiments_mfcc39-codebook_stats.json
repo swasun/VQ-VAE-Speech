@@ -1,0 +1,17 @@
+{
+    "experiments_path": "../experiments-mfcc39-codebook-stats",
+    "results_path": "../results",
+    "configuration_path": "../configurations/vctk_features.yaml",
+    "seed": 1234,
+    "experiments": {
+        "baseline": {
+            "num_epochs": 10,
+            "batch_size": 2,
+            "num_embeddings": 10,
+            "embedding_dim": 2,
+            "use_device": "cuda:1",
+            "normalize": true,
+            "record_codebook_stats": true
+        }
+    }
+}
