@@ -130,7 +130,7 @@ class VCTKSpeechStream(object):
                     i = initial_index
                     bar = tqdm(loader, initial=initial_index)
                     for data in bar:
-                        (preprocessed_audio, one_hot, speaker_id, quantized, wav_filename, sampling_rate, shifting_time, preprocessed_length, top_db) = data
+                        (preprocessed_audio, one_hot, speaker_id, quantized, wav_filename, sampling_rate, shifting_time, random_starting_index, preprocessed_length, top_db) = data
 
                         output_path = output_dir + os.sep + str(i) + '.pickle'
                         if os.path.isfile(output_path):
@@ -168,6 +168,7 @@ class VCTKSpeechStream(object):
                             'speaker_id': speaker_id,
                             'output_features': output_features,
                             'shifting_time': shifting_time,
+                            'random_starting_index': random_starting_index,
                             'preprocessed_length': preprocessed_length,
                             'sampling_rate': sampling_rate,
                             'top_db': top_db

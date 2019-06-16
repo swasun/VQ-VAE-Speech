@@ -448,8 +448,6 @@ class AlignmentStats(object):
             return ' '.join([word[0].upper() + word[1:] for word in text.replace('_', ' ').split(' ')])
 
         for current_experiment_name in scores.keys():
-            all_num_embeddings = list()
-            all_scores = list()
             i = 0
             for clustering_metric in scores[current_experiment_name].keys():
                 axs[i].plot(scores[current_experiment_name][clustering_metric][0],

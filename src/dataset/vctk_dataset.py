@@ -104,7 +104,7 @@ class VCTKDataset(Dataset):
 
         # Check if a groundtruth is available
         split_path = wav_filename.split(os.sep)
-        groundtruth_alignment_path = os.sep.join(split_path[:-3]) + os.sep + 'phonemes' + split_path[-2] + split_path[-1].replace('.wav', '.TextGrid')
+        groundtruth_alignment_path = os.sep.join(split_path[:-3]) + os.sep + 'phonemes' + os.sep + split_path[-2] + os.sep + split_path[-1].replace('.wav', '.TextGrid')
         detected_sil_duration = 0.0
         if os.path.isfile(groundtruth_alignment_path):
             tg = textgrid.TextGrid()
@@ -133,21 +133,21 @@ class VCTKDataset(Dataset):
         shifting_time = trimming_time + (0 if start_trimming is None else start_trimming / self._sampling_rate)
 
         return preprocessed_audio, one_hot, speaker_id, quantized, wav_filename, self._sampling_rate, \
-            shifting_time, self._length - 1, self._top_db
+            shifting_time, 0 if start_trimming is None else start_trimming, self._length - 1, self._top_db
 
     def __len__(self):
         return len(self._audios)
 
     def _load_wav(self, filename, sampling_rate, res_type, top_db, trimming_duration=None):
         raw, _ = librosa.load(filename, sampling_rate, res_type=res_type)
-        if not trimming_duration:
-            trimmed_audio, _ = librosa.effects.trim(raw, top_db=top_db)
+        if trimming_duration is None:
+            trimmed_audio, trimming_indices = librosa.effects.trim(raw, top_db=top_db)
+            trimming_time = trimming_indices[0] / sampling_rate
         else:
-            trimmed_audio = raw[trimming_duration * sampling_rate:]
+            trimmed_audio = raw[int(trimming_duration * sampling_rate):]
+            trimming_time = trimming_duration
         trimmed_audio /= np.abs(trimmed_audio).max()
         trimmed_audio = trimmed_audio.astype(np.float32)
-
-        trimming_time = librosa.get_duration(raw) - librosa.get_duration(trimmed_audio)
 
         return trimmed_audio, trimming_time
 

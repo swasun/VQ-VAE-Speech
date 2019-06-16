@@ -53,6 +53,7 @@ if __name__ == "__main__":
             audio_filename = features['wav_filename'][0][0]
             shifting_time = features['shifting_time'].item()
             sampling_rate = features['sampling_rate'].item()
+            random_starting_index = features['random_starting_index'].item()
 
             raw_audio, trimmed_audio, trimming_indices = load_wav(audio_filename, sampling_rate, res_type, top_db)
 
@@ -73,7 +74,11 @@ if __name__ == "__main__":
                     break
                 detected_sil_duration += float(interval.maxTime) - float(interval.minTime)
 
-            sil_duration_gaps.append(abs(beginning_trimmed_time - detected_sil_duration))
+            sil_duration_gap = abs(detected_sil_duration - \
+                (shifting_time - (0 if random_starting_index == 0 \
+                else random_starting_index / sampling_rate)))
+            bar.set_description(str(sil_duration_gap))
+            sil_duration_gaps.append(sil_duration_gap)
             audio_filenames.append(audio_filename)
             original_shifting_times.append(shifting_time)
             beginning_trimmed_times.append(beginning_trimmed_time)
@@ -94,7 +99,7 @@ if __name__ == "__main__":
     ax.set_ylabel('Time (s)')
     ax.set_xlabel('Number of audio samples')
     ax.set_ylim(bottom=0)
-    fig.savefig('sil_duration_gaps.png')
+    fig.savefig('../results/sil_duration_gaps.png')
     plt.close(fig)
 
     ConsoleLogger.success('mean sil duration gap: {}'.format(mean_sil_duration_gaps))
