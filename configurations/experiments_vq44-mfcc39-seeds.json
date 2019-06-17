@@ -1,11 +1,11 @@
 {
-    "experiments_path": "../experiments-vq44-mfcc39",
+    "experiments_path": "../experiments-vq44-mfcc39-seeds",
     "results_path": "../results",
     "configuration_path": "../configurations/vctk_features.yaml",
-    "seed": 1234,
+    "seed": [1234, 5678, 4242],
     "experiments": {
         "baseline": {
-            "num_epochs": 15,
+            "num_epochs": 5,
             "batch_size": 2,
             "num_embeddings": 44,
             "use_device": "cuda:1",
@@ -13,7 +13,7 @@
         },
 
         "jitter12": {
-            "num_epochs": 15,
+            "num_epochs": 5,
             "use_jitter": true,
             "jitter_probability": 0.12,
             "batch_size": 2,

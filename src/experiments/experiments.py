@@ -47,22 +47,38 @@ class Experiments(object):
         return self._experiments
 
     def train(self):
-        Experiments.set_deterministic_on(self._seed)
-
-        for experiment in self._experiments:
-            experiment.train()
-            torch.cuda.empty_cache() # Release the GPU memory cache
+        if type(self._seed) == list:
+            for seed in self._seed:
+                Experiments.set_deterministic_on(seed)
+                for experiment in self._experiments:
+                    experiment.set_name(experiment.name + '-seed' + str(seed))
+                    experiment.train()
+                    torch.cuda.empty_cache() # Release the GPU memory cache
+        else:
+            Experiments.set_deterministic_on(self._seed)
+            for experiment in self._experiments:
+                experiment.train()
+                torch.cuda.empty_cache() # Release the GPU memory cache
 
     def evaluate(self, evaluation_options):
-
-        Experiments.set_deterministic_on(self._seed)
-
-        # TODO: put all types of evaluation in evaluation_options, and skip this loop if none of them are set to true
-        for experiment in self._experiments:
-            experiment.evaluate(evaluation_options)
-            torch.cuda.empty_cache() # Release the GPU memory cache
+        if type(self._seed) == list():
+            for seed in self._seed:
+                Experiments.set_deterministic_on(self._seed)
+                # TODO: put all types of evaluation in evaluation_options, and skip this loop if none of them are set to true
+                for experiment in self._experiments:
+                    experiment.set_name(experiment.name + '-seed' + str(seed))
+                    experiment.evaluate(evaluation_options)
+                    torch.cuda.empty_cache() # Release the GPU memory cache
+        else:
+            Experiments.set_deterministic_on(self._seed)
+            # TODO: put all types of evaluation in evaluation_options, and skip this loop if none of them are set to true
+            for experiment in self._experiments:
+                experiment.evaluate(evaluation_options)
+                torch.cuda.empty_cache() # Release the GPU memory cache
 
         if evaluation_options['compute_quantized_embedding_spaces_animation']:
+            if type(self._seed) == list():
+                Experiments.set_deterministic_on(self._seed[0]) # For now use only the first seed there
             EmbeddingSpaceStats.compute_quantized_embedding_spaces_animation(
                 all_experiments_paths=[experiment.experiment_path for experiment in self._experiments],
                 all_experiments_names=[experiment.name for experiment in self._experiments],
@@ -70,6 +86,8 @@ class Experiments(object):
             )
 
         if evaluation_options['plot_clustering_metrics_evolution']:
+            if type(self._seed) == list():
+                Experiments.set_deterministic_on(self._seed[0]) # For now use only the first seed there
             all_results_paths = [experiment.results_path for experiment in self._experiments]
             if len(set(all_results_paths)) != 1:
                 ConsoleLogger.error('All clustering metric results should be in the same result folder')
@@ -107,4 +125,4 @@ class Experiments(object):
                 )
                 experiments.append(experiment)
         
-        return Experiments(experiments, experiment_configurations['seed'])
+        return Experiments(experiments, configuration['seed'])

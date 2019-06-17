@@ -90,9 +90,16 @@ class Experiment(object):
     def name(self):
         return self._name
 
+    def set_name(self, name):
+        self._name = name
+
     @property
     def results_path(self):
         return self._results_path
+
+    @property
+    def configuration(self):
+        return self._experiment_configuration
 
     def train(self):
         ConsoleLogger.status("Running the experiment called '{}'".format(self._name))
@@ -118,6 +125,7 @@ class Experiment(object):
         def create_from_scratch(configuration, device_configuration):
             # Load the data stream
             ConsoleLogger.status('Loading data stream')
+            # FIXME hardcoded
             data_stream = VCTKFeaturesStream('../data/vctk', configuration, device_configuration.gpu_ids, device_configuration.use_cuda)
 
             # Build the model and the trainer from the configurations and the data stream
