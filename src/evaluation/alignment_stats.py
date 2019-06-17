@@ -71,11 +71,11 @@ class AlignmentStats(object):
                     for interval in tg.tiers[1]:
                         if interval.mark in ['', '-', "'"]:
                             continue
-                        interval.mark = interval.mark[:-1] if interval.mark[-1].isdigit() else interval.mark
                         interval.minTime = float(interval.minTime)
                         interval.maxTime = float(interval.maxTime)
                         if interval.maxTime < shifting_time:
                             continue
+                        interval.mark = interval.mark[:-1] if interval.mark[-1].isdigit() else interval.mark
                         possible_phonemes.add(interval.mark)
                         if interval.mark not in phonemes_counter:
                             phonemes_counter[interval.mark] = 0
@@ -260,7 +260,7 @@ class AlignmentStats(object):
         num_embeddings = alignments_dic['num_embeddings']
 
         if num_embeddings > 100:
-            ConsoleLogger.warn('Stopping the computation of empirical bigrams matrix because the embedding number ({}) is to huge'.format(num_embeddings))
+            ConsoleLogger.warn('Stopping the computation of empirical bigrams matrix because the embedding number ({}) is huge'.format(num_embeddings))
             return
 
         bigrams = np.zeros((num_embeddings, num_embeddings), dtype=int)
@@ -353,6 +353,8 @@ class AlignmentStats(object):
         final_empirical_alignments = list()
 
         for (utterence_key, alignment) in groundtruth_alignments:
+            if len(alignment) != 24: # FIXME
+                continue
             groundtruth_utterance_keys.add(utterence_key)
             final_groundtruth_alignments.append([phonemes_indices[alignment[i]] for i in range(len(alignment))])
 
