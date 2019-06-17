@@ -125,4 +125,4 @@ class Experiments(object):
                 )
                 experiments.append(experiment)
         
-        return Experiments(experiments, configuration['seed'])
+        return Experiments(experiments, experiment_configurations['seed'])
