@@ -42,6 +42,10 @@ class Experiments(object):
         self._experiments = experiments
         self._seed = seed
 
+    @property
+    def experiments(self):
+        return self._experiments
+
     def train(self):
         Experiments.set_deterministic_on(self._seed)
 

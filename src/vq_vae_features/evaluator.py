@@ -207,7 +207,7 @@ class Evaluator(object):
         axs[3].set_title('Softmax of distances computed in VQ\n($||z_e(x) - e_i||^2_2$ with $z_e(x)$ the output of the encoder prior to quantization)')
         self._plot_pcolormesh(probs, fig, x=self._compute_unified_time_scale(probs.shape[1], downsampling_factor=2), axis=axs[3])
 
-        encodings = self._encodings.detach().cpu().numpy()
+        encodings = evaluation_entry['encodings'].detach().cpu().numpy()
         axs[4].set_title('Encodings')
         self._plot_pcolormesh(encodings[0].transpose(), fig, x=self._compute_unified_time_scale(encodings[0].transpose().shape[1],
             downsampling_factor=2), axis=axs[4])

@@ -87,8 +87,10 @@ if __name__ == "__main__":
         sys.exit(0)
 
     if args.plot_experiments_losses:
-        experiments = Experiments.load(args.experiments_configuration_path)
-        LossesPlotter.plot_training_losses(experiments, args.experiments_path)
+        LossesPlotter().plot_training_losses(
+            Experiments.load(args.experiments_configuration_path).experiments,
+            args.experiments_path
+        )
         sys.exit(0)
 
     if args.export_to_features:
