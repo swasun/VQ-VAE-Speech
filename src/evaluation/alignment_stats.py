@@ -463,3 +463,74 @@ class AlignmentStats(object):
         axs[-1].set_xlabel('Number of embedding vectors', fontsize=15)
         fig.savefig(result_path + os.sep + 'clustering_metrics_evolution.png', bbox_inches='tight', pad_inches=0)
         plt.close(fig)
+
+    def print_biggest_adjusted_scores(self):
+        groundtruth_alignments_dic = None
+        with open(self._results_path + os.sep + 'vctk_groundtruth_alignments.pickle', 'rb') as f:
+            groundtruth_alignments_dic = pickle.load(f)
+
+        empirical_alignments_dic = None
+        with open(self._results_path + os.sep + self._experiment_name + '_vctk_empirical_alignments.pickle', 'rb') as f:
+            empirical_alignments_dic = pickle.load(f)
+
+        groundtruth_alignments = np.array(groundtruth_alignments_dic['extended_alignment_dataset'])
+        possible_phonemes = list(groundtruth_alignments_dic['possible_phonemes'])
+        empirical_alignments = np.array(empirical_alignments_dic['all_alignments'])
+        phonemes_indices = {possible_phonemes[i]:i for i in range(len(possible_phonemes))}
+
+        ConsoleLogger.status('#{} possible phonemes: {}'.format(len(possible_phonemes), possible_phonemes))
+        ConsoleLogger.status('# of raw groundtruth alignments: {}'.format(len(groundtruth_alignments)))
+        ConsoleLogger.status('# of raw empirical alignments: {}'.format(len(empirical_alignments)))
+
+        groundtruth_utterance_keys = set()
+        final_groundtruth_alignments = list()
+        final_empirical_alignments = list()
+
+        for (utterence_key, alignment) in groundtruth_alignments:
+            if len(alignment) != 24: # FIXME
+                continue
+            groundtruth_utterance_keys.add(utterence_key)
+            final_groundtruth_alignments.append([phonemes_indices[alignment[i]] for i in range(len(alignment))])
+
+        for (utterence_key, alignment) in empirical_alignments:
+            if utterence_key in groundtruth_utterance_keys:
+                final_empirical_alignments.append(alignment)
+
+        final_groundtruth_alignments = np.asarray(final_groundtruth_alignments)
+        final_empirical_alignments = np.asarray(final_empirical_alignments)
+
+        ConsoleLogger.status('Groundtruth alignments shape: {}'.format(final_groundtruth_alignments.shape))
+        ConsoleLogger.status('Empirical alignments shape: {}'.format(final_empirical_alignments.shape))
+
+        ConsoleLogger.status('Groundtruth alignments samples: {}'.format([final_groundtruth_alignments[i] for i in range(2)]))
+        ConsoleLogger.status('Empirical alignments samples: {}'.format([final_empirical_alignments[i] for i in range(2)]))
+
+        biggest_adjusted_rand_score = 0.0
+        biggest_adjusted_mutual_info_score = 0.0
+        biggest_adjusted_rand_score_index = 0
+        biggest_adjusted_mutual_info_score_index = 0
+        i = 0
+        with tqdm(final_groundtruth_alignments) as bar:
+            for groundtruth_alignment in bar:
+                empirical_alignment = final_empirical_alignments[i]
+                adjusted_rand_score = sklearn.metrics.adjusted_rand_score(groundtruth_alignment, empirical_alignment)
+                adjusted_mutual_info_score = sklearn.metrics.adjusted_mutual_info_score(groundtruth_alignment, empirical_alignment)
+                if adjusted_rand_score > biggest_adjusted_rand_score:
+                    biggest_adjusted_rand_score = adjusted_rand_score
+                    biggest_adjusted_rand_score_index = i
+                if adjusted_mutual_info_score > biggest_adjusted_mutual_info_score:
+                    biggest_adjusted_mutual_info_score = adjusted_mutual_info_score
+                    biggest_adjusted_mutual_info_score_index = i
+                bar.update(1)
+                i += 1
+
+        ConsoleLogger.status('Biggest adjusted rand score: {} at index {}'.format(
+            biggest_adjusted_rand_score, biggest_adjusted_rand_score_index))
+        ConsoleLogger.status('Biggest adjusted mutual info score: {} at index {}'.format(
+            biggest_adjusted_mutual_info_score, biggest_adjusted_mutual_info_score_index))
+
+        ConsoleLogger.status('Alignments of the biggest adjusted rand score. Groundtruth:{} Empirical:{}'.format(
+            final_groundtruth_alignments[biggest_adjusted_rand_score_index], final_empirical_alignments[biggest_adjusted_rand_score_index]))
+        ConsoleLogger.status('Alignments of the biggest adjusted mutual info score. Groundtruth:{} Empirical:{}'.format(
+            final_groundtruth_alignments[biggest_adjusted_mutual_info_score_index], final_empirical_alignments[biggest_adjusted_mutual_info_score_index]))
+
