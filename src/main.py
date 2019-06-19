@@ -55,7 +55,6 @@ if __name__ == "__main__":
     parser.add_argument('--compute_quantized_embedding_spaces_animation', action='store_true', help='Compute a 2D projection of the VQ codebook over training iterations')
     parser.add_argument('--plot_distances_histogram', action='store_true', help='Compute histograms of several distances to investiguate how close are the samples with the codebook')
     parser.add_argument('--compute_many_to_one_mapping', action='store_true', help='Compute the many to one mapping for all the samples')
-    parser.add_argument('--compute_speaker_dependency_stats', action='store_true', help='Compute if the VQ codebook is speaker independent for all the samples')
     parser.add_argument('--compute_alignments', action='store_true', help='Compute the groundtruth alignments and those of the specified experiments')
     parser.add_argument('--compute_clustering_metrics', action='store_true', help='Compute the clustering metrics between the groundtruth and the empirical alignments')
     parser.add_argument('--plot_clustering_metrics_evolution', action='store_true', help='Compute the evolution of the clustering metrics accross different number of embedding vectors')
@@ -67,7 +66,6 @@ if __name__ == "__main__":
         'compute_quantized_embedding_spaces_animation': args.compute_quantized_embedding_spaces_animation,
         'plot_distances_histogram': args.plot_distances_histogram,
         'compute_many_to_one_mapping': args.compute_many_to_one_mapping,
-        'compute_speaker_dependency_stats': args.compute_speaker_dependency_stats,
         'compute_alignments': args.compute_alignments,
         'compute_clustering_metrics': args.compute_clustering_metrics,
         'plot_clustering_metrics_evolution': args.plot_clustering_metrics_evolution
