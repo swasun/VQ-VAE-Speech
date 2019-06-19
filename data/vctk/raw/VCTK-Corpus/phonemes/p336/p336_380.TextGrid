@@ -1,0 +1,112 @@
+File type = "ooTextFile"
+Object class = "TextGrid"
+
+xmin = 0.0
+xmax = 2.010666666666667
+tiers? <exists>
+size = 2
+item []:
+	item [1]:
+		class = "IntervalTier"
+		name = "words"
+		xmin = 0.0
+		xmax = 2.010666666666667
+		intervals: size = 6
+			intervals [1]:
+				xmin = 0.0
+				xmax = 0.650
+				text = ""
+			intervals [2]:
+				xmin = 0.650
+				xmax = 0.830
+				text = "it"
+			intervals [3]:
+				xmin = 0.830
+				xmax = 1.120
+				text = "runs"
+			intervals [4]:
+				xmin = 1.120
+				xmax = 1.210
+				text = "in"
+			intervals [5]:
+				xmin = 1.210
+				xmax = 1.780
+				text = "cycles"
+			intervals [6]:
+				xmin = 1.780
+				xmax = 2.010666666666667
+				text = ""
+	item [2]:
+		class = "IntervalTier"
+		name = "phones"
+		xmin = 0.0
+		xmax = 2.010666666666667
+		intervals: size = 17
+			intervals [1]:
+				xmin = 0.000
+				xmax = 0.650
+				text = "sil"
+			intervals [2]:
+				xmin = 0.650
+				xmax = 0.760
+				text = "IH0"
+			intervals [3]:
+				xmin = 0.760
+				xmax = 0.830
+				text = "T"
+			intervals [4]:
+				xmin = 0.830
+				xmax = 0.900
+				text = "R"
+			intervals [5]:
+				xmin = 0.900
+				xmax = 0.960
+				text = "AH1"
+			intervals [6]:
+				xmin = 0.960
+				xmax = 1.050
+				text = "N"
+			intervals [7]:
+				xmin = 1.050
+				xmax = 1.120
+				text = "Z"
+			intervals [8]:
+				xmin = 1.120
+				xmax = 1.150
+				text = "IH1"
+			intervals [9]:
+				xmin = 1.150
+				xmax = 1.210
+				text = "N"
+			intervals [10]:
+				xmin = 1.210
+				xmax = 1.320
+				text = "S"
+			intervals [11]:
+				xmin = 1.320
+				xmax = 1.430
+				text = "AY1"
+			intervals [12]:
+				xmin = 1.430
+				xmax = 1.540
+				text = "K"
+			intervals [13]:
+				xmin = 1.540
+				xmax = 1.580
+				text = "AH0"
+			intervals [14]:
+				xmin = 1.580
+				xmax = 1.680
+				text = "L"
+			intervals [15]:
+				xmin = 1.680
+				xmax = 1.780
+				text = "Z"
+			intervals [16]:
+				xmin = 1.780
+				xmax = 1.990
+				text = "sp"
+			intervals [17]:
+				xmin = 1.990
+				xmax = 2.010666666666667
+				text = ""

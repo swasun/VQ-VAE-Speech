@@ -1,0 +1,112 @@
+File type = "ooTextFile"
+Object class = "TextGrid"
+
+xmin = 0.0
+xmax = 3.4583333333333335
+tiers? <exists>
+size = 2
+item []:
+	item [1]:
+		class = "IntervalTier"
+		name = "words"
+		xmin = 0.0
+		xmax = 3.4583333333333335
+		intervals: size = 6
+			intervals [1]:
+				xmin = 0.0
+				xmax = 1.800
+				text = ""
+			intervals [2]:
+				xmin = 1.800
+				xmax = 1.990
+				text = "the"
+			intervals [3]:
+				xmin = 1.990
+				xmax = 2.460
+				text = "idea"
+			intervals [4]:
+				xmin = 2.460
+				xmax = 2.720
+				text = "is"
+			intervals [5]:
+				xmin = 2.720
+				xmax = 3.230
+				text = "simple"
+			intervals [6]:
+				xmin = 3.230
+				xmax = 3.4583333333333335
+				text = ""
+	item [2]:
+		class = "IntervalTier"
+		name = "phones"
+		xmin = 0.0
+		xmax = 3.4583333333333335
+		intervals: size = 17
+			intervals [1]:
+				xmin = 0.000
+				xmax = 1.800
+				text = "sil"
+			intervals [2]:
+				xmin = 1.800
+				xmax = 1.840
+				text = "DH"
+			intervals [3]:
+				xmin = 1.840
+				xmax = 1.990
+				text = "AH1"
+			intervals [4]:
+				xmin = 1.990
+				xmax = 2.090
+				text = "AY0"
+			intervals [5]:
+				xmin = 2.090
+				xmax = 2.210
+				text = "D"
+			intervals [6]:
+				xmin = 2.210
+				xmax = 2.320
+				text = "IY1"
+			intervals [7]:
+				xmin = 2.320
+				xmax = 2.460
+				text = "AH0"
+			intervals [8]:
+				xmin = 2.460
+				xmax = 2.670
+				text = "IH1"
+			intervals [9]:
+				xmin = 2.670
+				xmax = 2.720
+				text = "Z"
+			intervals [10]:
+				xmin = 2.720
+				xmax = 2.830
+				text = "S"
+			intervals [11]:
+				xmin = 2.830
+				xmax = 2.880
+				text = "IH1"
+			intervals [12]:
+				xmin = 2.880
+				xmax = 2.950
+				text = "M"
+			intervals [13]:
+				xmin = 2.950
+				xmax = 3.040
+				text = "P"
+			intervals [14]:
+				xmin = 3.040
+				xmax = 3.090
+				text = "AH0"
+			intervals [15]:
+				xmin = 3.090
+				xmax = 3.230
+				text = "L"
+			intervals [16]:
+				xmin = 3.230
+				xmax = 3.440
+				text = "sp"
+			intervals [17]:
+				xmin = 3.440
+				xmax = 3.4583333333333335
+				text = ""
