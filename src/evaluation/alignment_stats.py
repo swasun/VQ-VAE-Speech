@@ -464,6 +464,92 @@ class AlignmentStats(object):
         fig.savefig(result_path + os.sep + 'clustering_metrics_evolution.png', bbox_inches='tight', pad_inches=0)
         plt.close(fig)
 
+    @staticmethod
+    def check_clustering_metrics_stability_over_seeds(all_experiments_names, result_path):
+        possible_metric_names = [
+            'adjusted_rand_score',
+            'adjusted_mutual_info_score',
+            'normalized_mutual_info_score'
+        ]
+
+        scores = dict()
+
+        correct_file_paths = list()
+        for file in os.listdir(result_path):
+            # Check if a known experiment name is present in the current file name
+            if sum([1 if experiment_name in file else 0 for experiment_name in all_experiments_names]) == 0:
+                continue
+
+            # Check if a known clustering metric is present in the current file name
+            possible_metric_found = None
+            for possible_metric in possible_metric_names:
+                if possible_metric in file:
+                    possible_metric_found = possible_metric
+                    break
+            if possible_metric_found is None:
+                continue
+            correct_file_paths.append((file, possible_metric_found))
+
+        # Sort the selected file paths by the seed number indicated in the file name
+        correct_file_paths = sorted(correct_file_paths, key=lambda x: int(x[0].split('_')[0].split('-')[1].replace('seed', '')))
+
+        seeds = set()
+        experiment_names_wo_seed = set()
+        for (file, possible_metric_found) in correct_file_paths:
+            current_experiment_name = file.split('_' + possible_metric_found)[0]
+            seeds.add(current_experiment_name.split('-')[1].replace('seed', ''))
+            current_experiment_name_wo_seed = current_experiment_name.split('-')[0]
+            experiment_names_wo_seed.add(current_experiment_name_wo_seed)
+            if possible_metric_found not in scores:
+                scores[possible_metric_found] = dict()
+            if current_experiment_name_wo_seed not in scores[possible_metric_found]:
+                scores[possible_metric_found][current_experiment_name_wo_seed] = list()
+            scores[possible_metric_found][current_experiment_name_wo_seed].append(float(np.load(result_path + os.sep + file)))
+
+        seeds = sorted(seeds)
+
+        fig, axs = plt.subplots(
+            len(possible_metric_names),
+            1,
+            figsize=(5 * len(possible_metric_names), 10),
+            sharex=True
+        )
+
+        #print(json.dumps(scores, sort_keys=True, indent=2)) # TODO: log this line instead of printting it
+        #print(seeds) # TODO: log this line instead of printting it
+
+        def underscored_text_to_uppercased(text):
+            return ' '.join([word[0].upper() + word[1:] for word in text.replace('_', ' ').split(' ')])
+
+        for i in range(len(possible_metric_names)):
+            metric_name = possible_metric_names[i]
+            bars = list()
+            previous_experiment_name = None
+            for experiment_name in scores[metric_name]:
+                indices = np.arange(len(seeds))
+                bottom = scores[metric_name][previous_experiment_name] \
+                    if previous_experiment_name is not None else None
+                bars.append(axs[i].bar(
+                    x=indices,
+                    height=scores[metric_name][experiment_name],
+                    width=0.40,
+                    label=experiment_name,
+                    bottom=bottom
+                ))
+                previous_experiment_name = experiment_name
+            axs[i].set_ylabel(underscored_text_to_uppercased(metric_name), fontsize=10)
+
+        fig.suptitle(
+            'Evolution of the clustering metric scores accross\ndifferent seed values',
+            fontsize=20
+        )
+        axs[-1].set_xlabel('Seed numbers', fontsize=15)
+        axs[-1].set_xticks(np.arange(len(seeds)))
+        axs[-1].set_xticklabels(list(seeds))
+        fig.legend(np.unique(axs[-1].get_legend_handles_labels()[1]))
+        fig.savefig(result_path + os.sep + 'clustering_metrics_accross_seeds.png', bbox_inches='tight', pad_inches=0)
+        plt.close(fig)
+
     def print_biggest_adjusted_scores(self):
         groundtruth_alignments_dic = None
         with open(self._results_path + os.sep + 'vctk_groundtruth_alignments.pickle', 'rb') as f:
@@ -533,4 +619,3 @@ class AlignmentStats(object):
             final_groundtruth_alignments[biggest_adjusted_rand_score_index], final_empirical_alignments[biggest_adjusted_rand_score_index]))
         ConsoleLogger.status('Alignments of the biggest adjusted mutual info score. Groundtruth:{} Empirical:{}'.format(
             final_groundtruth_alignments[biggest_adjusted_mutual_info_score_index], final_empirical_alignments[biggest_adjusted_mutual_info_score_index]))
-

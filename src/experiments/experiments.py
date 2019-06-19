@@ -58,9 +58,12 @@ class Experiments(object):
             experiment.evaluate(evaluation_options)
             torch.cuda.empty_cache()
 
+        if type(self._experiments[0].seed) == list:
+            Experiments.set_deterministic_on(self._experiments[0].seed[0]) # For now use only the first seed there
+        else:
+            Experiments.set_deterministic_on(self._experiments[0].seed)
+
         if evaluation_options['compute_quantized_embedding_spaces_animation']:
-            if type(self._seed) == list:
-                Experiments.set_deterministic_on(self._experiments[0].seed) # For now use only the first seed there
             EmbeddingSpaceStats.compute_quantized_embedding_spaces_animation(
                 all_experiments_paths=[experiment.experiment_path for experiment in self._experiments],
                 all_experiments_names=[experiment.name for experiment in self._experiments],
@@ -68,13 +71,19 @@ class Experiments(object):
             )
 
         if evaluation_options['plot_clustering_metrics_evolution']:
-            if type(self._seed) == list:
-                Experiments.set_deterministic_on(self._experiments[0].seed) # For now use only the first seed there
-            all_results_paths = [experiment.results_path for experiment in self._experiments]
             if len(set(all_results_paths)) != 1:
                 ConsoleLogger.error('All clustering metric results should be in the same result folder')
                 return
             AlignmentStats.compute_clustering_metrics_evolution(
+                all_experiments_names=[experiment.name for experiment in self._experiments],
+                result_path=self._experiments[0].results_path
+            )
+
+        if evaluation_options['check_clustering_metrics_stability_over_seeds']:
+            if len(set(all_results_paths)) != 1:
+                ConsoleLogger.error('All clustering metric results should be in the same result folder')
+                return
+            AlignmentStats.check_clustering_metrics_stability_over_seeds(
                 all_experiments_names=[experiment.name for experiment in self._experiments],
                 result_path=self._experiments[0].results_path
             )
