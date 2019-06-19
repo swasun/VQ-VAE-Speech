@@ -39,6 +39,8 @@ import seaborn as sns
 import textgrid
 from tqdm import tqdm
 import pickle
+import torch
+from scipy.stats import ks_2samp
 
 
 class Evaluator(object):
@@ -408,24 +410,67 @@ class Evaluator(object):
             - Compute all the distances between all possible distribution couples, using
               a distribution distance (e.g. entropy) and plot them.
         """
-        all_speaker_ids = list()
-        all_embeddings = torch.tensor([]).to(self._device)
+        """embeddings_grouped_by_speaker_id = dict()
 
         with tqdm(self._data_stream.validation_loader) as bar:
             for data in bar:
                 valid_originals = data['input_features'].to(self._device).permute(0, 2, 1).contiguous().float()
-                speaker_ids = data['speaker_id'].to(self._device)
-                wav_filenames = data['wav_filename']
+                speaker_ids = data['speaker_id'].to(self._device).detach().cpu().numpy().tolist()
 
                 z = self._model.encoder(valid_originals)
                 z = self._model.pre_vq_conv(z)
                 _, quantized, _, _, _, _, _, \
                     _, _, _, _ = self._model.vq(z)
+
                 valid_reconstructions = self._model.decoder(quantized, self._data_stream.speaker_dic, speaker_ids)
                 B = valid_reconstructions.size(0)
 
-                all_speaker_ids.append(speaker_ids.detach().cpu().numpy().tolist())
-                #torch.cat(all_embeddings, self._model.vq.embedding.weight.data) # FIXME
+                for i in range(B):
+                    speaker_id = speaker_ids[i][0]
+                    if speaker_id not in embeddings_grouped_by_speaker_id:
+                        embeddings_grouped_by_speaker_id[speaker_id] = list()
+                    embeddings_grouped_by_speaker_id[speaker_id].append(
+                        self._model.vq.embedding.weight.data.detach().cpu().numpy()
+                    )
+
+        import pickle
+        with open('test.pickle', 'wb') as file:
+            pickle.dump(embeddings_grouped_by_speaker_id, file)"""
+
+        embeddings_grouped_by_speaker_id = None
+        with open('test.pickle', 'rb') as file:
+            embeddings_grouped_by_speaker_id = pickle.load(file)
+
+        from scipy.special import softmax
+        from itertools import combinations
+
+        def kolmogorov_smirnov_test(embedding1, embedding2):
+            # https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.ks_2samp.html
+            embedding1_len = len(embedding1)
+            embedding2_len = len(embedding2)
+            if embedding2_len > embedding1_len:
+                embedding2 = embedding2[:embedding1_len]
+            elif embedding1_len > embedding2_len:
+                embedding1 = embedding1[:embedding2_len]
+            distribution1 = softmax(np.concatenate(np.asarray(embedding1)))
+            distribution2 = softmax(np.concatenate(np.asarray(embedding2)))
+            return ks_2samp(distribution1.flatten(), distribution2.flatten())[1]
+
+        """values = list(embeddings_grouped_by_speaker_id.values())
+        values[1] = values[1][:len(values[0])]
+        distribution1 = softmax(np.concatenate(np.asarray(values[0])))
+        distribution2 = softmax(np.concatenate(np.asarray(values[1])))
+        ConsoleLogger.status('distribution1.shape: {}'.format(distribution1.shape))
+        ConsoleLogger.status('distribution2.shape: {}'.format(distribution2.shape))
+        print(str(ks_2samp(distribution1.flatten(), distribution2.flatten())))"""
+
+        ks = [kolmogorov_smirnov_test(items[0], items[1]) for items in combinations(list(embeddings_grouped_by_speaker_id.values()), r=2)]
+
+        print(np.mean(ks))
+
+        #sns.distplot(ks, hist=True, kde=False, norm_hist=True)
+        #output_path = results_path + os.sep + experiment_name + '_test-plot.png'
+        #plt.savefig(output_path, bbox_inches='tight', pad_inches=0)
 
         # - Group the embeddings by speaker: create a tensor/numpy per speaker id from all_embeddings
         # - Compute the distribution of each embedding (seaborn histogram, softmax)

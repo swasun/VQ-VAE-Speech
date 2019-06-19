@@ -12,6 +12,14 @@
             "normalize": true
         },
 
+        "baseline-44": {
+            "num_epochs": 15,
+            "batch_size": 2,
+            "num_embeddings": 44,
+            "use_device": "cuda:1",
+            "normalize": true
+        },
+
         "baseline-100": {
             "num_epochs": 15,
             "batch_size": 2,

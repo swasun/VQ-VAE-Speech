@@ -37,13 +37,15 @@ import copy
 class Experiment(object):
 
     def __init__(self, name, experiments_path, results_path, global_configuration,
-        experiment_configuration):
+        experiment_configuration, seed):
 
         self._name = name
+        self._file_suffix = ''
         self._experiments_path = experiments_path
         self._results_path = results_path
         self._global_configuration = global_configuration
         self._experiment_configuration = experiment_configuration
+        self._seed = seed
 
         # Create the results path directory if it doesn't exist
         if not os.path.isdir(results_path):
@@ -90,8 +92,9 @@ class Experiment(object):
     def name(self):
         return self._name
 
-    def set_name(self, name):
-        self._name = name
+    @property
+    def seed(self):
+        return self._seed
 
     @property
     def results_path(self):
