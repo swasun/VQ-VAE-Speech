@@ -60,11 +60,17 @@ class AlignmentStats(object):
 
                     shifting_time = shifting_times[0].detach().cpu().item()
                     target_time_scale = np.arange((data_length / desired_time_interval) + 1) * desired_time_interval + shifting_time
+                    shifted_indices = np.where(target_time_scale >= shifting_time)
                     tg = textgrid.TextGrid()
                     tg.read(phonemes_alignment_path)
-                    if target_time_scale[-1] > tg.tiers[1][-1].maxTime:
-                        ConsoleLogger.error('Shifting time error at {}.pickle'.format(loader_indices[i].detach().cpu().item()))
-                        continue
+                    """if target_time_scale[-1] > tg.tiers[1][-1].maxTime:
+                        ConsoleLogger.error('Shifting time error at {}.pickle: shifting_time:{}' \
+                            ' target_time_scale[-1]:{} > tg.tiers[1][-1].maxTime:{}'.format(
+                            loader_indices[i].detach().cpu().item(),
+                            shifting_time,
+                            target_time_scale[-1],
+                            tg.tiers[1][-1].maxTime))
+                        continue"""
 
                     phonemes = list()
                     current_target_time_index = 0
@@ -99,7 +105,7 @@ class AlignmentStats(object):
             pickle.dump({
                 'desired_time_interval': desired_time_interval,
                 'extended_alignment_dataset': extended_alignment_dataset,
-                'possible_phonemes': possible_phonemes,
+                'possible_phonemes': list(possible_phonemes),
                 'phonemes_counter': phonemes_counter,
                 'total_phonemes_apparations': total_phonemes_apparations
             }, f)
@@ -352,8 +358,10 @@ class AlignmentStats(object):
         final_groundtruth_alignments = list()
         final_empirical_alignments = list()
 
+        alignment_length = ((self._configuration['length'] / self._configuration['sampling_rate']) * 100) / 2
+
         for (utterence_key, alignment) in groundtruth_alignments:
-            if len(alignment) != 24: # FIXME
+            if len(alignment) != alignment_length: # FIXME
                 continue
             groundtruth_utterance_keys.add(utterence_key)
             final_groundtruth_alignments.append([phonemes_indices[alignment[i]] for i in range(len(alignment))])
@@ -572,8 +580,10 @@ class AlignmentStats(object):
         final_groundtruth_alignments = list()
         final_empirical_alignments = list()
 
+        alignment_length = ((self._configuration['length'] / self._configuration['sampling_rate']) * 100) / 2
+
         for (utterence_key, alignment) in groundtruth_alignments:
-            if len(alignment) != 24: # FIXME
+            if len(alignment) != alignment_length: # FIXME
                 continue
             groundtruth_utterance_keys.add(utterence_key)
             final_groundtruth_alignments.append([phonemes_indices[alignment[i]] for i in range(len(alignment))])

@@ -46,12 +46,13 @@ class VCTKFeaturesStream(object):
             with open(configuration['normalizer_path'], 'rb') as file:
                 self._normalizer = pickle.load(file)
 
-        self._training_data = VCTKFeaturesDataset(vctk_path, 'train', self._normalizer)
-        self._validation_data = VCTKFeaturesDataset(vctk_path, 'val', self._normalizer)
+        self._training_data = VCTKFeaturesDataset(vctk_path, 'train', self._normalizer, features_path=configuration['features_path'])
+        self._validation_data = VCTKFeaturesDataset(vctk_path, 'val', self._normalizer, features_path=configuration['features_path'])
         factor = 1 if len(gpu_ids) == 0 else len(gpu_ids)
 
         factor = 1
-        configuration['batch_size'] = 1
+        #configuration['batch_size'] = 1
+        self._training_batch_size = configuration['batch_size']
         self._validation_batch_size = 1
 
         self._training_loader = DataLoader(
@@ -71,6 +72,7 @@ class VCTKFeaturesStream(object):
         self._speaker_dic = self._make_speaker_dic(vctk_path + os.sep + 'raw' + os.sep + 'VCTK-Corpus')
         self._vctk_path = vctk_path
         self._logger = LoggerFactory.create(LOG_PATH, __name__)
+        self._normalizer_path = configuration['normalizer_path']
 
     @property
     def training_data(self):
@@ -91,6 +93,10 @@ class VCTKFeaturesStream(object):
     @property
     def speaker_dic(self):
         return self._speaker_dic
+
+    @property
+    def training_batch_size(self):
+        return self._training_batch_size
 
     @property
     def validation_batch_size(self):
@@ -155,7 +161,7 @@ class VCTKFeaturesStream(object):
         }
 
         ConsoleLogger.status('Writing stats in file...')
-        with open(self._vctk_path + os.sep + 'vctk-mfcc-stats.pickle', 'wb') as file: # TODO: do not use hardcoded path
+        with open(self._normalizer_path, 'wb') as file: # TODO: do not use hardcoded path
             pickle.dump(stats, file)
 
         train_mfccs_norm = (train_mfccs[0] - train_mean) / train_std

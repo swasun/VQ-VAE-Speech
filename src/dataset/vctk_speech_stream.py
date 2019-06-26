@@ -93,7 +93,7 @@ class VCTKSpeechStream(object):
             raise ValueError("VCTK dataset not found at path '{}'".format(vctk_path))
 
         # Create the features path directory if it doesn't exist
-        features_path = vctk_path + os.sep + 'features'
+        features_path = vctk_path + os.sep + configuration['features_path']
         if not os.path.isdir(features_path):
             ConsoleLogger.status('Creating features directory at path: {}'.format(features_path))
             os.mkdir(features_path)

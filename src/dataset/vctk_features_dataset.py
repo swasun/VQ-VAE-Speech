@@ -32,10 +32,10 @@ import numpy as np
 
 class VCTKFeaturesDataset(Dataset):
 
-    def __init__(self, vctk_path, subdirectory, normalizer=None):
+    def __init__(self, vctk_path, subdirectory, normalizer=None, features_path='features'):
         self._vctk_path = vctk_path
         self._subdirectory = subdirectory
-        features_path = self._vctk_path + os.sep + 'features'
+        features_path = self._vctk_path + os.sep + features_path
         self._sub_features_path = features_path + os.sep + self._subdirectory
         self._files_number = len(os.listdir(self._sub_features_path))
         self._normalizer = normalizer

@@ -28,6 +28,7 @@ from experiments.experiment import Experiment
 from error_handling.console_logger import ConsoleLogger
 from evaluation.alignment_stats import AlignmentStats
 from evaluation.embedding_space_stats import EmbeddingSpaceStats
+from evaluation.gradient_stats import GradientStats
 
 import json
 import yaml
@@ -71,22 +72,51 @@ class Experiments(object):
             )
 
         if evaluation_options['plot_clustering_metrics_evolution']:
-            if len(set(all_results_paths)) != 1:
-                ConsoleLogger.error('All clustering metric results should be in the same result folder')
-                return
             AlignmentStats.compute_clustering_metrics_evolution(
                 all_experiments_names=[experiment.name for experiment in self._experiments],
                 result_path=self._experiments[0].results_path
             )
 
         if evaluation_options['check_clustering_metrics_stability_over_seeds']:
-            if len(set(all_results_paths)) != 1:
-                ConsoleLogger.error('All clustering metric results should be in the same result folder')
-                return
             AlignmentStats.check_clustering_metrics_stability_over_seeds(
                 all_experiments_names=[experiment.name for experiment in self._experiments],
                 result_path=self._experiments[0].results_path
             )
+
+        if evaluation_options['plot_gradient_stats']:
+            from evaluation.gradient_stats import GradientStats
+            from tqdm import tqdm
+            import matplotlib.pyplot as plt
+            import os
+            import pickle
+            all_experiments_paths=[experiment.experiment_path for experiment in self._experiments]
+            all_experiments_names=[experiment.name for experiment in self._experiments]
+            all_results_paths=[experiment.results_path for experiment in self._experiments]
+            gradient_stats_entries = list()
+            for i in range(len(all_experiments_paths)):
+                experiment_path = all_experiments_paths[i]
+                experiment_name = all_experiments_names[i]
+                experiment_results_path = all_results_paths[i]
+                # List all file names related to the gradient stats for the current observed experiment
+                file_names = [file_name for file_name in os.listdir(experiment_path) if 'gradient-stats' in file_name and experiment_name in file_name]
+
+                # Sort file names by epoch number and iteration number as well
+                file_names = sorted(file_names, key=lambda x: 
+                    (int(x.replace(experiment_name + '_', '').replace('_gradient-stats.pickle', '').split('_')[0]),
+                    int(x.replace(experiment_name + '_', '').replace('_gradient-stats.pickle', '').split('_')[1]))
+                )
+
+                with tqdm(file_names) as bar:
+                    bar.set_description('Processing')
+                    for file_name in bar:
+                        with open(experiment_path + os.sep + file_name, 'rb') as file:
+                            a = pickle.load(file)
+                            print(list(a['model'].keys()))
+                            gradient_stats_entries.append(pickle.load(file))
+                            input('')
+            gradient_stats_entry = gradient_stats_entries[-1]
+            GradientStats.plot_gradient_flow(gradient_stats_entry['model'])
+            plt.savefig('ok.png')
 
     @staticmethod
     def set_deterministic_on(seed):

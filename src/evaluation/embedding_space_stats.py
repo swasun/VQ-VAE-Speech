@@ -1,7 +1,7 @@
 import numpy as np
 import umap
 import matplotlib.pyplot as plt
-from matplotlib import animation
+from matplotlib.image import imread
 from textwrap import wrap
 import os
 from tqdm import tqdm
@@ -180,56 +180,36 @@ class EmbeddingSpaceStats(object):
                         'time_speaker_ids': time_speaker_ids,
                         'encoding_indices': encoding_indices
                     })
-                    bar.update(1)
+                    bar.update(1)    
 
             cmap = 'cubehelix'
-            plt.rcParams['animation.ffmpeg_path'] = ''
+            projected_images = list()
 
-            fig, ax = plt.subplots()
-            projection = projections[0]['projection']
-            n_embedding = projections[0]['n_embedding']
-            time_speaker_ids = projections[0]['time_speaker_ids']
-            scatter1 = ax.scatter(projection[:-n_embedding, 0], projection[:-n_embedding, 1], s=10, c=time_speaker_ids, cmap=cmap) # audio frame colored by speaker id
-            scatter2 = ax.scatter(projection[-n_embedding:, 0], projection[-n_embedding:, 1], s=50, marker='x', c='k', alpha=0.8) # embedding
+            with tqdm(projections) as bar:
+                bar.set_description('Plotting projections')
+                for projection_entry in bar:
+                    projection = projection_entry['projection']
+                    n_embedding = projection_entry['n_embedding']
+                    time_speaker_ids = projection_entry['time_speaker_ids']
+                    encoding_indices = projection_entry['encoding_indices']
 
-            #scatter1 = ax.scatter(projection[:-n_embedding,0], projection[:-n_embedding, 1], s=10, c=time_speaker_ids, cmap=cmap) # audio frame colored by speaker id
-            #scatter2 = ax.scatter(projection[-n_embedding:,0], projection[-n_embedding:, 1], s=50, marker='x', c='k', alpha=0.8) # embedding
+                    fig, axs = plt.subplots(1, 2, figsize=(16, 8), sharey=True)
 
-            def update_plot(i, projections, scatter1, scatter2):
-                projection = projections[i]['projection']
-                n_embedding = projections[i]['n_embedding']
+                    axs[0].scatter(projection[:-n_embedding, 0], projection[:-n_embedding, 1], s=10, c=time_speaker_ids, cmap=cmap) # audio frame colored by speaker id
+                    axs[0].scatter(projection[-n_embedding:, 0], projection[-n_embedding:, 1], s=50, marker='x', c='k', alpha=0.8) # embedding
 
-                x_i = projection[:-n_embedding, 0]
-                y_i = projection[:-n_embedding, 1]
-                """data = np.hstack((x[:i, np.newaxis], y[:i, np.newaxis]))
-                scatter1.set_offsets(data)"""
-                scatter1.set_array(projections[i]['time_speaker_ids'])
-                scatter1.set_offsets(np.c_[x_i, y_i])
+                    axs[1].scatter(projection[:-n_embedding,0], projection[:-n_embedding, 1], s=10, c=encoding_indices, cmap=cmap) # audio frame colored by encoding indices
+                    axs[1].scatter(projection[-n_embedding:, 0], projection[-n_embedding:, 1], s=50, marker='x', c=np.arange(n_embedding), cmap=cmap) # different color for each embedding
 
-                x_i = projection[-n_embedding:, 0]
-                y_i = projection[-n_embedding:, 1]
-                """data = np.hstack((x[:i, np.newaxis], y[:i, np.newaxis]))
-                scatter2.set_offsets(data)"""
-                scatter2.set_offsets(np.c_[x_i, y_i])
+                    projection_file_path = '_tmp_projection' + '.png'
+                    fig.savefig(projection_file_path)
+                    plt.close(fig)
+                    projected_images.append(imread(projection_file_path))
+                    os.remove(projection_file_path)
+                    bar.update(1)
 
-                return scatter1, scatter2,
-
-            animated_plot = animation.FuncAnimation(
-                fig,
-                update_plot,
-                frames=np.arange(len(projections)),
-                fargs=(projections, scatter1, scatter2),
-                blit=True,
-                interval=2.5,
-                repeat=False
-            )
-
-            FFwriter = animation.FFMpegWriter(fps=60)
-            animated_plot.save(
-                experiment_results_path + os.sep + experiment_name + '_quantized_embedding_spaces_animation.mp4',
-                writer=FFwriter,
-                dpi=200
-            )
+            ConsoleLogger.status('Building gif from projected images...')
+            Utils.build_gif(projected_images)
 
     def _configure_ax(self, ax, title=None, xlabel=None, ylabel=None, legend=False):
         ax.minorticks_off()

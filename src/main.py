@@ -36,11 +36,32 @@ import os
 import argparse
 import yaml
 import sys
+import json
+
+
+def load_configuration(configuration_path):
+    configuration = None
+    with open(configuration_path, 'r') as configuration_file:
+        configuration = yaml.load(configuration_file, Loader=yaml.FullLoader)
+    return configuration
+
+def update_configuration_from_experiments(experiments_configuration_path, configuration):
+    experiment_configuration = None
+    with open(experiments_configuration_path, 'r') as experiments_file:
+        experiment_configuration = json.load(experiments_file)
+    for entry in list(experiment_configuration.keys()):
+        if entry == 'experiments':
+            continue
+        if entry in configuration:
+            configuration[entry] = experiment_configuration[entry]
+    return configuration
 
 
 if __name__ == "__main__":
-    default_experiments_configuration_path = '..' + os.sep + 'configurations' + os.sep + 'experiments.json'
+    default_experiments_configuration_path = '..' + os.sep + 'configurations' + os.sep + 'experiments_vq44-mfcc39.json'
     default_experiments_path = '..' + os.sep + 'experiments'
+    default_configuration_path = '..' + os.sep + 'configurations' + os.sep + 'vctk_features.yaml'
+    default_dataset_path = '..' + os.sep + 'data' + os.sep + 'vctk'
 
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--summary', nargs='?', default=None, type=str, help='The summary of the model based of a specified configuration file')
@@ -59,6 +80,7 @@ if __name__ == "__main__":
     parser.add_argument('--compute_clustering_metrics', action='store_true', help='Compute the clustering metrics between the groundtruth and the empirical alignments')
     parser.add_argument('--plot_clustering_metrics_evolution', action='store_true', help='Compute the evolution of the clustering metrics accross different number of embedding vectors')
     parser.add_argument('--check_clustering_metrics_stability_over_seeds', action='store_true', help='Check the evolution of the clustering metrics statbility over different seed values')
+    parser.add_argument('--plot_gradient_stats', action='store_true', help='Plot the gradient stats of the training')
     args = parser.parse_args()
     
     evaluation_options = {
@@ -70,18 +92,16 @@ if __name__ == "__main__":
         'compute_alignments': args.compute_alignments,
         'compute_clustering_metrics': args.compute_clustering_metrics,
         'plot_clustering_metrics_evolution': args.plot_clustering_metrics_evolution,
-        'check_clustering_metrics_stability_over_seeds': args.check_clustering_metrics_stability_over_seeds
+        'check_clustering_metrics_stability_over_seeds': args.check_clustering_metrics_stability_over_seeds,
+        'plot_gradient_stats': args.plot_gradient_stats
     }
 
     # If specified, print the summary of the model using the CPU device
     if args.summary:
-        ConsoleLogger.status('Loading the configuration file {}...'.format(args.summary))
-        configuration = None
-        with open(args.summary, 'r') as configuration_file:
-            configuration = yaml.load(configuration_file, Loader=yaml.FullLoader)
+        configuration = load_configuration(args.summary)
         ConsoleLogger.status('Printing the summary of the model...')
         device_configuration = DeviceConfiguration.load_from_configuration(configuration)
-        data_stream = VCTKFeaturesStream('../data/vctk', configuration, device_configuration.gpu_ids, device_configuration.use_cuda)
+        data_stream = VCTKFeaturesStream(default_dataset_path, configuration, device_configuration.gpu_ids, device_configuration.use_cuda)
         model = ModelFactory.build(configuration, device_configuration, data_stream, with_trainer=False)
         print(model)
         sys.exit(0)
@@ -94,13 +114,13 @@ if __name__ == "__main__":
         sys.exit(0)
 
     if args.export_to_features:
-        configuration = None
-        with open('../configurations/vctk_features.yaml', 'r') as configuration_file:
-            configuration = yaml.load(configuration_file, Loader=yaml.FullLoader)
+        configuration = load_configuration(default_configuration_path)
+        update_configuration_from_experiments(args.experiments_configuration_path, configuration)
         device_configuration = DeviceConfiguration.load_from_configuration(configuration)
         data_stream = VCTKSpeechStream(configuration, device_configuration.gpu_ids, device_configuration.use_cuda)
-        data_stream.export_to_features('../data/vctk', configuration)
-        ConsoleLogger.success("VCTK exported to a new features dataset at: '../data/vctk/features'")
+        data_stream.export_to_features(default_dataset_path, configuration)
+        ConsoleLogger.success("VCTK exported to a new features dataset at: '{}'".format(
+            default_configuration_path + os.sep + configuration['features_path']))
         sys.exit(0)
 
     if args.evaluate:
@@ -109,12 +129,11 @@ if __name__ == "__main__":
         sys.exit(0)
 
     if args.compute_dataset_stats:
-        ConsoleLogger.status('Loading the configuration file {}...'.format(args.summary))
         configuration = None
-        with open('../configurations/vctk_features.yaml', 'r') as configuration_file:
-            configuration = yaml.load(configuration_file, Loader=yaml.FullLoader)
+        configuration = load_configuration(default_configuration_path)
+        update_configuration_from_experiments(args.experiments_configuration_path, configuration)
         device_configuration = DeviceConfiguration.load_from_configuration(configuration)
-        data_stream = VCTKFeaturesStream('../data/vctk', configuration, device_configuration.gpu_ids, device_configuration.use_cuda)
+        data_stream = VCTKFeaturesStream(default_dataset_path, configuration, device_configuration.gpu_ids, device_configuration.use_cuda)
         data_stream.compute_dataset_stats()
         sys.exit(0)
 

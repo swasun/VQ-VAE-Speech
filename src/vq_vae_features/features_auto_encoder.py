@@ -133,9 +133,12 @@ class FeaturesAutoEncoder(nn.Module):
 
         reconstructed_x = self._decoder(quantized, speaker_dic, speaker_id)
 
-        reconstructed_x = reconstructed_x.view(-1, self._output_features_filters, 51) # FIXME
-        
-        reconstruction_loss = self._criterion(reconstructed_x[:, :, :-4], y.float()) # MSELoss
+        input_features_size = x.size(2)
+        output_features_size = reconstructed_x.size(2)
+
+        reconstructed_x = reconstructed_x.view(-1, self._output_features_filters, output_features_size)
+
+        reconstruction_loss = self._criterion(reconstructed_x[:, :, :-(output_features_size-input_features_size)], y.float()) # MSELoss
 
         loss = vq_loss + reconstruction_loss
 

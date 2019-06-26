@@ -1,3 +1,11 @@
+from matplotlib.colors import LinearSegmentedColormap
+from matplotlib import colors, colorbar
+from matplotlib import pyplot as plt
+import matplotlib.animation as animation
+import colorsys
+import numpy as np
+
+
 class Utils(object):
 
     @staticmethod
@@ -12,10 +20,6 @@ class Utils(object):
         :return: colormap for matplotlib
         :author: https://github.com/delestro/rand_cmap
         """
-        from matplotlib.colors import LinearSegmentedColormap
-        import colorsys
-        import numpy as np
-
 
         if type not in ('bright', 'soft'):
             print ('Please choose "bright" or "soft" for type')
@@ -60,8 +64,6 @@ class Utils(object):
 
         # Display colorbar
         if verbose:
-            from matplotlib import colors, colorbar
-            from matplotlib import pyplot as plt
             fig, ax = plt.subplots(1, 1, figsize=(15, 0.5))
 
             bounds = np.linspace(0, nlabels, nlabels + 1)
@@ -71,3 +73,63 @@ class Utils(object):
                                     boundaries=bounds, format='%1i', orientation=u'horizontal')
 
         return random_colormap
+
+    @staticmethod
+    def build_gif(images, interval=0.1, dpi=72,
+        save_gif=True, saveto='animation.gif',
+        show_gif=False, cmap=None):
+        """
+        Take an array or list of images and create a GIF.
+        Parameters
+        ----------
+        images : np.ndarray or list
+            List of images to create a GIF of
+        interval : float, optional
+            Spacing in seconds between successive images.
+        dpi : int, optional
+            Dots per inch.
+        save_gif : bool, optional
+            Whether or not to save the GIF.
+        saveto : str, optional
+            Filename of GIF to save.
+        show_gif : bool, optional
+            Whether or not to render the GIF using plt.
+        cmap : None, optional
+            Optional colormap to apply to the images.
+        Returns
+        -------
+        ani : matplotlib.animation.ArtistAnimation
+            The artist animation from matplotlib.  Likely not useful.
+        Author
+        ------
+        Creative Applications of Deep Learning w/ Tensorflow.
+        Kadenze, Inc.
+        Copyright Parag K. Mital, June 2016.
+        """
+
+        images = np.asarray(images)
+        h, w, *c = images[0].shape
+        fig, ax = plt.subplots(figsize=(np.round(w / dpi), np.round(h / dpi)))
+        fig.subplots_adjust(bottom=0)
+        fig.subplots_adjust(top=1)
+        fig.subplots_adjust(right=1)
+        fig.subplots_adjust(left=0)
+        ax.set_axis_off()
+
+        if cmap is not None:
+            axs = list(map(lambda x: [
+                ax.imshow(x, cmap=cmap)], images))
+        else:
+            axs = list(map(lambda x: [
+                ax.imshow(x)], images))
+
+        ani = animation.ArtistAnimation(
+            fig, axs, interval=interval, repeat_delay=0, blit=False)
+
+        if save_gif:
+            ani.save(saveto, writer='imagemagick', dpi=dpi)
+
+        if show_gif:
+            plt.show()
+
+        return ani

@@ -56,7 +56,8 @@ class Trainer(object):
                 train_res_perplexity = []
 
                 iteration = 0
-                if self._configuration['record_codebook_stats']:
+                if self._configuration['record_codebook_stats'] or \
+                    self._configuration['record_gradient_stats']:
                     max_iterations_number = len(train_bar)
                     iterations_to_record = 10
                     iterations = list(np.arange(max_iterations_number, step=(max_iterations_number / iterations_to_record) - 1, dtype=int))
@@ -91,10 +92,10 @@ class Trainer(object):
 
                     if self._configuration['record_gradient_stats'] and iteration in iterations:
                         gradient_stats_entry = {
-                            'model': self._model.named_parameters(),
-                            'encoder': self._model.encoder.named_parameters(),
-                            'vq': self._model.vq.named_parameters(),
-                            'decoder': self._model.decoder.named_parameters()
+                            'model': dict(self._model.named_parameters()),
+                            'encoder': dict(self._model.encoder.named_parameters()),
+                            'vq': dict(self._model.vq.named_parameters()),
+                            'decoder': dict(self._model.decoder.named_parameters())
                         }
                         gradient_stats_entry_path = experiments_path + os.sep + experiment_name + '_' + str(epoch + 1) + '_' + str(iteration) + '_gradient-stats.pickle'
                         with open(gradient_stats_entry_path, 'wb') as file:
