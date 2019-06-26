@@ -162,19 +162,3 @@ class VCTKDataset(Dataset):
     @property
     def utterences(self):
         return self._utterences
-
-
-if __name__ =='__main__':
-
-    from torch.utils.data import DataLoader
-
-    vctk = VCTK('./')
-    configuration = { 'length':7680, 'quantize':256, 'sampling_rate':16000, 'res_type':'kaiser_fast', 'top_db':20 }
-    train_dataset = VCTKDataset(vctk.audios_train, vctk.speaker_dic, configuration)
-    val_dataset = VCTKDataset(vctk.audios_val, vctk.speaker_dic, configuration)
-
-    train_loader = DataLoader(train_dataset, batch_size=4, num_workers=4)
-    val_loader = DataLoader(val_dataset, batch_size=1, num_workers=4)
-    raw, one_hot, speaker_id, quantized = next(iter(train_loader))
-    raw_val, one_hot_val, speaker_id_val, quantized_val = next(iter(val_loader))
-
