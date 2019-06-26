@@ -14,6 +14,7 @@ normalizer_path: '../data/vctk/vctk-mfcc-stats.pickle'
 use_speaker_conditioning: False
 record_codebook_stats: False
 record_gradient_stats: False
+features_path: 'features'
 
 # Cuda
 use_cuda: True

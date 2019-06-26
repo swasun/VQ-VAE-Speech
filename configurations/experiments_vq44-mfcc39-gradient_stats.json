@@ -1,0 +1,16 @@
+{
+    "experiments_path": "../experiments-vq44-mfcc39-gradient-stats",
+    "results_path": "../results",
+    "configuration_path": "../configurations/vctk_features.yaml",
+    "seed": 1234,
+    "experiments": {
+        "baseline": {
+            "num_epochs": 20,
+            "batch_size": 32,
+            "num_embeddings": 44,
+            "use_device": "cuda:1",
+            "normalize": true,
+            "record_gradient_stats": true
+        }
+    }
+}

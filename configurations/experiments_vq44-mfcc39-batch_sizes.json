@@ -1,0 +1,39 @@
+{
+    "experiments_path": "../experiments-vq44-mfcc39-batch-sizes",
+    "results_path": "../results",
+    "configuration_path": "../configurations/vctk_features.yaml",
+    "seed": 1234,
+    "experiments": {
+        "baseline-2": {
+            "num_epochs": 15,
+            "batch_size": 2,
+            "num_embeddings": 44,
+            "use_device": "cuda:0",
+            "normalize": true
+        },
+
+        "baseline-16": {
+            "num_epochs": 15,
+            "batch_size": 16,
+            "num_embeddings": 44,
+            "use_device": "cuda:0",
+            "normalize": true
+        },
+
+        "baseline-32": {
+            "num_epochs": 15,
+            "batch_size": 32,
+            "num_embeddings": 44,
+            "use_device": "cuda:0",
+            "normalize": true
+        },
+
+        "baseline-64": {
+            "num_epochs": 15,
+            "batch_size": 64,
+            "num_embeddings": 44,
+            "use_device": "cuda:0",
+            "normalize": true
+        }
+    }
+}

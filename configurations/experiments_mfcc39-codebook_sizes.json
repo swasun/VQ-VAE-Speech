@@ -1,5 +1,5 @@
 {
-    "experiments_path": "../experiments-mfcc39-codebook_size",
+    "experiments_path": "../experiments-mfcc39-codebook_sizes",
     "results_path": "../results",
     "configuration_path": "../configurations/vctk_features.yaml",
     "seed": 1234,

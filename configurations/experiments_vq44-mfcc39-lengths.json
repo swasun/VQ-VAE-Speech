@@ -1,0 +1,31 @@
+{
+    "experiments_path": "../experiments-vq44-mfcc39-lengths",
+    "results_path": "../results",
+    "configuration_path": "../configurations/vctk_features.yaml",
+    "seed": 1234,
+    "length": 30720,
+    "input_features_dim": 191,
+    "output_features_dim": 191,
+    "features_path": "features-30720",
+    "normalizer_path": "../data/vctk/vctk-mfcc-stats-30720.pickle",
+
+    "experiments": {
+        "baseline-30720": {
+            "num_epochs": 25,
+            "batch_size": 16,
+            "num_embeddings": 44,
+            "use_device": "cuda:1",
+            "normalize": true
+        },
+
+        "jitter12-30720": {
+            "num_epochs": 25,
+            "use_jitter": true,
+            "jitter_probability": 0.12,
+            "batch_size": 16,
+            "num_embeddings": 44,
+            "use_device": "cuda:1",
+            "normalize": true
+        }
+    }
+}
