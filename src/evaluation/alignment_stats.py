@@ -151,7 +151,6 @@ class AlignmentStats(object):
         phonemes_counter = alignments_dic['phonemes_counter']
         total_phonemes_apparations = alignments_dic['total_phonemes_apparations']
 
-        possible_phonemes = list(possible_phonemes)
         possibles_phonemes_number = len(possible_phonemes)
         #ConsoleLogger.status('List of phonemes: {}'.format(possible_phonemes)) # TODO: log it instead of print it
         #ConsoleLogger.status('Number of phonemes: {}'.format(possibles_phonemes_number)) # TODO: log it instead of print it
@@ -221,6 +220,19 @@ class AlignmentStats(object):
         fig.savefig(self._results_path + os.sep + 'vctk_groundtruth_phonemes_frequency_{}ms.png'.format(
             int(desired_time_interval * 1000)), bbox_inches='tight', pad_inches=0)
         plt.close(fig)
+
+    def compute_groundtruth_average_phonemes_number(self):
+        alignments_dic = None
+        with open(self._results_path + os.sep + 'vctk_groundtruth_alignments.pickle', 'rb') as f:
+            alignments_dic = pickle.load(f)
+
+        extended_alignment_dataset = alignments_dic['extended_alignment_dataset']
+    
+        phonemes_number = list()
+        for _, alignment in extended_alignment_dataset:
+            phonemes_number.append(len(np.unique(alignment)))
+        ConsoleLogger.success('The average number of phonemes per alignment for {} alignments is: {}'.format(
+            len(extended_alignment_dataset), np.mean(round(phonemes_number, 2))))
 
     def compute_empirical_alignments(self):
         ConsoleLogger.status('Computing empirical alignments of VCTK val dataset...')

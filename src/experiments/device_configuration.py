@@ -62,9 +62,6 @@ class DeviceConfiguration(object):
         if configuration['use_device'] and ':' in configuration['use_device']:
             gpu_ids = [int(configuration['use_device'].split(':')[1])]
 
-        device = 'cuda:1'
-        gpu_ids = '[1]'
-
         use_data_parallel = True if configuration['use_data_parallel'] and use_cuda and len(gpu_ids) > 1 else False
 
         ConsoleLogger.status('The used device is: {}'.format(device))

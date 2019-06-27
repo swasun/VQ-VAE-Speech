@@ -78,6 +78,7 @@ if __name__ == "__main__":
     parser.add_argument('--compute_many_to_one_mapping', action='store_true', help='Compute the many to one mapping for all the samples')
     parser.add_argument('--compute_alignments', action='store_true', help='Compute the groundtruth alignments and those of the specified experiments')
     parser.add_argument('--compute_clustering_metrics', action='store_true', help='Compute the clustering metrics between the groundtruth and the empirical alignments')
+    parser.add_argument('--compute_groundtruth_average_phonemes_number', action='store_true', help='Compute the average number of phonemes per groundtruth alignment')
     parser.add_argument('--plot_clustering_metrics_evolution', action='store_true', help='Compute the evolution of the clustering metrics accross different number of embedding vectors')
     parser.add_argument('--check_clustering_metrics_stability_over_seeds', action='store_true', help='Check the evolution of the clustering metrics statbility over different seed values')
     parser.add_argument('--plot_gradient_stats', action='store_true', help='Plot the gradient stats of the training')
@@ -91,6 +92,7 @@ if __name__ == "__main__":
         'compute_many_to_one_mapping': args.compute_many_to_one_mapping,
         'compute_alignments': args.compute_alignments,
         'compute_clustering_metrics': args.compute_clustering_metrics,
+        'compute_groundtruth_average_phonemes_number': args.compute_groundtruth_average_phonemes_number,
         'plot_clustering_metrics_evolution': args.plot_clustering_metrics_evolution,
         'check_clustering_metrics_stability_over_seeds': args.check_clustering_metrics_stability_over_seeds,
         'plot_gradient_stats': args.plot_gradient_stats

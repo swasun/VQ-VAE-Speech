@@ -24,6 +24,9 @@
  #   SOFTWARE.                                                                       #
  #####################################################################################
 
+from error_handling.console_logger import ConsoleLogger
+from evaluation.utils import Utils
+
 import numpy as np
 import umap
 import matplotlib.pyplot as plt
@@ -227,7 +230,7 @@ class EmbeddingSpaceStats(object):
                     axs[1].scatter(projection[:-n_embedding,0], projection[:-n_embedding, 1], s=10, c=encoding_indices, cmap=cmap) # audio frame colored by encoding indices
                     axs[1].scatter(projection[-n_embedding:, 0], projection[-n_embedding:, 1], s=50, marker='x', c=np.arange(n_embedding), cmap=cmap) # different color for each embedding
 
-                    projection_file_path = '_tmp_projection' + '.png'
+                    projection_file_path = '..' + os.sep + '_tmp_projection' + '.png'
                     fig.savefig(projection_file_path)
                     plt.close(fig)
                     projected_images.append(imread(projection_file_path))

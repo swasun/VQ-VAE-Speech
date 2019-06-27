@@ -25,6 +25,7 @@
  #####################################################################################
 
 from error_handling.console_logger import ConsoleLogger
+from evaluation.gradient_stats import GradientStats
 
 import numpy as np
 from tqdm import tqdm
@@ -90,18 +91,18 @@ class Trainer(object):
                         with open(codebook_stats_entry_path, 'wb') as file:
                             pickle.dump(codebook_stats_entry, file)
 
+                    loss.backward()
+
                     if self._configuration['record_gradient_stats'] and iteration in iterations:
                         gradient_stats_entry = {
-                            'model': dict(self._model.named_parameters()),
-                            'encoder': dict(self._model.encoder.named_parameters()),
-                            'vq': dict(self._model.vq.named_parameters()),
-                            'decoder': dict(self._model.decoder.named_parameters())
+                            'model': GradientStats.build_gradient_entry(self._model.named_parameters()),
+                            'encoder': GradientStats.build_gradient_entry(self._model.encoder.named_parameters()),
+                            'vq': GradientStats.build_gradient_entry(self._model.vq.named_parameters()),
+                            'decoder': GradientStats.build_gradient_entry(self._model.decoder.named_parameters())
                         }
                         gradient_stats_entry_path = experiments_path + os.sep + experiment_name + '_' + str(epoch + 1) + '_' + str(iteration) + '_gradient-stats.pickle'
                         with open(gradient_stats_entry_path, 'wb') as file:
                             pickle.dump(gradient_stats_entry, file)
-
-                    loss.backward()
 
                     self._optimizer.step()
 

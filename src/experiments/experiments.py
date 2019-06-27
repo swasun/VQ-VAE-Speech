@@ -35,6 +35,8 @@ import yaml
 import torch
 import numpy as np
 import random
+import pickle
+import os
 
 
 class Experiments(object):
@@ -84,14 +86,9 @@ class Experiments(object):
             )
 
         if evaluation_options['plot_gradient_stats']:
-            from evaluation.gradient_stats import GradientStats
-            from tqdm import tqdm
-            import matplotlib.pyplot as plt
-            import os
-            import pickle
-            all_experiments_paths=[experiment.experiment_path for experiment in self._experiments]
-            all_experiments_names=[experiment.name for experiment in self._experiments]
-            all_results_paths=[experiment.results_path for experiment in self._experiments]
+            all_experiments_paths = [experiment.experiment_path for experiment in self._experiments]
+            all_experiments_names = [experiment.name for experiment in self._experiments]
+            all_results_paths = [experiment.results_path for experiment in self._experiments]
             gradient_stats_entries = list()
             for i in range(len(all_experiments_paths)):
                 experiment_path = all_experiments_paths[i]
@@ -110,13 +107,13 @@ class Experiments(object):
                     bar.set_description('Processing')
                     for file_name in bar:
                         with open(experiment_path + os.sep + file_name, 'rb') as file:
-                            a = pickle.load(file)
-                            print(list(a['model'].keys()))
-                            gradient_stats_entries.append(pickle.load(file))
-                            input('')
-            gradient_stats_entry = gradient_stats_entries[-1]
-            GradientStats.plot_gradient_flow(gradient_stats_entry['model'])
-            plt.savefig('ok.png')
+                            split_file_name = file_name.replace(experiment_name + '_', '').replace('_gradients-stats.pickle', '').split('_')
+                            gradient_stats_entries.append((int(split_file_name[0]), int(split_file_name[1]), pickle.load(file)))
+
+                GradientStats.plot_gradient_flow_over_epochs(
+                    gradient_stats_entries,
+                    output_file_name=experiment_results_path + os.sep + experiment_name + '_gradient_flow.png'
+                )
 
     @staticmethod
     def set_deterministic_on(seed):
@@ -159,5 +156,5 @@ class Experiments(object):
                         seed=experiment_configurations['seed']
                     )
                     experiments.append(experiment)
-        
+
         return Experiments(experiments)

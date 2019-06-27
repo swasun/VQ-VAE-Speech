@@ -74,7 +74,9 @@ class Evaluator(object):
         if evaluation_options['compute_many_to_one_mapping']:
             self._many_to_one_mapping(results_path, experiment_name)
 
-        if evaluation_options['compute_alignments'] or evaluation_options['compute_clustering_metrics']:
+        if evaluation_options['compute_alignments'] or \
+            evaluation_options['compute_clustering_metrics'] or \
+            evaluation_options['compute_groundtruth_average_phonemes_number']:
             alignment_stats = AlignmentStats(
                 self._data_stream,
                 self._vctk,
@@ -103,6 +105,9 @@ class Evaluator(object):
 
         if evaluation_options['compute_clustering_metrics']:
             alignment_stats.compute_clustering_metrics()
+
+        if evaluation_options['compute_groundtruth_average_phonemes_number']:
+            alignment_stats.compute_groundtruth_average_phonemes_number()
 
     def _evaluate_once(self, results_path, experiment_name):
         self._model.eval()
