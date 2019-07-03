@@ -26,7 +26,7 @@
 
 from dataset.vctk_dataset import VCTKDataset
 from dataset.vctk import VCTK
-from vq_vae_speech.speech_features import SpeechFeatures
+from speech_utils.speech_features import SpeechFeatures
 from error_handling.console_logger import ConsoleLogger
 from error_handling.logger_factory import LoggerFactory
 from . import LOG_PATH

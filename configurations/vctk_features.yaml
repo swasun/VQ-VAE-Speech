@@ -1,4 +1,5 @@
 decoder_type: 'deconvolutional'
+trainer_type: 'convolutional'
 verbose: False
 
 # Training

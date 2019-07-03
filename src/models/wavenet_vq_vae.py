@@ -24,21 +24,21 @@
  #   SOFTWARE.                                                                       #
  #####################################################################################
 
-from vq_vae_speech.speech_encoder import SpeechEncoder
-from vq_vae_wavenet.wavenet_decoder import WaveNetDecoder
-from vq.vector_quantizer import VectorQuantizer
-from vq.vector_quantizer_ema import VectorQuantizerEMA
+from models.convolutional_encoder import ConvolutionalEncoder
+from models.wavenet_decoder import WaveNetDecoder
+from models.vector_quantizer import VectorQuantizer
+from models.vector_quantizer_ema import VectorQuantizerEMA
 
 import torch
 import torch.nn as nn
 
 
-class WaveNetAutoEncoder(nn.Module):
+class WaveNetVQVAE(nn.Module):
     
     def __init__(self, configuration, speaker_dic, device):
-        super(WaveNetAutoEncoder, self).__init__()
+        super(WaveNetVQVAE, self).__init__()
         
-        self._encoder = SpeechEncoder(
+        self._encoder = ConvolutionalEncoder(
             in_channels=configuration['input_features_dim'],
             num_hiddens=configuration['num_hiddens'],
             num_residual_layers=configuration['num_residual_layers'],
@@ -80,8 +80,8 @@ class WaveNetAutoEncoder(nn.Module):
             device
         )
 
-        self._criterion = nn.MSELoss()
         self._device = device
+        self._record_codebook_stats = configuration['record_codebook_stats']
 
     @property
     def vq(self):
@@ -99,12 +99,13 @@ class WaveNetAutoEncoder(nn.Module):
     def decoder(self):
         return self._decoder
 
-    def forward(self, x_enc, x_dec, global_condition, quantized_val):
+    def forward(self, x_enc, x_dec, global_condition):
         z = self._encoder(x_enc)
 
         z = self._pre_vq_conv(z)
 
-        vq_loss, quantized, perplexity, _, _ = self._vq(z)
+        vq_loss, quantized, perplexity, _, _, encoding_indices, \
+            losses, _, _, _, concatenated_quantized = self._vq(z, record_codebook_stats=self._record_codebook_stats)
 
         local_condition = quantized
         local_condition = local_condition.squeeze(-1)
@@ -114,16 +115,13 @@ class WaveNetAutoEncoder(nn.Module):
         reconstructed_x = reconstructed_x.unsqueeze(-1)
         x_dec = x_dec.unsqueeze(-1)
 
-        reconstruction_loss = self._criterion(reconstructed_x, x_dec)
-        loss = vq_loss + reconstruction_loss
-
-        return loss, reconstructed_x, perplexity
+        return reconstructed_x, x_dec, vq_loss, losses, perplexity, encoding_indices, concatenated_quantized
 
     def save(self, path):
         torch.save(self.state_dict(), path)
 
     @staticmethod
     def load(path, configuration, speaker_dic, device):
-        model = WaveNetAutoEncoder(configuration, speaker_dic, device)
+        model = WaveNetVQVAE(configuration, speaker_dic, device)
         model.load_state_dict(torch.load(path, map_location=device))
         return model

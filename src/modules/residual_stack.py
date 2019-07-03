@@ -2,6 +2,7 @@
  # MIT License                                                                       #
  #                                                                                   #
  # Copyright (C) 2019 Charly Lamothe                                                 #
+ # Copyright (C) 2018 Zalando Research                                               #
  #                                                                                   #
  # This file is part of VQ-VAE-Speech.                                               #
  #                                                                                   #
@@ -24,34 +25,22 @@
  #   SOFTWARE.                                                                       #
  #####################################################################################
 
-import matplotlib.pyplot as plt
-import numpy as np
+from modules.residual import Residual
+
+import torch.nn as nn
+import torch.nn.functional as F
 
 
-class Evaluator(object):
+class ResidualStack(nn.Module):
 
-    def __init__(self, device, model, data_stream):
-        self._device = device
-        self._model = model
-        self._data_stream = data_stream
-
-    def save_embedding_plot(self, path):
-        # Copyright (C) 2018 Zalando Research
+    def __init__(self, in_channels, num_hiddens, num_residual_layers, num_residual_hiddens, use_kaiming_normal):
+        super(ResidualStack, self).__init__()
         
-        try:
-            import umap
-        except ImportError:
-            raise ValueError('umap-learn not installed')
-
-        map = umap.UMAP(
-            n_neighbors=3,
-            min_dist=0.1,
-            metric='euclidean'
-        )
-
-        projection = map.fit_transform(self._model.vq.embedding.weight.data.cpu())
-
-        fig = plt.figure()
-        plt.scatter(projection[:,0], projection[:,1], alpha=0.3)
-        fig.savefig(path)
-        plt.close(fig)
+        self._num_residual_layers = num_residual_layers
+        self._layers = nn.ModuleList(
+            [Residual(in_channels, num_hiddens, num_residual_hiddens, use_kaiming_normal)] * self._num_residual_layers)
+        
+    def forward(self, x):
+        for i in range(self._num_residual_layers):
+            x = self._layers[i](x)
+        return F.relu(x)

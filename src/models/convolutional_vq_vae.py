@@ -24,27 +24,28 @@
  #   SOFTWARE.                                                                       #
  #####################################################################################
 
-from vq_vae_speech.speech_encoder import SpeechEncoder
-from vq_vae_features.features_decoder import FeaturesDecoder
-from vq.vector_quantizer import VectorQuantizer
-from vq.vector_quantizer_ema import VectorQuantizerEMA
+from models.convolutional_encoder import ConvolutionalEncoder
+from models.deconvolutional_decoder import DeconvolutionalDecoder
+from models.vector_quantizer import VectorQuantizer
+from models.vector_quantizer_ema import VectorQuantizerEMA
 from error_handling.console_logger import ConsoleLogger
 
 import torch.nn as nn
 import torch
 import torch.nn.functional as F
+import os
 
 
-class FeaturesAutoEncoder(nn.Module):
-    
+class ConvolutionalVQVAE(nn.Module):
+
     def __init__(self, configuration, device):
-        super(FeaturesAutoEncoder, self).__init__()
+        super(ConvolutionalVQVAE, self).__init__()
 
         self._output_features_filters = configuration['output_features_filters'] * 3 if configuration['augment_output_features'] else configuration['output_features_filters']
         self._output_features_dim = configuration['output_features_dim']
         self._verbose = configuration['verbose']
 
-        self._encoder = SpeechEncoder(
+        self._encoder = ConvolutionalEncoder(
             in_channels=configuration['input_features_dim'],
             num_hiddens=configuration['num_hiddens'],
             num_residual_layers=configuration['num_residual_layers'],
@@ -80,7 +81,7 @@ class FeaturesAutoEncoder(nn.Module):
                 device=device
             )
 
-        self._decoder = FeaturesDecoder(
+        self._decoder = DeconvolutionalDecoder(
             in_channels=configuration['embedding_dim'],
             out_channels=self._output_features_filters,
             num_hiddens=configuration['num_hiddens'],
@@ -95,9 +96,6 @@ class FeaturesAutoEncoder(nn.Module):
         )
 
         self._device = device
-
-        self._criterion = nn.MSELoss()
-
         self._record_codebook_stats = configuration['record_codebook_stats']
 
     @property
@@ -116,17 +114,16 @@ class FeaturesAutoEncoder(nn.Module):
     def decoder(self):
         return self._decoder
 
-    def forward(self, x, y, speaker_dic, speaker_id):
+    def forward(self, x, speaker_dic, speaker_id):
         x = x.permute(0, 2, 1).contiguous().float()
-        y = y.permute(0, 2, 1).contiguous().float()
 
         z = self._encoder(x)
         if self._verbose:
-            ConsoleLogger.status('[FEATURES_AE] _encoder output size: {}'.format(z.size()))
+            ConsoleLogger.status('[ConvVQVAE] _encoder output size: {}'.format(z.size()))
 
         z = self._pre_vq_conv(z)
         if self._verbose:
-            ConsoleLogger.status('[FEATURES_AE] _pre_vq_conv output size: {}'.format(z.size()))
+            ConsoleLogger.status('[ConvVQVAE] _pre_vq_conv output size: {}'.format(z.size()))
 
         vq_loss, quantized, perplexity, _, _, encoding_indices, \
             losses, _, _, _, concatenated_quantized = self._vq(z, record_codebook_stats=self._record_codebook_stats)
@@ -137,12 +134,6 @@ class FeaturesAutoEncoder(nn.Module):
         output_features_size = reconstructed_x.size(2)
 
         reconstructed_x = reconstructed_x.view(-1, self._output_features_filters, output_features_size)
-
-        reconstruction_loss = self._criterion(reconstructed_x[:, :, :-(output_features_size-input_features_size)], y.float()) # MSELoss
-
-        loss = vq_loss + reconstruction_loss
-
-        losses['reconstruction_loss'] = reconstruction_loss.item()
-        losses['loss'] = loss.item()
-
-        return loss, reconstructed_x, perplexity, losses, encoding_indices, concatenated_quantized
+        reconstructed_x = reconstructed_x[:, :, :-(output_features_size-input_features_size)]
+        
+        return reconstructed_x, vq_loss, losses, perplexity, encoding_indices, concatenated_quantized

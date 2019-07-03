@@ -43,36 +43,39 @@ import pickle
 
 class Evaluator(object):
 
-    def __init__(self, device, model, data_stream, configuration):
+    def __init__(self, device, model, data_stream, configuration, results_path, experiment_name):
         self._device = device
         self._model = model
         self._data_stream = data_stream
         self._configuration = configuration
         self._vctk = VCTK(self._configuration['data_root'], ratio=self._configuration['train_val_split'])
+        self._results_path = results_path
+        self._experiment_name = experiment_name
 
-    def evaluate(self, results_path, experiment_name, evaluation_options):
+    def evaluate(self, evaluation_options):
         self._model.eval()
 
         if evaluation_options['plot_comparaison_plot'] or \
             evaluation_options['plot_quantized_embedding_spaces'] or \
             evaluation_options['plot_distances_histogram']:
-            evaluation_entry = self._evaluate_once(results_path, experiment_name)
+            evaluation_entry = self._evaluate_once()
 
         if evaluation_options['plot_comparaison_plot']:
-            self._compute_comparaison_plot(evaluation_entry, results_path, experiment_name)
+            self._compute_comparaison_plot(evaluation_entry)
 
         if evaluation_options['plot_quantized_embedding_spaces']:
-            EmbeddingSpaceStats.compute_and_plot_quantized_embedding_space_projections(results_path, experiment_name,
-                evaluation_entry, self._model.vq.embedding, self._data_stream.validation_batch_size
+            EmbeddingSpaceStats.compute_and_plot_quantized_embedding_space_projections(
+                self._results_path, self._experiment_name, evaluation_entry,
+                self._model.vq.embedding, self._data_stream.validation_batch_size
             )
 
         if evaluation_options['plot_distances_histogram']:
-            self._plot_distances_histogram(evaluation_entry, results_path, experiment_name)
+            self._plot_distances_histogram(evaluation_entry)
 
-        #self._test_denormalization(evaluation_entry, results_path, experiment_name)
+        #self._test_denormalization(evaluation_entry)
 
         if evaluation_options['compute_many_to_one_mapping']:
-            self._many_to_one_mapping(results_path, experiment_name)
+            self._many_to_one_mapping()
 
         if evaluation_options['compute_alignments'] or \
             evaluation_options['compute_clustering_metrics'] or \
@@ -83,11 +86,11 @@ class Evaluator(object):
                 self._configuration,
                 self._device,
                 self._model,
-                results_path,
-                experiment_name
+                self._results_path,
+                self._experiment_name
             )
         if evaluation_options['compute_alignments']:
-            if not os.path.isfile(results_path + os.sep + 'vctk_groundtruth_alignments.pickle'):
+            if not os.path.isfile(self._results_path + os.sep + 'vctk_train_groundtruth_alignments.pickle'):
                 alignment_stats.compute_groundtruth_alignments()
                 alignment_stats.compute_groundtruth_bigrams_matrix(wo_diag=True)
                 alignment_stats.compute_groundtruth_bigrams_matrix(wo_diag=False)
@@ -95,7 +98,7 @@ class Evaluator(object):
             else:
                 ConsoleLogger.status('Groundtruth alignments already exist')
 
-            if not os.path.isfile(results_path + os.sep + experiment_name + '_vctk_empirical_alignments.pickle'):
+            if not os.path.isfile(self._results_path + os.sep + self._experiment_name + '_vctk_train_empirical_alignments.pickle'):
                 alignment_stats.compute_empirical_alignments()
                 alignment_stats.compute_empirical_bigrams_matrix(wo_diag=True)
                 alignment_stats.compute_empirical_bigrams_matrix(wo_diag=False)
@@ -109,7 +112,7 @@ class Evaluator(object):
         if evaluation_options['compute_groundtruth_average_phonemes_number']:
             alignment_stats.compute_groundtruth_average_phonemes_number()
 
-    def _evaluate_once(self, results_path, experiment_name):
+    def _evaluate_once(self):
         self._model.eval()
 
         data = next(iter(self._data_stream.validation_loader))
@@ -154,7 +157,7 @@ class Evaluator(object):
             'valid_reconstructions': valid_reconstructions
         }
 
-    def _compute_comparaison_plot(self, evaluation_entry, results_path, experiment_name):
+    def _compute_comparaison_plot(self, evaluation_entry):
         utterence_key = evaluation_entry['wav_filename'].split('/')[-1].replace('.wav', '')
         utterence = self._vctk.utterences[utterence_key].replace('\n', '')
         phonemes_alignment_path = os.sep.join(evaluation_entry['wav_filename'].split('/')[:-3]) \
@@ -218,7 +221,7 @@ class Evaluator(object):
         axs[5].set_title('Actual reconstruction')
         self._plot_pcolormesh(valid_reconstructions, fig, x=self._compute_unified_time_scale(valid_reconstructions.shape[1]), axis=axs[5])
 
-        output_path = results_path + os.sep + experiment_name + '_evaluation-comparaison-plot.png'
+        output_path = self._results_path + os.sep + self._experiment_name + '_evaluation-comparaison-plot.png'
         plt.savefig(output_path, bbox_inches='tight', pad_inches=0)
         plt.close()
 
@@ -232,7 +235,7 @@ class Evaluator(object):
     def _compute_unified_time_scale(self, shape, winstep=0.01, downsampling_factor=1):
         return np.arange(shape) * winstep * downsampling_factor
 
-    def _plot_distances_histogram(self, evaluation_entry, results_path, experiment_name):
+    def _plot_distances_histogram(self, evaluation_entry):
         encoding_distances = evaluation_entry['encoding_distances'][0].detach().cpu().numpy()
         embedding_distances = evaluation_entry['embedding_distances'].detach().cpu().numpy()
         frames_vs_embedding_distances = evaluation_entry['frames_vs_embedding_distances'].detach()[0].cpu().transpose(0, 1).numpy().ravel()
@@ -259,11 +262,11 @@ class Evaluator(object):
         )
         sns.distplot(frames_vs_embedding_distances, hist=True, kde=False, ax=axs[2], norm_hist=True)
 
-        output_path = results_path + os.sep + experiment_name + '_distances-histogram-plot.png'
+        output_path = self._results_path + os.sep + self._experiment_name + '_distances-histogram-plot.png'
         fig.savefig(output_path, bbox_inches='tight', pad_inches=0)
         plt.close(fig)
 
-    def _test_denormalization(self, evaluation_entry, results_path, experiment_name):
+    def _test_denormalization(self, evaluation_entry):
         valid_originals = evaluation_entry['valid_originals'].detach().cpu()[0].numpy()
         valid_reconstructions = evaluation_entry['valid_reconstructions'].detach().cpu().numpy()
         normalizer = self._data_stream.normalizer
@@ -292,11 +295,11 @@ class Evaluator(object):
         axs[3].set_title('Denormalized reconstruction')
         self._plot_pcolormesh(denormalized_valid_reconstructions, fig, x=self._compute_unified_time_scale(denormalized_valid_reconstructions.shape[1]), axis=axs[3])
 
-        output_path = results_path + os.sep + experiment_name + '_test-denormalization-plot.png'
+        output_path = self._results_path + os.sep + self._experiment_name + '_test-denormalization-plot.png'
         plt.savefig(output_path, bbox_inches='tight', pad_inches=0)
         plt.close()
 
-    def _many_to_one_mapping(self, results_path, experiment_name):
+    def _many_to_one_mapping(self):
         # TODO: fix it for batch size greater than one
 
         tokens_selections = list()
@@ -392,8 +395,104 @@ class Evaluator(object):
 
         ConsoleLogger.status('tokens_mapping: {}'.format(tokens_mapping))
 
-        with open(results_path + os.sep + experiment_name + '_phonemes_mapping.pickle', 'wb') as f:
+        with open(self._results_path + os.sep + self._experiment_name + '_phonemes_mapping.pickle', 'wb') as f:
             pickle.dump(phonemes_mapping, f)
 
-        with open(results_path + os.sep + experiment_name + '_tokens_mapping.pickle', 'wb') as f:
+        with open(self._results_path + os.sep + self._experiment_name + '_tokens_mapping.pickle', 'wb') as f:
             pickle.dump(tokens_mapping, f)
+
+    def _compute_speaker_dependency_stats(self):
+        """
+        The goal of this function is to investiguate wether or not the supposed
+        phonemes stored in the embeddings space are speaker independents.
+        The algorithm is as follow:
+            - Evaluate the model using the val dataset. Save each resulting
+              embedding, with the corresponding speaker;
+            - Group the embeddings by speaker;
+            - Compute the distribution of each embedding;
+            - Compute all the distances between all possible distribution couples, using
+              a distribution distance (e.g. entropy) and plot them.
+        """
+        all_speaker_ids = list()
+        all_embeddings = torch.tensor([]).to(self._device)
+
+        with tqdm(self._data_stream.validation_loader) as bar:
+            for data in bar:
+                valid_originals = data['input_features'].to(self._device).permute(0, 2, 1).contiguous().float()
+                speaker_ids = data['speaker_id'].to(self._device)
+                wav_filenames = data['wav_filename']
+
+                z = self._model.encoder(valid_originals)
+                z = self._model.pre_vq_conv(z)
+                _, quantized, _, _, _, _, _, \
+                    _, _, _, _ = self._model.vq(z)
+                valid_reconstructions = self._model.decoder(quantized, self._data_stream.speaker_dic, speaker_ids)
+                B = valid_reconstructions.size(0)
+
+                all_speaker_ids.append(speaker_ids.detach().cpu().numpy().tolist())
+                #torch.cat(all_embeddings, self._model.vq.embedding.weight.data) # FIXME
+
+        # - Group the embeddings by speaker: create a tensor/numpy per speaker id from all_embeddings
+        # - Compute the distribution of each embedding (seaborn histogram, softmax)
+        # - Compute all the distances between all possible distribution couples, using
+        #   a distribution distance (e.g. entropy) and plot them (seaborn histogram?)
+
+        # Snippet
+        #_embedding_distances = [torch.dist(items[0], items[1], 2).to(self._device) for items in combinations(self._embedding.weight, r=2)]
+        #embedding_distances = torch.tensor(_embedding_distances).to(self._device)
+
+    def _compute_entropy_distributions(self):
+        original_distribution = list()
+        quantized_distribution = list()
+        reconstruction_distribution = list()
+
+        with tqdm(self._data_stream.validation_loader) as bar:
+            for data in bar:
+                valid_originals = data['input_features'].to(self._device).permute(0, 2, 1).contiguous().float()
+                speaker_ids = data['speaker_id'].to(self._device)
+
+                original_probs = F.softmax(valid_originals[0], dim=0).detach().cpu()
+                original_entropy = -torch.sum(original_probs * torch.log(original_probs + 1e-10))
+
+                z = self._model.encoder(valid_originals)
+                z = self._model.pre_vq_conv(z)
+                _, quantized, _, _, _, _, _, \
+                    _, _, _, _ = self._model.vq(z)
+                valid_reconstructions = self._model.decoder(quantized, self._data_stream.speaker_dic, speaker_ids)
+
+                quantized_probs = F.softmax(quantized[0], dim=1).detach().cpu()
+                quantized_entropy = -torch.sum(quantized_probs * torch.log(quantized_probs + 1e-10))
+
+                reconstruction_probs = F.softmax(valid_reconstructions[0], dim=0).detach().cpu()
+                reconstruction_entropy = -torch.sum(reconstruction_probs * torch.log(reconstruction_probs + 1e-10))
+
+                original_distribution.append(original_entropy.detach().cpu().numpy())
+                quantized_distribution.append(quantized_entropy.detach().cpu().numpy())
+                reconstruction_distribution.append(reconstruction_entropy.detach().cpu().numpy())
+
+        fig, axs = plt.subplots(3, 1, figsize=(30, 20), sharex=True)
+
+        original_distribution = np.asarray(original_distribution).ravel()
+        quantized_distribution = np.asarray(quantized_distribution).ravel()
+        reconstruction_distribution = np.asarray(reconstruction_distribution).ravel()
+
+        def dump_distribution(results_path, experiment_name, distribution_name, distribution):
+            with open(results_path + os.sep + experiment_name + '_' + distribution_name + '.pickle', 'wb') as f:
+                pickle.dump(distribution_name, f)
+
+        dump_distribution(self._results_path, self._experiment_name, 'original_distribution', original_distribution)
+        dump_distribution(self._results_path, self._experiment_name, 'quantized_distribution', quantized_distribution)
+        dump_distribution(self._results_path, self._experiment_name, 'reconstruction_distribution', reconstruction_distribution)
+
+        sns.distplot(original_distribution, hist=True, kde=False, ax=axs[0], norm_hist=True)
+        axs[0].set_title('Entropy distribution of validation dataset')
+
+        sns.distplot(quantized_distribution, hist=True, kde=False, ax=axs[1], norm_hist=True)
+        axs[1].set_title('Entropy distribution of quantized validation dataset')
+
+        sns.distplot(reconstruction_distribution, hist=True, kde=False, ax=axs[2], norm_hist=True)
+        axs[2].set_title('Entropy distribution of reconstructed validation dataset')
+
+        output_path = self._results_path + os.sep + self._experiment_name + '_entropy-stats-plot.png'
+        fig.savefig(output_path, bbox_inches='tight', pad_inches=0)
+        plt.close(fig)

@@ -24,8 +24,8 @@
  #   SOFTWARE.                                                                       #
  #####################################################################################
 
-from vq_vae_speech.residual_stack import ResidualStack
-from vq_vae_speech.conv1d_builder import Conv1DBuilder
+from modules.residual_stack import ResidualStack
+from modules.conv1d_builder import Conv1DBuilder
 from error_handling.console_logger import ConsoleLogger
 
 import torch
@@ -33,13 +33,13 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-class SpeechEncoder(nn.Module):
+class ConvolutionalEncoder(nn.Module):
     
     def __init__(self, in_channels, num_hiddens, num_residual_layers, num_residual_hiddens,
         use_kaiming_normal, input_features_type, features_filters, sampling_rate,
         device, verbose=False):
 
-        super(SpeechEncoder, self).__init__()
+        super(ConvolutionalEncoder, self).__init__()
 
         """
         2 preprocessing convolution layers with filter length 3
@@ -47,7 +47,7 @@ class SpeechEncoder(nn.Module):
         """
 
         self._conv_1 = Conv1DBuilder.build(
-            in_channels=39, # FIXME
+            in_channels=features_filters,
             out_channels=num_hiddens,
             kernel_size=3,
             use_kaiming_normal=use_kaiming_normal,

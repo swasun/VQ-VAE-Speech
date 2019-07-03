@@ -25,9 +25,8 @@
  #####################################################################################
 
 from experiments.device_configuration import DeviceConfiguration
-from experiments.model_factory import ModelFactory
+from experiments.pipeline_factory import PipelineFactory
 from error_handling.console_logger import ConsoleLogger
-from dataset.vctk_features_stream import VCTKFeaturesStream
 
 import os
 import yaml
@@ -40,7 +39,6 @@ class Experiment(object):
         experiment_configuration, seed):
 
         self._name = name
-        self._file_suffix = ''
         self._experiments_path = experiments_path
         self._results_path = results_path
         self._global_configuration = global_configuration
@@ -62,8 +60,8 @@ class Experiment(object):
             ConsoleLogger.status('Experiments directory already created at path: {}'.format(experiments_path))
 
         experiments_configuration_path = experiments_path + os.sep + name + '_configuration.yaml'
-        self._configuration_file_already_exists = True if os.path.isfile(experiments_configuration_path) else False
-        if not self._configuration_file_already_exists:
+        configuration_file_already_exists = True if os.path.isfile(experiments_configuration_path) else False
+        if not configuration_file_already_exists:
             self._device_configuration = DeviceConfiguration.load_from_configuration(global_configuration)
 
             # Create a new configuration state from the default and the experiment specific aspects
@@ -79,6 +77,13 @@ class Experiment(object):
             with open(experiments_configuration_path, 'r') as file:
                 self._configuration = yaml.load(file, Loader=yaml.FullLoader)
                 self._device_configuration = DeviceConfiguration.load_from_configuration(self._configuration)
+
+        if configuration_file_already_exists:
+            self._trainer, self._evaluator, self._configuration, self._device_configuration = \
+                PipelineFactory.load(self._experiments_path, self._name, self._results_path)
+        else:
+            self._trainer, self._evaluator = PipelineFactory.build(self._configuration,
+                self._device_configuration, self._experiments_path, self._name, self._results_path)
 
     @property
     def device_configuration(self):
@@ -106,61 +111,12 @@ class Experiment(object):
 
     def train(self):
         ConsoleLogger.status("Running the experiment called '{}'".format(self._name))
-
-        self._init()
-
         ConsoleLogger.status('Begins to train the model')
-        self._trainer.train(self._experiments_path, self._name)
-
+        self._trainer.train()
         ConsoleLogger.success("Succeed to runned the experiment called '{}'".format(self._name))
 
     def evaluate(self, evaluation_options):
         ConsoleLogger.status("Running the experiment called '{}'".format(self._name))
-
-        self._init()
-
         ConsoleLogger.status('Begins to evaluate the model')
-        self._evaluator.evaluate(self._results_path, self._name, evaluation_options)
-
+        self._evaluator.evaluate(evaluation_options)
         ConsoleLogger.success("Succeed to runned the experiment called '{}'".format(self._name))
-
-    def _init(self):
-        def create_from_scratch(configuration, device_configuration):
-            # Load the data stream
-            ConsoleLogger.status('Loading data stream')
-            # FIXME hardcoded
-            data_stream = VCTKFeaturesStream('../data/vctk', configuration, device_configuration.gpu_ids, device_configuration.use_cuda)
-
-            # Build the model and the trainer from the configurations and the data stream
-            model, trainer, evaluator = ModelFactory.build(configuration, device_configuration, data_stream)
-
-            return model, trainer, evaluator, data_stream, configuration
-
-        if self._configuration_file_already_exists:
-            ConsoleLogger.status('Configuration file already exists. Loading...')
-            try:
-                results = ModelFactory.load(self._experiments_path, self._name)
-                if len(results) == 5:
-                    self._model, self._trainer, self._evaluator, _, self._data_stream = results
-                else:
-                    configuration_file = results[0]
-                    # Load the configuration file
-                    ConsoleLogger.status('Loading the configuration file')
-                    configuration = None
-                    with open(self._experiments_path + os.sep + configuration_file, 'r') as file:
-                        configuration = yaml.load(file, Loader=yaml.FullLoader)
-                    self._model, self._trainer, self._evaluator, self._data_stream, self._configuration = create_from_scratch(
-                        configuration,
-                        self._device_configuration
-                    )
-            except:
-                ConsoleLogger.error('Failed to load existing configuration. Building a new model...')
-                self._model, self._trainer, self._evaluator, self._data_stream, self._configuration = create_from_scratch(
-                    self._configuration,
-                    self._device_configuration
-                )
-        else:
-            self._model, self._trainer, self._evaluator, self._data_stream, self._configuration = create_from_scratch(
-                self._configuration,
-                self._device_configuration
-            )

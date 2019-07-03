@@ -24,11 +24,11 @@
  #   SOFTWARE.                                                                       #
  #####################################################################################
 
-from vq_vae_speech.residual_stack import ResidualStack
-from vq_vae_speech.jitter import Jitter
-from vq_vae_speech.conv1d_builder import Conv1DBuilder
-from vq_vae_speech.conv_transpose1d_builder import ConvTranspose1DBuilder
-from vq_vae_speech.global_conditioning import GlobalConditioning
+from modules.residual_stack import ResidualStack
+from modules.jitter import Jitter
+from modules.conv1d_builder import Conv1DBuilder
+from modules.conv_transpose1d_builder import ConvTranspose1DBuilder
+from speech_utils.global_conditioning import GlobalConditioning
 from error_handling.console_logger import ConsoleLogger
 
 import torch
@@ -36,13 +36,13 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-class FeaturesDecoder(nn.Module):
+class DeconvolutionalDecoder(nn.Module):
     
     def __init__(self, in_channels, out_channels, num_hiddens, num_residual_layers,
         num_residual_hiddens, use_kaiming_normal, use_jitter, jitter_probability,
         use_speaker_conditioning, device, verbose=False):
 
-        super(FeaturesDecoder, self).__init__()
+        super(DeconvolutionalDecoder, self).__init__()
 
         self._use_jitter = use_jitter
         self._use_speaker_conditioning = use_speaker_conditioning

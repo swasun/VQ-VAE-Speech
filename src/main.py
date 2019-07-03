@@ -27,7 +27,7 @@
 from error_handling.console_logger import ConsoleLogger
 from dataset.vctk_speech_stream import VCTKSpeechStream
 from dataset.vctk_features_stream import VCTKFeaturesStream
-from experiments.model_factory import ModelFactory
+from experiments.pipeline_factory import PipelineFactory
 from experiments.device_configuration import DeviceConfiguration
 from experiments.experiments import Experiments
 from evaluation.losses_plotter import LossesPlotter
@@ -62,6 +62,8 @@ if __name__ == "__main__":
     default_experiments_path = '..' + os.sep + 'experiments'
     default_configuration_path = '..' + os.sep + 'configurations' + os.sep + 'vctk_features.yaml'
     default_dataset_path = '..' + os.sep + 'data' + os.sep + 'vctk'
+    default_results_path = '..' + os.sep + 'results'
+    default_experiment_name = 'baseline'
 
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--summary', nargs='?', default=None, type=str, help='The summary of the model based of a specified configuration file')
@@ -69,8 +71,8 @@ if __name__ == "__main__":
     parser.add_argument('--experiments_configuration_path', nargs='?', default=default_experiments_configuration_path, type=str, help='The path of the experiments configuration file')
     parser.add_argument('--experiments_path', nargs='?', default=default_experiments_path, type=str, help='The path of the experiments ouput directory')
     parser.add_argument('--plot_experiments_losses', action='store_true', help='Plot the losses of the experiments based of the specified file in --experiments_configuration_path option')
-    parser.add_argument('--compute_dataset_stats', action='store_true', help='Compute the mean and the std of the VCTK dataset')
     parser.add_argument('--evaluate', action='store_true', help='Evaluate the model')
+    parser.add_argument('--compute_dataset_stats', action='store_true', help='Compute the mean and the std of the VCTK dataset')
     parser.add_argument('--plot_comparaison_plot', action='store_true', help='Compute a comparaison plot for a single sample')
     parser.add_argument('--plot_quantized_embedding_spaces', action='store_true', help='Compute a 2D projection of the VQ codebook for a single sample')
     parser.add_argument('--compute_quantized_embedding_spaces_animation', action='store_true', help='Compute a 2D projection of the VQ codebook over training iterations')
@@ -103,8 +105,8 @@ if __name__ == "__main__":
         configuration = load_configuration(args.summary)
         ConsoleLogger.status('Printing the summary of the model...')
         device_configuration = DeviceConfiguration.load_from_configuration(configuration)
-        data_stream = VCTKFeaturesStream(default_dataset_path, configuration, device_configuration.gpu_ids, device_configuration.use_cuda)
-        model = ModelFactory.build(configuration, device_configuration, data_stream, with_trainer=False)
+        model = PipelineFactory.build(configuration, device_configuration,
+            default_experiments_path, default_experiment_name, default_results_path)
         print(model)
         sys.exit(0)
 
@@ -122,7 +124,7 @@ if __name__ == "__main__":
         data_stream = VCTKSpeechStream(configuration, device_configuration.gpu_ids, device_configuration.use_cuda)
         data_stream.export_to_features(default_dataset_path, configuration)
         ConsoleLogger.success("VCTK exported to a new features dataset at: '{}'".format(
-            default_configuration_path + os.sep + configuration['features_path']))
+            default_dataset_path + os.sep + configuration['features_path']))
         sys.exit(0)
 
     if args.evaluate:
@@ -131,7 +133,6 @@ if __name__ == "__main__":
         sys.exit(0)
 
     if args.compute_dataset_stats:
-        configuration = None
         configuration = load_configuration(default_configuration_path)
         update_configuration_from_experiments(args.experiments_configuration_path, configuration)
         device_configuration = DeviceConfiguration.load_from_configuration(configuration)

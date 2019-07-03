@@ -7,7 +7,7 @@ The WaveNet [van den Oord et al., 2016] implementation is from [r9y9/wavenet_voc
 # Disclaimer
 
 * The code is actively changing;
-* For now instead of a Wavenet it's a deconvolutional NN;
+* For now instead of a Wavenet it's a deconvolutional NN to speed up my tests;
 * For now we are focusing on the evaluation of the VQ, and not on computing good audio samples.
 
 # Installation
@@ -35,14 +35,16 @@ Output:
 usage: main.py [-h] [--summary [SUMMARY]] [--export_to_features]
                [--experiments_configuration_path [EXPERIMENTS_CONFIGURATION_PATH]]
                [--experiments_path [EXPERIMENTS_PATH]]
-               [--plot_experiments_losses] [--compute_dataset_stats]
-               [--evaluate] [--plot_comparaison_plot]
+               [--plot_experiments_losses] [--evaluate]
+               [--compute_dataset_stats] [--plot_comparaison_plot]
                [--plot_quantized_embedding_spaces]
                [--compute_quantized_embedding_spaces_animation]
                [--plot_distances_histogram] [--compute_many_to_one_mapping]
-               [--compute_speaker_dependency_stats] [--compute_alignments]
-               [--compute_clustering_metrics]
+               [--compute_alignments] [--compute_clustering_metrics]
+               [--compute_groundtruth_average_phonemes_number]
                [--plot_clustering_metrics_evolution]
+               [--check_clustering_metrics_stability_over_seeds]
+               [--plot_gradient_stats]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -52,7 +54,8 @@ optional arguments:
                         False)
   --experiments_configuration_path [EXPERIMENTS_CONFIGURATION_PATH]
                         The path of the experiments configuration file
-                        (default: ../configurations/experiments.json)
+                        (default:
+                        ../configurations/experiments_vq44-mfcc39.json)
   --experiments_path [EXPERIMENTS_PATH]
                         The path of the experiments ouput directory (default:
                         ../experiments)
@@ -60,10 +63,10 @@ optional arguments:
                         Plot the losses of the experiments based of the
                         specified file in --experiments_configuration_path
                         option (default: False)
+  --evaluate            Evaluate the model (default: False)
   --compute_dataset_stats
                         Compute the mean and the std of the VCTK dataset
                         (default: False)
-  --evaluate            Evaluate the model (default: False)
   --plot_comparaison_plot
                         Compute a comparaison plot for a single sample
                         (default: False)
@@ -80,78 +83,24 @@ optional arguments:
   --compute_many_to_one_mapping
                         Compute the many to one mapping for all the samples
                         (default: False)
-  --compute_speaker_dependency_stats
-                        Compute if the VQ codebook is speaker independent for
-                        all the samples (default: False)
   --compute_alignments  Compute the groundtruth alignments and those of the
                         specified experiments (default: False)
   --compute_clustering_metrics
                         Compute the clustering metrics between the groundtruth
                         and the empirical alignments (default: False)
+  --compute_groundtruth_average_phonemes_number
+                        Compute the average number of phonemes per groundtruth
+                        alignment (default: False)
   --plot_clustering_metrics_evolution
                         Compute the evolution of the clustering metrics
                         accross different number of embedding vectors
                         (default: False)
-usage: main.py [-h] [--summary [SUMMARY]] [--export_to_features]
-               [--experiments_configuration_path [EXPERIMENTS_CONFIGURATION_PATH]]
-               [--experiments_path [EXPERIMENTS_PATH]]
-               [--plot_experiments_losses] [--compute_dataset_stats]
-               [--evaluate] [--plot_comparaison_plot]
-               [--plot_quantized_embedding_spaces]
-               [--compute_quantized_embedding_spaces_animation]
-               [--plot_distances_histogram] [--compute_many_to_one_mapping]
-               [--compute_speaker_dependency_stats] [--compute_alignments]
-               [--compute_clustering_metrics]
-               [--plot_clustering_metrics_evolution]
-
-optional arguments:
-  -h, --help            show this help message and exit
-  --summary [SUMMARY]   The summary of the model based of a specified
-                        configuration file (default: None)
-  --export_to_features  Export the VCTK dataset files to features (default:
+  --check_clustering_metrics_stability_over_seeds
+                        Check the evolution of the clustering metrics
+                        statbility over different seed values (default: False)
+  --plot_gradient_stats
+                        Plot the gradient stats of the training (default:
                         False)
-  --experiments_configuration_path [EXPERIMENTS_CONFIGURATION_PATH]
-                        The path of the experiments configuration file
-                        (default: ../configurations/experiments.json)
-  --experiments_path [EXPERIMENTS_PATH]
-                        The path of the experiments ouput directory (default:
-                        ../experiments)
-  --plot_experiments_losses
-                        Plot the losses of the experiments based of the
-                        specified file in --experiments_configuration_path
-                        option (default: False)
-  --compute_dataset_stats
-                        Compute the mean and the std of the VCTK dataset
-                        (default: False)
-  --evaluate            Evaluate the model (default: False)
-  --plot_comparaison_plot
-                        Compute a comparaison plot for a single sample
-                        (default: False)
-  --plot_quantized_embedding_spaces
-                        Compute a 2D projection of the VQ codebook for a
-                        single sample (default: False)
-  --compute_quantized_embedding_spaces_animation
-                        Compute a 2D projection of the VQ codebook over
-                        training iterations (default: False)
-  --plot_distances_histogram
-                        Compute histograms of several distances to
-                        investiguate how close are the samples with the
-                        codebook (default: False)
-  --compute_many_to_one_mapping
-                        Compute the many to one mapping for all the samples
-                        (default: False)
-  --compute_speaker_dependency_stats
-                        Compute if the VQ codebook is speaker independent for
-                        all the samples (default: False)
-  --compute_alignments  Compute the groundtruth alignments and those of the
-                        specified experiments (default: False)
-  --compute_clustering_metrics
-                        Compute the clustering metrics between the groundtruth
-                        and the empirical alignments (default: False)
-  --plot_clustering_metrics_evolution
-                        Compute the evolution of the clustering metrics
-                        accross different number of embedding vectors
-                        (default: False)
 ```
 
 First, we need to download the dataset (only VCTK is supported for now) and compute the MFCC features:
@@ -213,11 +162,21 @@ This figure describes the layers of the VQ-VAE model we have used. All convoluti
 
 ### Training
 
+#### Losses
+
 ![](results/vq44-mfcc39/train/loss-and-perplexity-plots/merged-loss-and-perplexity.png)
 
 This figure shows the training evolution of the VQ-VAE model using two metrics: the loss values (the lower the better), and the perplexity, which is the average codebook usage. The model was trained during 15 epochs using the architecture described in Section `VQ-VAE-Speech encoder + Deconv decoder`. We used 44 vectors of dim 64 as the VQ space. All experiments have been setted with a seed of 1234 for reproducibility purpose. The jitter experiment used the jitter layer proposed in [Chorowski et al., 2019] during the training.
 
 ![](results/vq44-mfcc39/train/merged-losses-plots/baseline_merged-losses.png)
+
+#### Gradient flow
+
+One way to detect if a given NN architecture is subject to gradient problems (i.e. vanishing, exploding) may be to compute the gradient flow at a given time of the model training.
+
+In the [following plot](results/experiments-vq44-mfcc39-gradient-stats/baseline_gradient_flow.png), each column is for the current epoch and each line of this epoch contains different time step of the training. Also, each box is a figure of the gradient flow on the encoder, vq and decoder layers.
+
+![](results/experiments-vq44-mfcc39-gradient-stats/baseline_gradient_flow.png)
 
 ### Evaluation
 
@@ -258,6 +217,10 @@ Phonemes frequency of the groundtruth alignments:
 
 Encoding indices frequency of the empirical alignments:
 ![](results/vq44-mfcc39/val/alignment-stats/baseline/baseline_vctk_empirical_frequency_10ms.png)
+
+#### Clustering metrics
+
+![](results/vq44-mfcc39-seeds/val/clustering_metrics_accross_seeds.png)
 
 # References
 

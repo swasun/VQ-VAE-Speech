@@ -56,14 +56,13 @@ class VCTKFeaturesStream(object):
 
         self._training_loader = DataLoader(
             self._training_data,
-            batch_size=configuration['batch_size'],
+            batch_size=self._training_batch_size,
             shuffle=True,
             num_workers=configuration['num_workers'],
             pin_memory=use_cuda
         )
-        self._validation_loader = DataLoader(
+	self._validation_loader = DataLoader(
             self._validation_data,
-            #batch_size=configuration['batch_size'],
             batch_size=self._validation_batch_size,
             num_workers=configuration['num_workers'],
             pin_memory=use_cuda

@@ -25,7 +25,7 @@
  #####################################################################################
 
 from dataset.vctk import VCTK
-from vq_vae_speech.mu_law import MuLaw
+from speech_utils.mu_law import MuLaw
 
 from torch.utils.data import Dataset
 import numpy as np
@@ -162,3 +162,4 @@ class VCTKDataset(Dataset):
     @property
     def utterences(self):
         return self._utterences
+
