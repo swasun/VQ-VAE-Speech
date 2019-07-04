@@ -33,11 +33,11 @@ python3 main.py --help
 Output:
 ```
 usage: main.py [-h] [--summary [SUMMARY]] [--export_to_features]
+               [--compute_dataset_stats]
                [--experiments_configuration_path [EXPERIMENTS_CONFIGURATION_PATH]]
                [--experiments_path [EXPERIMENTS_PATH]]
                [--plot_experiments_losses] [--evaluate]
-               [--compute_dataset_stats] [--plot_comparaison_plot]
-               [--plot_quantized_embedding_spaces]
+               [--plot_comparaison_plot] [--plot_quantized_embedding_spaces]
                [--compute_quantized_embedding_spaces_animation]
                [--plot_distances_histogram] [--compute_many_to_one_mapping]
                [--compute_alignments] [--compute_clustering_metrics]
@@ -52,6 +52,9 @@ optional arguments:
                         configuration file (default: None)
   --export_to_features  Export the VCTK dataset files to features (default:
                         False)
+  --compute_dataset_stats
+                        Compute the mean and the std of the VCTK dataset
+                        (default: False)
   --experiments_configuration_path [EXPERIMENTS_CONFIGURATION_PATH]
                         The path of the experiments configuration file
                         (default:
@@ -64,9 +67,6 @@ optional arguments:
                         specified file in --experiments_configuration_path
                         option (default: False)
   --evaluate            Evaluate the model (default: False)
-  --compute_dataset_stats
-                        Compute the mean and the std of the VCTK dataset
-                        (default: False)
   --plot_comparaison_plot
                         Compute a comparaison plot for a single sample
                         (default: False)
@@ -108,6 +108,12 @@ First, we need to download the dataset (only VCTK is supported for now) and comp
 python3 main.py --export_to_features
 ```
 
+The results are way better if the data are normalized. This can be done by computing the dataset stats with:
+```bash
+python3 main.py --compute_dataset_stats
+```
+and by setting `"normalize"` to true in the next part.
+
 Then, we have to create an experiments file (e.g., `../configurations/experiments_example.json`).
 Example of experiment file:
 ```json
@@ -127,17 +133,26 @@ Example of experiment file:
     }
 }
 ```
-The parameters in the experiment will override the corresponding parameters from `vctk_features.yaml`.
+The parameters in the experiment will override the corresponding parameters from `vctk_features.yaml`. Other parameters can be add, such as `"use_jitter": true`, `"jitter_probability": 0.12` to enable the use of VQ jitter layer.
 
 Thus, we can run the experiment(s) specified in the previous file:
 ```bash
 python3 main.py --experiments_configuration_path ../configurations/experiments_example.json
 ```
 
-Finally, we can plot the training evolution:
-```
+Eventually, we can plot the training evolution:
+```bash
 python3 main.py --experiments_configuration_path ../configurations/experiments_example.json --experiments_path ../experiments --plot_experiments_losses
 ```
+
+Also, we can evaluate our trained model with several ways, by using the main argument `--evaluate` followed with multiple sub evaluation arguments.
+For example:
+```bash
+python3 main.py --experiments_configuration_path ../configurations/experiments_example.json --experiments_path ../experiments --evaluate --plot_comparaison_plot --plot_quantized_embedding_spaces --plot_distances_histogram --compute_alignments --compute_clustering_metrics
+```
+
+Note that `--plot_gradient_stats` argument will only work if `"record_gradient_stats": true` was added in the json exeperiment configuration file. Furthermore, `--plot_clustering_metrics_evolution` argument will only work for experiment [codebook_sizes](configuration/experiments_mfcc39-codebook_sizes.json) and `--check_clustering_metrics_stability_over_seeds` argument will only work for experiment [seeds](configuration/experiments_vq44-mfcc39-seeds.json).
+For more examples, see the (configurations)[configurations] folder.
 
 # Architectures
 
@@ -145,7 +160,7 @@ python3 main.py --experiments_configuration_path ../configurations/experiments_e
 
 For now only this architecture was used in our experiments to decrease the training time necessary to train a WaveNet.
 
-[vq_vae_speech](src/vq_vae_speech) for the encoder and [vq_vae_features](src/vq_vae_features) for the deconv decoder:
+[ConvolutionalEncoder](src/models/convolutional_encoder.py) for the encoder and [DeconvolutionalDecoder](src/models/deconvolutional_decoder.py) for the deconv decoder:
 
 ![](architectures/vq_vae_features.png)
 
@@ -153,7 +168,7 @@ This figure describes the layers of the VQ-VAE model we have used. All convoluti
 
 ## VQ-VAE-Speech encoder + WaveNet decoder
 
-[vq_vae_speech](src/vq_vae_speech) for the encoder and [vq_vae_wavenet](src/vq_vae_wavenet) for the WaveNet decoder. Figure from [Chorowski et al., 2019]:
+[ConvolutionalEncoder](src/models/convolutional_encoder.py)(src/vq_vae_speech) for the encoder and [WaveNetDecoder](src/models/wavenet_decoder.py) for the WaveNet decoder (Work in progress). Figure from [Chorowski et al., 2019]:
 ![](architectures/chorowski19.png)
 
 # Results
