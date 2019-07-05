@@ -42,7 +42,15 @@ class VCTKFeaturesDataset(Dataset):
 
     def __getitem__(self, index):
         dic = None
-        with open(self._sub_features_path + os.sep + str(index) + '.pickle', 'rb') as file:
+        path = self._sub_features_path + os.sep + str(index) + '.pickle'
+
+        if not os.path.isfile(path):
+            raise OSError("No such file '{}'".format(path))
+
+        if os.path.getsize(path) == 0:
+            raise OSError("Empty file '{}'".format(path))
+
+        with open(path, 'rb') as file:
             dic = pickle.load(file)
 
         if self._normalizer:
