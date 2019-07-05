@@ -118,7 +118,7 @@ class VCTKSpeechStream(object):
 
         def process(loader, output_dir, input_features_name, output_features_name,
             rate, input_filters_number, output_filters_number, input_target_shape,
-            augment_output_features):
+            augment_output_features, export_one_hot_features):
 
             initial_index = 0
             attempts = 10
@@ -134,8 +134,12 @@ class VCTKSpeechStream(object):
 
                         output_path = output_dir + os.sep + str(i) + '.pickle'
                         if os.path.isfile(output_path):
+                            if os.path.getsize(output_path) == 0:
+                                bar.set_description('{} already exists but is empty. Computing it again...'.format(output_path))
+                                os.remove(output_path)
+                            else:
+                                bar.set_description('{} already exists'.format(output_path))
                             i += 1
-                            bar.set_description('{} already exists'.format(output_path))
                             continue
 
                         input_features = SpeechFeatures.features_from_name(
@@ -163,7 +167,7 @@ class VCTKSpeechStream(object):
                             'preprocessed_audio': preprocessed_audio,
                             'wav_filename': wav_filename,
                             'input_features': input_features,
-                            'one_hot': np.array([]),
+                            'one_hot': one_hot if export_one_hot_features else np.array([]),
                             'quantized': np.array([]),
                             'speaker_id': speaker_id,
                             'output_features': output_features,
@@ -210,7 +214,8 @@ class VCTKSpeechStream(object):
                 input_filters_number=configuration['input_features_filters'],
                 output_filters_number=configuration['output_features_filters'],
                 input_target_shape=(configuration['input_features_dim'], configuration['input_features_filters'] * 3),
-                augment_output_features=configuration['augment_output_features']
+                augment_output_features=configuration['augment_output_features'],
+                export_one_hot_features=configuration['export_one_hot_features']
             )
             ConsoleLogger.success('Training part processed')
         except:
@@ -227,7 +232,8 @@ class VCTKSpeechStream(object):
                 input_filters_number=configuration['input_features_filters'],
                 output_filters_number=configuration['output_features_filters'],
                 input_target_shape=(configuration['input_features_dim'], configuration['input_features_filters'] * 3),
-                augment_output_features=configuration['augment_output_features']
+                augment_output_features=configuration['augment_output_features'],
+                export_one_hot_features=configuration['export_one_hot_features']
             )
             ConsoleLogger.success('Validation part processed')
         except:

@@ -27,8 +27,10 @@
 from experiments.device_configuration import DeviceConfiguration
 from experiments.checkpoint_utils import CheckpointUtils
 from experiments.convolutional_trainer import ConvolutionalTrainer
+from experiments.wavenet_trainer import WaveNetTrainer
 from experiments.evaluator import Evaluator
 from models.convolutional_vq_vae import ConvolutionalVQVAE
+from models.wavenet_vq_vae import WaveNetVQVAE
 from error_handling.console_logger import ConsoleLogger
 from dataset.vctk_features_stream import VCTKFeaturesStream
 
@@ -49,11 +51,18 @@ class PipelineFactory(object):
             vqvae_model = ConvolutionalVQVAE(configuration, device_configuration.device).to(device_configuration.device)
             evaluator = Evaluator(device_configuration.device, vqvae_model, data_stream, configuration,
                 results_path, experiment_name)
+        elif configuration['decoder_type'] == 'wavenet':
+            vqvae_model = WaveNetVQVAE(configuration, device_configuration)
+            evaluator = Evaluator(device_configuration.device, vqvae_model, data_stream, configuration,
+                results_path, experiment_name)
         else:
             raise NotImplementedError("Decoder type '{}' isn't implemented for now".format(configuration['decoder_type']))
 
         if configuration['trainer_type'] == 'convolutional':
             trainer = ConvolutionalTrainer(device_configuration.device, data_stream,
+                configuration, experiments_path, experiment_name, **{'model': vqvae_model})
+        elif configuration['trainer_type'] == 'wavenet':
+            trainer = WaveNetTrainer(device_configuration.device, data_stream,
                 configuration, experiments_path, experiment_name, **{'model': vqvae_model})
         else:
             raise NotImplementedError("Trainer type '{}' isn't implemented for now".format(configuration['trainer_type']))

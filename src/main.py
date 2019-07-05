@@ -119,7 +119,7 @@ if __name__ == "__main__":
 
     if args.export_to_features:
         configuration = load_configuration(default_configuration_path)
-        update_configuration_from_experiments(args.experiments_configuration_path, configuration)
+        configuration = update_configuration_from_experiments(args.experiments_configuration_path, configuration)
         device_configuration = DeviceConfiguration.load_from_configuration(configuration)
         data_stream = VCTKSpeechStream(configuration, device_configuration.gpu_ids, device_configuration.use_cuda)
         data_stream.export_to_features(default_dataset_path, configuration)
@@ -134,7 +134,7 @@ if __name__ == "__main__":
 
     if args.compute_dataset_stats:
         configuration = load_configuration(default_configuration_path)
-        update_configuration_from_experiments(args.experiments_configuration_path, configuration)
+        configuration = update_configuration_from_experiments(args.experiments_configuration_path, configuration)
         device_configuration = DeviceConfiguration.load_from_configuration(configuration)
         data_stream = VCTKFeaturesStream(default_dataset_path, configuration, device_configuration.gpu_ids, device_configuration.use_cuda)
         data_stream.compute_dataset_stats()

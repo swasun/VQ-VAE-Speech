@@ -35,7 +35,7 @@ import torch.nn as nn
 
 class WaveNetVQVAE(nn.Module):
     
-    def __init__(self, configuration, speaker_dic, device):
+    def __init__(self, configuration, device):
         super(WaveNetVQVAE, self).__init__()
         
         self._encoder = ConvolutionalEncoder(
@@ -76,7 +76,6 @@ class WaveNetVQVAE(nn.Module):
 
         self._decoder = WaveNetDecoder(
             configuration,
-            speaker_dic,
             device
         )
 
@@ -116,12 +115,3 @@ class WaveNetVQVAE(nn.Module):
         x_dec = x_dec.unsqueeze(-1)
 
         return reconstructed_x, x_dec, vq_loss, losses, perplexity, encoding_indices, concatenated_quantized
-
-    def save(self, path):
-        torch.save(self.state_dict(), path)
-
-    @staticmethod
-    def load(path, configuration, speaker_dic, device):
-        model = WaveNetVQVAE(configuration, speaker_dic, device)
-        model.load_state_dict(torch.load(path, map_location=device))
-        return model

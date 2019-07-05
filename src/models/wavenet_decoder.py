@@ -37,7 +37,7 @@ import numpy as np
 
 class WaveNetDecoder(nn.Module):
     
-    def __init__(self, configuration, speaker_dic, device):
+    def __init__(self, configuration, device):
         super(WaveNetDecoder, self).__init__()
 
         self._use_jitter = configuration['use_jitter']
@@ -69,7 +69,7 @@ class WaveNetDecoder(nn.Module):
             configuration['filter_size'],
             cin_channels=configuration['local_condition_dim'],
             gin_channels=configuration['global_condition_dim'],
-            n_speakers=len(speaker_dic),
+            n_speakers=configuration['speaker_dic_len'],
             upsample_conditional_features=True,
             upsample_scales=[2, 2, 2, 2, 2, 12] # 768
             #upsample_scales=[2, 2, 2, 2, 12]
