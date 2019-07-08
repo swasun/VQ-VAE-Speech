@@ -93,8 +93,8 @@ class BaseTrainer(object):
             return
 
         gradient_stats_entry = {
-            module[0]: GradientStats.build_gradient_entry(module[1].named_parameters()) \
-            for module in modules
+            name: GradientStats.build_gradient_entry(module.named_parameters()) \
+            for name, module in modules.items()
         }
 
         gradient_stats_entry_path = self._experiments_path + os.sep + self._experiment_name + '_' + str(epoch + 1) + '_' + str(iteration) + '_gradient-stats.pickle'
