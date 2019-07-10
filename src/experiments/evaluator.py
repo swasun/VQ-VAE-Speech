@@ -90,7 +90,7 @@ class Evaluator(object):
                 self._experiment_name
             )
         if evaluation_options['compute_alignments']:
-            if not os.path.isfile(self._results_path + os.sep + 'vctk_train_groundtruth_alignments.pickle'):
+            if not os.path.isfile(self._results_path + os.sep + 'vctk_groundtruth_alignments.pickle'):
                 alignment_stats.compute_groundtruth_alignments()
                 alignment_stats.compute_groundtruth_bigrams_matrix(wo_diag=True)
                 alignment_stats.compute_groundtruth_bigrams_matrix(wo_diag=False)
@@ -98,7 +98,7 @@ class Evaluator(object):
             else:
                 ConsoleLogger.status('Groundtruth alignments already exist')
 
-            if not os.path.isfile(self._results_path + os.sep + self._experiment_name + '_vctk_train_empirical_alignments.pickle'):
+            if not os.path.isfile(self._results_path + os.sep + self._experiment_name + '_vctk_empirical_alignments.pickle'):
                 alignment_stats.compute_empirical_alignments()
                 alignment_stats.compute_empirical_bigrams_matrix(wo_diag=True)
                 alignment_stats.compute_empirical_bigrams_matrix(wo_diag=False)

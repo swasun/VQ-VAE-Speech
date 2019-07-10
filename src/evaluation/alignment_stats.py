@@ -102,6 +102,19 @@ class AlignmentStats(object):
                     current_target_time_index = 0
                     for interval in tg.tiers[1]:
                         if interval.mark in ['', '-', "'"]:
+                            if interval == tg.tiers[1][-1] and len(phonemes) != int(data_length / desired_time_interval):
+                                previous_interval = tg.tiers[1][-2]
+                                ConsoleLogger.warn("{}/{} phonemes aligned. Add the last valid phoneme '{}' in the list to have the correct number.\n"
+                                    "Sanity checks to find the possible cause:\n"
+                                    "current_target_time_index < (data_length / desired_time_interval): {}\n"
+                                    "target_time_scale[current_target_time_index] >= interval.minTime: {}\n"
+                                    "target_time_scale[current_target_time_index] <= interval.maxTime: {}".format(
+                                    len(phonemes), int(data_length / desired_time_interval), previous_interval.mark,
+                                    current_target_time_index < (data_length / desired_time_interval),
+                                    target_time_scale[current_target_time_index] >= previous_interval.minTime,
+                                    target_time_scale[current_target_time_index] <= previous_interval.maxTime
+                                ))
+                                phonemes.append(previous_interval.mark)
                             continue
                         interval.minTime = float(interval.minTime)
                         interval.maxTime = float(interval.maxTime)
@@ -118,12 +131,13 @@ class AlignmentStats(object):
                             target_time_scale[current_target_time_index] <= interval.maxTime:
                             phonemes.append(interval.mark)
                             current_target_time_index += 1
-                        if len(phonemes) == (data_length / desired_time_interval):
+                        if len(phonemes) == int(data_length / desired_time_interval):
                             break
-                    if len(phonemes) == 0:
+                    if len(phonemes) != int(data_length / desired_time_interval):
                         intervals = ['min:{} max:{} mark:{}'.format(interval.minTime, interval.maxTime, interval.mark) for interval in tg.tiers[1]]
                         ConsoleLogger.error('Error - min:{} max:{} shifting:{} target_time_scale: {} intervals: {}'.format(
                             interval.minTime, interval.maxTime, shifting_time, target_time_scale, intervals))
+                        ConsoleLogger.error('#phonemes:{} phonemes:{}'.format(len(phonemes), phonemes))
                     else:
                         extended_alignment_dataset.append((utterence_key, phonemes))
 
@@ -227,7 +241,7 @@ class AlignmentStats(object):
             alignments_dic = pickle.load(f)
 
         extended_alignment_dataset = alignments_dic['extended_alignment_dataset']
-    
+
         phonemes_number = list()
         for _, alignment in extended_alignment_dataset:
             phonemes_number.append(len(np.unique(alignment)))
@@ -400,6 +414,7 @@ class AlignmentStats(object):
 
         for (utterence_key, alignment) in groundtruth_alignments:
             if len(alignment) != alignment_length: # FIXME
+                ConsoleLogger.error('len(alignment) != alignment_length: {}'.format(len(alignment)))
                 continue
             groundtruth_utterance_keys.add(utterence_key)
             final_groundtruth_alignments.append([phonemes_indices[alignment[i]] for i in range(len(alignment))])
