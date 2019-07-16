@@ -16,6 +16,7 @@ use_speaker_conditioning: False
 record_codebook_stats: False
 record_gradient_stats: False
 features_path: 'features'
+export_one_hot_features: False
 
 # Cuda
 use_cuda: True

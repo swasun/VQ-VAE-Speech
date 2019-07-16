@@ -41,7 +41,9 @@ from itertools import cycle
 
 class AlignmentStats(object):
     
-    def __init__(self, data_stream, vctk, configuration, device, model, results_path, experiment_name):
+    def __init__(self, data_stream, vctk, configuration, device, model,
+        results_path, experiment_name, alignment_subset):
+
         self._data_stream = data_stream
         self._vctk = vctk
         self._configuration = configuration
@@ -49,6 +51,7 @@ class AlignmentStats(object):
         self._model = model
         self._results_path = results_path
         self._experiment_name = experiment_name
+        self._alignment_subset = alignment_subset
 
         self._model.eval()
 
@@ -61,8 +64,10 @@ class AlignmentStats(object):
         phonemes_counter = dict()
         total_phonemes_apparations = 0
         data_length = self._configuration['length'] / self._configuration['sampling_rate']
+        speaker_id_folders = os.listdir(self._vctk.raw_folder + os.sep + 'VCTK-Corpus' + os.sep + 'phonemes')
+        loader = self._data_stream.training_loader if self._alignment_subset == 'train' else self._data_stream.validation_loader
 
-        with tqdm(self._data_stream.validation_loader) as bar:
+        with tqdm(loader) as bar:
             for data in bar:
                 speaker_ids = data['speaker_id'].to(self._device)
                 wav_filenames = data['wav_filename']
@@ -70,8 +75,9 @@ class AlignmentStats(object):
                 loader_indices = data['index'].to(self._device)
 
                 speaker_id = wav_filenames[0][0].split('/')[-2]
-                if speaker_id not in os.listdir(self._vctk.raw_folder + os.sep + 'VCTK-Corpus' + os.sep + 'phonemes'):
+                if speaker_id not in speaker_id_folders:
                     # TODO: log the missing folders
+                    #ConsoleLogger.warn('speaker id {} not found'.format(speaker_id))
                     continue
 
                 for i in range(len(shifting_times)):
@@ -84,18 +90,20 @@ class AlignmentStats(object):
                         #ConsoleLogger.warn('File {} not found'.format(phonemes_alignment_path))
                         break
 
-                    shifting_time = shifting_times[0].detach().cpu().item()
+                    shifting_time = shifting_times[i].detach().cpu().item()
                     target_time_scale = np.arange((data_length / desired_time_interval) + 1) * desired_time_interval + shifting_time
                     shifted_indices = np.where(target_time_scale >= shifting_time)
                     tg = textgrid.TextGrid()
                     tg.read(phonemes_alignment_path)
                     """if target_time_scale[-1] > tg.tiers[1][-1].maxTime:
                         ConsoleLogger.error('Shifting time error at {}.pickle: shifting_time:{}' \
-                            ' target_time_scale[-1]:{} > tg.tiers[1][-1].maxTime:{}'.format(
+                            ' target_time_scale[-1]:{} > tg.tiers[1][-1].maxTime:{}\n'
+                            'wav filename:{} phonemes alignment path:{}'.format(
                             loader_indices[i].detach().cpu().item(),
                             shifting_time,
                             target_time_scale[-1],
-                            tg.tiers[1][-1].maxTime))
+                            tg.tiers[1][-1].maxTime,
+                            wav_filename, phonemes_alignment_path))
                         continue"""
 
                     phonemes = list()
@@ -135,13 +143,17 @@ class AlignmentStats(object):
                             break
                     if len(phonemes) != int(data_length / desired_time_interval):
                         intervals = ['min:{} max:{} mark:{}'.format(interval.minTime, interval.maxTime, interval.mark) for interval in tg.tiers[1]]
-                        ConsoleLogger.error('Error - min:{} max:{} shifting:{} target_time_scale: {} intervals: {}'.format(
-                            interval.minTime, interval.maxTime, shifting_time, target_time_scale, intervals))
-                        ConsoleLogger.error('#phonemes:{} phonemes:{}'.format(len(phonemes), phonemes))
+                        ConsoleLogger.error('Error - min:{} max:{} shifting:{} target_time_scale: {} intervals: {}\n'
+                            '#phonemes:{} phonemes:{}\n'
+                            'wav filename:{} phonemes alignment path:{}'.format(
+                            interval.minTime, interval.maxTime, shifting_time, target_time_scale, intervals,
+                            len(phonemes), phonemes, wav_filename, phonemes_alignment_path))
                     else:
                         extended_alignment_dataset.append((utterence_key, phonemes))
 
-        with open(self._results_path + os.sep + 'vctk_groundtruth_alignments.pickle', 'wb') as f:
+        groundtruth_alignments_path = self._results_path + os.sep + \
+            'vctk_{}_groundtruth_alignments.pickle'.format(self._alignment_subset)
+        with open(groundtruth_alignments_path, 'wb') as f:
             pickle.dump({
                 'desired_time_interval': desired_time_interval,
                 'extended_alignment_dataset': extended_alignment_dataset,
@@ -156,7 +168,9 @@ class AlignmentStats(object):
         ))
 
         alignments_dic = None
-        with open(self._results_path + os.sep + 'vctk_groundtruth_alignments.pickle', 'rb') as f:
+        groundtruth_alignments_path = self._results_path + os.sep + \
+            'vctk_{}_groundtruth_alignments.pickle'.format(self._alignment_subset)
+        with open(groundtruth_alignments_path, 'rb') as f:
             alignments_dic = pickle.load(f)
 
         desired_time_interval = alignments_dic['desired_time_interval']
@@ -200,8 +214,9 @@ class AlignmentStats(object):
             for j in range(possibles_phonemes_number):
                 text = ax.text(j, i, round_bigrams[i, j], ha='center', va='center', color='w')
 
-        output_path = self._results_path + os.sep + 'vctk_groundtruth_bigrams_{}{}ms'.format(
-            'wo_diag_' if wo_diag else '', int(desired_time_interval * 1000))
+        output_path = self._results_path + os.sep + 'vctk_{}_groundtruth_bigrams_{}{}ms'.format(
+            self._alignment_subset, 'wo_diag_' if wo_diag else '',
+            int(desired_time_interval * 1000))
 
         fig.tight_layout()
         fig.savefig(output_path + '.png')
@@ -214,7 +229,10 @@ class AlignmentStats(object):
         ConsoleLogger.status('Computing groundtruth phonemes frequency of VCTK val dataset...')
 
         alignments_dic = None
-        with open(self._results_path + os.sep + 'vctk_groundtruth_alignments.pickle', 'rb') as f:
+
+        groundtruth_alignments_path = self._results_path + os.sep + \
+            'vctk_{}_groundtruth_alignments.pickle'.format(self._alignment_subset)
+        with open(groundtruth_alignments_path, 'rb') as f:
             alignments_dic = pickle.load(f)
 
         desired_time_interval = alignments_dic['desired_time_interval']
@@ -231,13 +249,15 @@ class AlignmentStats(object):
         # TODO: add title
         fig, ax = plt.subplots(figsize=(20, 1))
         ax.bar(phonemes_frequency_sorted_keys, values)
-        fig.savefig(self._results_path + os.sep + 'vctk_groundtruth_phonemes_frequency_{}ms.png'.format(
-            int(desired_time_interval * 1000)), bbox_inches='tight', pad_inches=0)
+        fig.savefig(self._results_path + os.sep + 'vctk_{}_groundtruth_phonemes_frequency_{}ms.png'.format(
+            self._alignment_subset, int(desired_time_interval * 1000)), bbox_inches='tight', pad_inches=0)
         plt.close(fig)
 
     def compute_groundtruth_average_phonemes_number(self):
         alignments_dic = None
-        with open(self._results_path + os.sep + 'vctk_groundtruth_alignments.pickle', 'rb') as f:
+        groundtruth_alignments_path = self._results_path + os.sep + \
+            'vctk_{}_groundtruth_alignments.pickle'.format(self._alignment_subset)
+        with open(groundtruth_alignments_path, 'rb') as f:
             alignments_dic = pickle.load(f)
 
         extended_alignment_dataset = alignments_dic['extended_alignment_dataset']
@@ -257,8 +277,9 @@ class AlignmentStats(object):
         data_length = self._configuration['length'] / self._configuration['sampling_rate']
         desired_time_scale = np.arange(data_length * 100) * desired_time_interval
         total_indices_apparations = 0
+        loader = self._data_stream.training_loader if self._alignment_subset == 'train' else self._data_stream.validation_loader
 
-        with tqdm(self._data_stream.validation_loader) as bar:
+        with tqdm(loader) as bar:
             for data in bar:
                 valid_originals = data['input_features'].to(self._device).permute(0, 2, 1).contiguous().float()
                 speaker_ids = data['speaker_id'].to(self._device)
@@ -293,7 +314,9 @@ class AlignmentStats(object):
                             encodings_counter[str_index] = 0
                         encodings_counter[str_index] += 1
 
-        with open(self._results_path + os.sep + self._experiment_name + '_vctk_empirical_alignments.pickle', 'wb') as f:
+        empirical_alignments_path = self._results_path + os.sep + self._experiment_name + \
+            '_vctk_{}_empirical_alignments.pickle'.format(self._alignment_subset)
+        with open(empirical_alignments_path, 'wb') as f:
             pickle.dump({
                 'all_alignments': all_alignments,
                 'encodings_counter': encodings_counter,
@@ -308,7 +331,9 @@ class AlignmentStats(object):
         ))
 
         alignments_dic = None
-        with open(self._results_path + os.sep + self._experiment_name + '_vctk_empirical_alignments.pickle', 'rb') as f:
+        empirical_alignments_path = self._results_path + os.sep + self._experiment_name + \
+            '_vctk_{}_empirical_alignments.pickle'.format(self._alignment_subset)
+        with open(empirical_alignments_path, 'rb') as f:
             alignments_dic = pickle.load(f)
 
         all_alignments = alignments_dic['all_alignments']
@@ -353,8 +378,8 @@ class AlignmentStats(object):
             for j in range(num_embeddings):
                 text = ax.text(j, i, round_bigrams[i, j], ha='center', va='center', color='w')
 
-        output_path = self._results_path + os.sep + self._experiment_name + '_vctk_empirical_bigrams_{}{}ms'.format(
-            'wo_diag_' if wo_diag else '', int(desired_time_interval * 1000))
+        output_path = self._results_path + os.sep + self._experiment_name + '_vctk_{}_empirical_bigrams_{}{}ms'.format(
+            self._alignment_subset, 'wo_diag_' if wo_diag else '', int(desired_time_interval * 1000))
 
         fig.tight_layout()
         fig.savefig(output_path + '.png')
@@ -367,7 +392,9 @@ class AlignmentStats(object):
         ConsoleLogger.status('Computing empirical encodings frequency of VCTK val dataset...')
 
         alignments_dic = None
-        with open(self._results_path + os.sep + self._experiment_name + '_vctk_empirical_alignments.pickle', 'rb') as f:
+        empirical_alignments_path = self._results_path + os.sep + self._experiment_name + \
+            '_vctk_{}_empirical_alignments.pickle'.format(self._alignment_subset)
+        with open(empirical_alignments_path, 'rb') as f:
             alignments_dic = pickle.load(f)
 
         encodings_counter = alignments_dic['encodings_counter']
@@ -384,17 +411,21 @@ class AlignmentStats(object):
         # TODO: add title
         fig, ax = plt.subplots(figsize=(20, 1))
         ax.bar(encodings_frequency_sorted_keys, values)
-        fig.savefig(self._results_path + os.sep + self._experiment_name + '_vctk_empirical_frequency_{}ms.png'.format(
-            int(desired_time_interval * 1000)), bbox_inches='tight', pad_inches=0)
+        fig.savefig(self._results_path + os.sep + self._experiment_name + '_vctk_{}_empirical_frequency_{}ms.png'.format(
+            self._alignment_subset, int(desired_time_interval * 1000)), bbox_inches='tight', pad_inches=0)
         plt.close(fig)
 
     def compute_clustering_metrics(self):
         groundtruth_alignments_dic = None
-        with open(self._results_path + os.sep + 'vctk_groundtruth_alignments.pickle', 'rb') as f:
+        groundtruth_alignments_path = self._results_path + os.sep + \
+            'vctk_{}_groundtruth_alignments.pickle'.format(self._alignment_subset)
+        with open(groundtruth_alignments_path, 'rb') as f:
             groundtruth_alignments_dic = pickle.load(f)
 
         empirical_alignments_dic = None
-        with open(self._results_path + os.sep + self._experiment_name + '_vctk_empirical_alignments.pickle', 'rb') as f:
+        empirical_alignments_path = self._results_path + os.sep + self._experiment_name + \
+            '_vctk_{}_empirical_alignments.pickle'.format(self._alignment_subset)
+        with open(empirical_alignments_path, 'rb') as f:
             empirical_alignments_dic = pickle.load(f)
 
         groundtruth_alignments = np.array(groundtruth_alignments_dic['extended_alignment_dataset'])
@@ -428,6 +459,14 @@ class AlignmentStats(object):
 
         ConsoleLogger.status('Groundtruth alignments shape: {}'.format(final_groundtruth_alignments.shape))
         ConsoleLogger.status('Empirical alignments shape: {}'.format(final_empirical_alignments.shape))
+
+        final_groundtruth_alignments = final_groundtruth_alignments[:-(final_groundtruth_alignments.shape[0] - final_empirical_alignments.shape[0])] \
+            if final_groundtruth_alignments.shape[0] - final_empirical_alignments.shape[0] > 0 \
+            else final_groundtruth_alignments
+
+        final_empirical_alignments = final_empirical_alignments[:-(final_empirical_alignments.shape[0] - final_groundtruth_alignments.shape[0])] \
+            if final_empirical_alignments.shape[0] - final_groundtruth_alignments.shape[0] > 0 \
+            else final_empirical_alignments
 
         ConsoleLogger.status('Groundtruth alignments samples: {}'.format([final_groundtruth_alignments[i] for i in range(2)]))
         ConsoleLogger.status('Empirical alignments samples: {}'.format([final_empirical_alignments[i] for i in range(2)]))
@@ -613,11 +652,15 @@ class AlignmentStats(object):
 
     def print_biggest_adjusted_scores(self):
         groundtruth_alignments_dic = None
-        with open(self._results_path + os.sep + 'vctk_groundtruth_alignments.pickle', 'rb') as f:
+        groundtruth_alignments_path = self._results_path + os.sep + \
+            'vctk_{}_groundtruth_alignments.pickle'.format(self._alignment_subset)
+        with open(groundtruth_alignments_path, 'rb') as f:
             groundtruth_alignments_dic = pickle.load(f)
 
         empirical_alignments_dic = None
-        with open(self._results_path + os.sep + self._experiment_name + '_vctk_empirical_alignments.pickle', 'rb') as f:
+        empirical_alignments_path = self._results_path + os.sep + self._experiment_name + \
+            '_vctk_{}_empirical_alignments.pickle'.format(self._alignment_subset)
+        with open(empirical_alignments_path, 'rb') as f:
             empirical_alignments_dic = pickle.load(f)
 
         groundtruth_alignments = np.array(groundtruth_alignments_dic['extended_alignment_dataset'])

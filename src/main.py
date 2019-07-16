@@ -79,6 +79,7 @@ if __name__ == "__main__":
     parser.add_argument('--plot_distances_histogram', action='store_true', help='Compute histograms of several distances to investiguate how close are the samples with the codebook')
     parser.add_argument('--compute_many_to_one_mapping', action='store_true', help='Compute the many to one mapping for all the samples')
     parser.add_argument('--compute_alignments', action='store_true', help='Compute the groundtruth alignments and those of the specified experiments')
+    parser.add_argument('--alignment_subset', action='store', type=str, default='val')
     parser.add_argument('--compute_clustering_metrics', action='store_true', help='Compute the clustering metrics between the groundtruth and the empirical alignments')
     parser.add_argument('--compute_groundtruth_average_phonemes_number', action='store_true', help='Compute the average number of phonemes per groundtruth alignment')
     parser.add_argument('--plot_clustering_metrics_evolution', action='store_true', help='Compute the evolution of the clustering metrics accross different number of embedding vectors')
@@ -93,6 +94,7 @@ if __name__ == "__main__":
         'plot_distances_histogram': args.plot_distances_histogram,
         'compute_many_to_one_mapping': args.compute_many_to_one_mapping,
         'compute_alignments': args.compute_alignments,
+        'alignment_subset': args.alignment_subset,
         'compute_clustering_metrics': args.compute_clustering_metrics,
         'compute_groundtruth_average_phonemes_number': args.compute_groundtruth_average_phonemes_number,
         'plot_clustering_metrics_evolution': args.plot_clustering_metrics_evolution,
@@ -119,7 +121,7 @@ if __name__ == "__main__":
 
     if args.export_to_features:
         configuration = load_configuration(default_configuration_path)
-        update_configuration_from_experiments(args.experiments_configuration_path, configuration)
+        configuration = update_configuration_from_experiments(args.experiments_configuration_path, configuration)
         device_configuration = DeviceConfiguration.load_from_configuration(configuration)
         data_stream = VCTKSpeechStream(configuration, device_configuration.gpu_ids, device_configuration.use_cuda)
         data_stream.export_to_features(default_dataset_path, configuration)
@@ -134,7 +136,7 @@ if __name__ == "__main__":
 
     if args.compute_dataset_stats:
         configuration = load_configuration(default_configuration_path)
-        update_configuration_from_experiments(args.experiments_configuration_path, configuration)
+        configuration = update_configuration_from_experiments(args.experiments_configuration_path, configuration)
         device_configuration = DeviceConfiguration.load_from_configuration(configuration)
         data_stream = VCTKFeaturesStream(default_dataset_path, configuration, device_configuration.gpu_ids, device_configuration.use_cuda)
         data_stream.compute_dataset_stats()
