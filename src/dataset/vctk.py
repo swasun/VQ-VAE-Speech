@@ -135,7 +135,4 @@ class VCTK(Dataset):
         if not self.dev_mode:
             os.unlink(file_path)
 
-        shutil.copyfile(
-            os.path.join(dset_abs_path, "COPYING"),
-        )
         print('Done!')
